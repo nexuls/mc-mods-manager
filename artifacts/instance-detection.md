@@ -22,6 +22,8 @@ The user said "in any Minecraft version directory". In practice that means one o
 | Velocity / BungeeCord proxy | `velocity.toml` / `config.yml` with `listeners` | `plugins/` |
 
 If the cwd is a *parent* (e.g. Prism instance root), the detector descends into the game dir.
+If the cwd (or `MC_MOD_DIR`) **is itself a content dir** (basename `mods` or `plugins`, containing jars), the detector
+walks up and uses the parent as the instance root. For example, `…/NeoForge 1.21.1/mods` resolves to `…/NeoForge 1.21.1`.
 If nothing is found, the UI starts in setup mode: pick version + loader, `mods/` gets created.
 
 ## Detectors (in order)

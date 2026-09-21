@@ -26,7 +26,9 @@ Update this file at the end of every working session (see AGENTS.md).
 ## Phase 2 — CLI skeleton & serving
 - [ ] `bin.ts` with commander (`--dir`, `--port`, `--no-open`, `--version`)
 - [ ] `route()` adapter + zod error middleware; `call()` client in web; contract coverage test
-- [ ] `env.ts` zod schema for env vars / CLI options
+- [x] `env.ts` zod schema for env vars (`MC_MOD_DEV`, `MC_MOD_DIR`); dev instance via `apps/cli/.env.local`
+- [ ] CLI options (`--dir` overrides `MC_MOD_DIR`) validated with zod
+- [ ] Stop the published CLI from auto-loading `.env` files from the user's cwd (Bun does this by default). Check the bunfig/`bun build` options
 - [ ] Express app factory, `/api/health` (first contract endpoint), static serving of `dist/web`, SPA fallback
 - [ ] Session token + Host check middleware; web API client sends token
 - [ ] Free port selection, open browser (Chromium `--app` mode if available, `--browser tab|app`), graceful shutdown
@@ -37,6 +39,8 @@ Update this file at the end of every working session (see AGENTS.md).
 - [ ] Detectors: state override, Prism/MultiMC, CurseForge app, ATLauncher, Modrinth App, version json, server files, mods heuristic
 - [ ] `GET/PUT /api/instance`, setup dialog in UI
 - [ ] Fixture directories for each layout + tests
+- [ ] Resolve a `mods/`/`plugins/` target dir to its parent instance root
+- [ ] Manual test instance (dev): vanilla-launcher profile dir `NeoForge 1.21.1` (options.txt, 38 NeoForge 1.21.1 jars, no version json → mods heuristic)
 
 ## Phase 4 — Installed mods
 - [ ] Jar metadata parsers (fabric, quilt, forge, neoforge, mcmod.info, plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json)

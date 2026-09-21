@@ -31,6 +31,7 @@ bun install              # root, installs all workspaces
 bun run dev              # tmux session "mc-mod" (windows: cli on :4719, web/vite on :5173); re-run to attach
 bun run dev --kill       # stop the tmux dev session
 bun run dev --no-tmux    # both apps in the current terminal (automatic fallback if tmux is missing)
+# Dev instance: set MC_MOD_DIR in apps/cli/.env.local (gitignored; see apps/cli/.env.example)
 bun run build            # web → cli (bun build) → copy web dist into cli/dist/web
 bun run check            # biome lint + format check (must pass)
 bun run fix              # biome autofix
