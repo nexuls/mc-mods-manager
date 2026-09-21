@@ -1,0 +1,26 @@
+{
+  "name": "mc-mods-manager",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "workspaces": {
+    "packages": ["apps/*", "packages/*"],
+    "catalog": {
+      "@types/bun": "^1.4.2",
+      "typescript": "~6.0.2",
+      "zod": "^4.6.5"
+    }
+  },
+  "scripts": {
+    "dev": "bun run --filter './apps/*' dev",
+    "build": "bun run --filter @mc-mod/web build && bun run --filter mc-mod build && bun scripts/copy-web.ts",
+    "check": "biome check .",
+    "fix": "biome check --write .",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
