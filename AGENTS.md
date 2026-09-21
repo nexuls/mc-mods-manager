@@ -93,3 +93,16 @@ cd apps/cli && bun link  # then run `mc-mod` in any instance dir
   `artifacts/decisions.md` (new entry, don't rewrite old ones).
 - If a spec is wrong or ambiguous, fix the spec in `artifacts/` in the same change, or add it to `open-questions.md`.
 - Verify external API endpoints against live docs before implementing; don't trust memory.
+
+## Commits (always atomic)
+
+- **Commit as you go, one logical change per commit.** Don't batch unrelated work into one commit at the end.
+  Examples: "add Tailwind", "add shadcn components", "apply Biome formatting" are three commits, not one.
+- Each commit must stand on its own: `bun run check && bun run typecheck && bun test` pass at that commit.
+- Stage only the files that belong to that change (`git add <paths>`, not `git add -A` over unrelated edits).
+  Keep mechanical changes (formatting, renames) in their own commit, separate from behavior changes.
+- Include `bun.lock` in the same commit as the `package.json` change that caused it.
+- Use Conventional Commits with a scope where it helps: `feat(cli): …`, `fix(web): …`, `chore(shared): …`,
+  `docs: …`, `test: …`, `build: …`, `style: …`. Subject in imperative mood, ≤ 72 chars. Add a body when the *why* isn't obvious.
+- Doc/progress updates for a change go in that change's commit, or in a `docs:` commit right after it.
+- Never rewrite published history (no force-push, no amending pushed commits).
