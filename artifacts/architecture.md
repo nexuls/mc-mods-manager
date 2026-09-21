@@ -264,7 +264,7 @@ Export modes: **copy** (default, clears previous export first after confirmation
   `/` (installed), `/browse`, `/project/:provider/:id`, `/export`, `/settings`.
 - API client: `call(endpoint, req)` in `src/lib/api.ts` takes a shared contract endpoint, injects the session
   token, validates the body and parses the response with the endpoint's zod schema. Components never call `fetch` directly.
-- Forms: shadcn `Form` (react-hook-form) with `zodResolver`, reusing the endpoint's body schema.
+- Forms: shadcn `Field` components + react-hook-form `Controller` with `zodResolver`, reusing the endpoint's body schema.
 - Dev: Vite dev server proxies `/api` to the Express dev server (see [setup-commands.md](setup-commands.md)).
 
 UI details: [ui-spec.md](ui-spec.md). API contract: [api-spec.md](api-spec.md).

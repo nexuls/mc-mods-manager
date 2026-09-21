@@ -3,23 +3,25 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 0 — Planning complete, nothing initialized.
+**Current phase:** 2 — CLI skeleton & serving (Phase 1 scaffolding done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
 - [x] AGENTS.md
-- [ ] User review of [open-questions.md](open-questions.md)
+- [x] User review of [open-questions.md](open-questions.md)
 
 ## Phase 1 — Scaffolding
-- [ ] `git init`, root `bun init` with workspaces, `.gitignore`, `packageManager: bun@1.3.x`
-- [ ] `apps/web` via `bun create vite` (react-ts), scripts use `bunx --bun vite`; remove ESLint
-- [ ] Tailwind v4 + `@tailwindcss/vite`
-- [ ] shadcn init + base components
-- [ ] Biome at root; `bun run check` passes
-- [ ] `packages/shared` with zod: `domain/`, `contract/define.ts`, `contract/errors.ts`
-- [ ] `apps/cli` Express + TS on Bun, `bun --watch` dev, `bun build` bundle
-- [ ] Root `dev`, `build`, `check`, `typecheck`, `test` scripts
-- [ ] `bun test` wired up; one passing test per package
+- [x] `git init`, root `bun init` with workspaces + catalog, `.gitignore`, `packageManager: bun@1.3.14`
+- [x] `apps/web` via `bun create vite` (react-ts), scripts use `bunx --bun vite`; removed oxlint
+- [x] Tailwind v4 + `@tailwindcss/vite`
+- [x] shadcn init (radix, nova) + base components + field/label
+- [x] Biome at root; `bun run check` passes
+- [x] `packages/shared` workspace with zod (catalog)
+- [ ] `packages/shared` contents: `domain/`, `contract/define.ts`, `contract/errors.ts` (moved to Phase 2)
+- [x] `apps/cli` Express + TS on Bun, `bun --watch` dev, `bun build` bundle (placeholder `bin.ts`)
+- [x] Root `dev`, `build` (with `scripts/copy-web.ts`), `check`, `typecheck`, `test` scripts
+- [x] Vite dev proxy `/api` → `127.0.0.1:4719`
+- [x] `bun test` wired up; smoke tests for shared + cli (web tests need happy-dom, later)
 
 ## Phase 2 — CLI skeleton & serving
 - [ ] `bin.ts` with commander (`--dir`, `--port`, `--no-open`, `--version`)
@@ -78,3 +80,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Planning docs and AGENTS.md written. No code yet. |
 | 2026-09-22 | Switched toolchain to Bun only (D11). |
 | 2026-09-22 | Browser UI decision (D12); zod everywhere + shared API contract (D13, zod-contract.md). |
+| 2026-09-22 | Phase 1 scaffolding done: bun workspaces, web (Vite 8/React 19/Tailwind 4/shadcn radix-nova), shared, cli (Express 5), Biome, bun test, build pipeline. check/typecheck/test/build all pass. |

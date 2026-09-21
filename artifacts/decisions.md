@@ -56,3 +56,14 @@ Accepted. All boundary data gets parsed with zod, and types are inferred from sc
 `call()` client, so request/response shapes are validated at runtime on both sides from one source.
 Chose a ~40-line custom helper over ts-rest/oRPC/tRPC: no extra dependency, it keeps plain REST + Express, and it's easy
 to read. Revisit if the helper starts growing features (e.g. OpenAPI generation → consider oRPC).
+
+### D14 — Scaffolding choices made during Phase 1
+Accepted.
+- **TypeScript ~6.0** repo-wide, via the catalog, matching what create-vite pins. TS 7 (native compiler) is deferred until
+  the tooling (Vite template, shadcn) targets it.
+- **shadcn with Radix primitives + Nova preset** (Lucide icons, Geist font, neutral base). Base UI was the alternative;
+  Radix was chosen for maturity and docs coverage.
+- **shadcn `field` instead of `form`**. Current shadcn replaced the react-hook-form `Form` wrapper with `Field` components,
+  used together with RHF `Controller` + `zodResolver`.
+- **Biome style**: 2 spaces, single quotes, no semicolons (as needed), width 100. `apps/web/src/components/ui` is excluded
+  so shadcn components can be regenerated without diffs.

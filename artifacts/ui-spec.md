@@ -57,4 +57,4 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 
 ## shadcn components expected
 button, input, badge, table, dialog, dropdown-menu, select, switch, tabs, tooltip, sonner (toasts),
-skeleton, scroll-area, card, separator, command (quick search), alert, progress.
+skeleton, scroll-area, card, separator, alert, progress, field, label (all installed), plus command (quick search) later.

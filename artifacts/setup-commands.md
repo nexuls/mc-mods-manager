@@ -35,21 +35,24 @@ bun add tailwindcss @tailwindcss/vite
 # shadcn (official): https://ui.shadcn.com/docs/installation/vite
 #   prerequisites: "@/*" path alias in tsconfig.json + tsconfig.app.json, and resolve.alias in vite.config.ts
 bun add -d @types/bun          # for path/__dirname types in vite.config.ts (instead of @types/node)
-bunx --bun shadcn@latest init
+bunx --bun shadcn@latest init -t vite -b radix -p nova --no-monorepo --no-rtl -y   # Radix primitives, Nova preset (Lucide + Geist)
 bunx --bun shadcn@latest add button input badge table dialog dropdown-menu select switch tabs tooltip sonner skeleton scroll-area card separator alert progress
 
 # Data fetching / routing
 bun add @tanstack/react-query react-router
 
-# Zod (same major as shared) + form integration used by shadcn Form
-bun add zod react-hook-form @hookform/resolvers
-bun add @mc-mod/shared@workspace:*
-bunx --bun shadcn@latest add form
+# Zod (catalog) + forms. Current shadcn replaced `form` with `field`; use it with react-hook-form's Controller
+bun add react-hook-form @hookform/resolvers "zod@catalog:" "@mc-mod/shared@workspace:*"
+bunx --bun shadcn@latest add field label -y --overwrite
 
 cd ../..
 ```
 
-- The Vite template ships ESLint — **remove it** (eslint packages, `eslint.config.js`, `lint` script) since Biome replaces it.
+- The Vite template (create-vite with Vite 8) ships **oxlint**. **Remove it** (`oxlint` dep, `.oxlintrc.json`, `lint` script) since Biome replaces it.
+- The template pins TypeScript `~6.0`. The repo standardizes on that through the catalog. TS 7 (the native compiler) is not adopted yet.
+- shadcn's `cn` helper now comes from the `cn` package (by shadcn, replaces `clsx` + `tailwind-merge`).
+- `bun init` in a sub-package also generates `CLAUDE.md`, `.gitignore`, `README.md` and `index.ts`. Delete them, because the root covers these,
+  and the generated `CLAUDE.md` tells agents not to use Express.
 - Run Vite on the Bun runtime: scripts use `bunx --bun vite` (`dev`, `build`, `preview`).
 
 Vite dev proxy (in `vite.config.ts`):

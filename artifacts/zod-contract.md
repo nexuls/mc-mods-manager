@@ -17,7 +17,7 @@ Use Zod v4 (`import { z } from 'zod'`), and the same version in every workspace.
 | Launcher manifests (`mmc-pack.json`, `minecraftinstance.json`, …) | `apps/cli/src/instance/detectors/*.schema.ts` | detectors (`safeParse`) |
 | `.mc-mod/state.json`, global `config.json` | `packages/shared/src/domain/state.ts`, `config.ts` | backend (with `schemaVersion` migrations) |
 | CLI args + env vars (`--port`, `CURSEFORGE_API_KEY`, `MC_MOD_DEV`) | `apps/cli/src/env.ts` | `bin.ts` at startup (commander parses, zod validates) |
-| Forms (instance setup, settings) | shared request schema, reused | react-hook-form + `@hookform/resolvers/zod` (shadcn `Form`) |
+| Forms (instance setup, settings) | shared request schema, reused | react-hook-form + `@hookform/resolvers/zod` (shadcn `Field`) |
 | `sessionStorage` / `localStorage` / URL search params | `apps/web/src/lib/storage.ts` | on read (`safeParse`, fall back to default) |
 
 Rules of thumb:
