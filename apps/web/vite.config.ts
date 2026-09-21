@@ -11,4 +11,8 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  server: {
+    // The CLI dev server (`bun run dev` in apps/cli) listens on this port.
+    proxy: { '/api': 'http://127.0.0.1:4719' },
+  },
 })
