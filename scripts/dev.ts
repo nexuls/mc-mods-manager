@@ -54,7 +54,9 @@ if (!tmuxOk('has-session', '-t', `=${SESSION}`)) {
     tmuxOk('set-option', '-w', '-t', `=${SESSION}:${app.window}`, 'remain-on-exit', 'on')
   }
   tmuxOk('select-window', '-t', `=${SESSION}:${first.window}`)
-  console.log(`Started tmux session "${SESSION}" (windows: ${apps.map((a) => a.window).join(', ')}).`)
+  console.log(
+    `Started tmux session "${SESSION}" (windows: ${apps.map((a) => a.window).join(', ')}).`,
+  )
 }
 
 // Inside tmux, switch the current client instead of nesting a session.
