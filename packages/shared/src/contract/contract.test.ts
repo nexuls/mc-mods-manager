@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { ApiErrorSchema, api, defineEndpoint, listEndpoints, SessionToken } from './index'
+import {
+  ApiErrorSchema,
+  api,
+  buildPath,
+  defineEndpoint,
+  listEndpoints,
+  SessionToken,
+} from './index'
 
 describe('defineEndpoint', () => {
   test('defaults params, query and body to empty strict objects', () => {
@@ -32,5 +39,23 @@ describe('SessionToken', () => {
     const bytes = crypto.getRandomValues(new Uint8Array(32))
     expect(SessionToken.safeParse(Buffer.from(bytes).toString('base64url')).success).toBe(true)
     expect(SessionToken.safeParse('short').success).toBe(false)
+  })
+})
+
+describe('buildPath', () => {
+  test('fills and encodes params', () => {
+    expect(buildPath('/api/mods/:fileName', { fileName: 'a b/c.jar' })).toBe(
+      '/api/mods/a%20b%2Fc.jar',
+    )
+  })
+
+  test('appends query, skipping undefined and repeating arrays', () => {
+    expect(
+      buildPath('/api/search', {}, { q: 'sodium', page: 0, x: undefined, tag: ['a', 'b'] }),
+    ).toBe('/api/search?q=sodium&page=0&tag=a&tag=b')
+  })
+
+  test('throws on a missing param', () => {
+    expect(() => buildPath('/api/mods/:fileName')).toThrow('fileName')
   })
 })

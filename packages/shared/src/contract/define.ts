@@ -73,3 +73,21 @@ function isEndpoint(v: unknown): v is Endpoint {
     v.response instanceof z.ZodType
   )
 }
+
+/** Fills `:param` segments (URL-encoded) and appends the query string. Undefined query values are skipped. */
+export function buildPath(path: string, params: object = {}, query: object = {}): string {
+  const values = new Map(Object.entries(params))
+  const filled = path.replace(/:([A-Za-z0-9_]+)/g, (_, name: string) => {
+    const v = values.get(name)
+    if (v === undefined || v === null) throw new Error(`Missing path param "${name}" for ${path}`)
+    return encodeURIComponent(String(v))
+  })
+  const search = new URLSearchParams()
+  for (const [k, v] of Object.entries(query)) {
+    for (const item of Array.isArray(v) ? v : [v]) {
+      if (item !== undefined && item !== null) search.append(k, String(item))
+    }
+  }
+  const qs = search.toString()
+  return qs ? `${filled}?${qs}` : filled
+}
