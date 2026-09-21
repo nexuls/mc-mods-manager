@@ -1,2 +1,2 @@
-// Domain schemas and the API contract live here. See artifacts/zod-contract.md.
-export {}
+// Domain schemas and the API contract. See artifacts/zod-contract.md.
+export * from './contract'

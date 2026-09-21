@@ -9,14 +9,16 @@ summarizes that code. If they disagree, the contract code wins, and this table s
 { "error": { "code": "NOT_FOUND", "message": "Human readable", "details": {} } }
 ```
 
-Error codes: `BAD_REQUEST`, `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `PROVIDER_ERROR`,
-`PROVIDER_DISABLED`, `RATE_LIMITED`, `HASH_MISMATCH`, `MANUAL_DOWNLOAD_REQUIRED`, `INTERNAL`.
+Error codes and their HTTP status (`errorStatus` in `contract/errors.ts`): `BAD_REQUEST` 400,
+`UNAUTHORIZED` 401 (missing/wrong token), `FORBIDDEN` 403 (bad `Host` header), `NOT_FOUND` 404, `CONFLICT` 409,
+`PROVIDER_ERROR` 502, `PROVIDER_DISABLED` 409, `RATE_LIMITED` 429, `HASH_MISMATCH` 502,
+`MANUAL_DOWNLOAD_REQUIRED` 409, `INTERNAL` 500.
 
 ## Health & instance
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/health` | `{ ok, version }` — UI polls to detect a dead server |
+| GET | `/api/health` | `{ ok, version }` — UI polls every 10s to detect a dead server; doubles as the `--exit-on-close` heartbeat |
 | GET | `/api/instance` | Detected `Instance` + `needsSetup: boolean` |
 | PUT | `/api/instance` | Override `{ gameVersion?, loader?, loaderVersion?, contentDir? }` → saved to state |
 | GET | `/api/meta/game-versions` | Release list (from Modrinth tags), with `includeSnapshots` query |
