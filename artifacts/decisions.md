@@ -67,3 +67,18 @@ Accepted.
   used together with RHF `Controller` + `zodResolver`.
 - **Biome style**: 2 spaces, single quotes, no semicolons (as needed), width 100. `apps/web/src/components/ui` is excluded
   so shadcn components can be regenerated without diffs.
+
+### D15 — CLI terminal UI, port choice and dev-mode isolation
+Accepted.
+- **Terminal output:** `@clack/prompts` (framed intro/note/log/outro, spinners and prompts for later) + `picocolors`
+  (colors, honors `NO_COLOR` and non-TTY). Commander's `--help` is colored through `configureHelp` style hooks. All
+  human-facing output goes through `apps/cli/src/cli/terminal.ts`. Chosen over ink (React in the terminal, too heavy for a
+  server that prints a few lines) and chalk/boxen/ora (three packages where clack covers all of it).
+- **Port:** default 4719, so SSH forwarding instructions are stable. If it's taken, fall back to a random free port.
+  An explicit `--port` is strict and fails if taken (the dev proxy depends on it).
+- **Browser:** `auto` looks for an installed Chromium browser (Chrome, Chromium, Edge, Brave, Vivaldi) and launches it with
+  `--app=<url>`; otherwise the `open` package opens a tab. On Linux without `DISPLAY`/`WAYLAND_DISPLAY` we don't try.
+- **Dev mode can't reach users:** the build defines `process.env.NODE_ENV="production"`, which makes `IS_BUNDLE` a
+  constant `true`, and `MC_MOD_DEV` is ignored when it is set. The shebang is `#!/usr/bin/env -S bun --no-env-file`, so
+  a `.env` in the user's instance folder isn't loaded. Windows shim handling of `env -S` is unverified (Phase 9 testing).
+

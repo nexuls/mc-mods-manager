@@ -57,7 +57,7 @@ Why this split:
 
 ```
  user shell ── mc-mod ──► apps/cli/src/bin.ts
-                              │ 1. parse args (commander)
+                              │ 1. parse args (commander + zod), print styled output (clack)
                               │ 2. detectInstance(cwd)  ─► Instance (version, loader, kind, dirs)
                               │ 3. load/create .mc-mod/ state in instance dir
                               │ 4. start Express on 127.0.0.1:<free port>
@@ -76,8 +76,16 @@ if the process dies.
 
 ```
 apps/cli/src/
-├── bin.ts                  # #!/usr/bin/env bun, commander setup
+├── bin.ts                  # #!/usr/bin/env -S bun --no-env-file; calls cli/run.ts
+├── cli/                    # the terminal side: everything that isn't serving HTTP
+│   ├── run.ts              # parse options → start server → print URL → open browser → shut down on Ctrl+C
+│   ├── options.ts          # commander program + zod-validated CliOptions
+│   ├── terminal.ts         # all human-facing output (@clack/prompts + picocolors)
+│   ├── listen.ts           # 127.0.0.1 listener, default port 4719 with free-port fallback
+│   ├── browser.ts          # Chromium --app window or a normal tab
+│   └── idle.ts             # --exit-on-close heartbeat watcher
 ├── server.ts               # express app factory (testable without listening)
+├── errors.ts               # AppError(code) thrown by services/routes
 ├── config.ts               # global config (~/.config/mc-mod/config.json): CF API key, defaults
 ├── security.ts             # token middleware, host/origin checks
 ├── instance/
@@ -101,6 +109,7 @@ apps/cli/src/
 ├── env.ts                  # zod schema for env vars + parsed CLI options
 └── routes/                 # thin express routers registered via route(router, api.x.y, handler)
     ├── adapter.ts          # route() + zod error middleware
+    ├── health.ts
     ├── instance.ts
     ├── mods.ts
     ├── search.ts

@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 2 — CLI skeleton & serving (Phase 1 scaffolding done).
+**Current phase:** 3 — Instance detection (Phase 2 CLI skeleton & serving done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -17,23 +17,23 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] shadcn init (radix, nova) + base components + field/label
 - [x] Biome at root; `bun run check` passes
 - [x] `packages/shared` workspace with zod (catalog)
-- [ ] `packages/shared` contents: `domain/`, `contract/define.ts`, `contract/errors.ts` (moved to Phase 2)
+- [x] `packages/shared` contents: `contract/define.ts`, `contract/errors.ts` (done in Phase 2; `domain/` starts with the first domain schema in Phase 3)
 - [x] `apps/cli` Express + TS on Bun, `bun --watch` dev, `bun build` bundle (placeholder `bin.ts`)
 - [x] Root `dev`, `build` (with `scripts/copy-web.ts`), `check`, `typecheck`, `test` scripts
 - [x] Vite dev proxy `/api` → `127.0.0.1:4719`
 - [x] `bun test` wired up; smoke tests for shared + cli (web tests need happy-dom, later)
 
 ## Phase 2 — CLI skeleton & serving
-- [ ] `bin.ts` with commander (`--dir`, `--port`, `--no-open`, `--version`)
-- [ ] `route()` adapter + zod error middleware; `call()` client in web; contract coverage test
+- [x] `bin.ts` with commander (`--dir`, `--port`, `--no-open`, `--browser`, `--exit-on-close`, `--version`); styled output with `@clack/prompts` + `picocolors` (D15)
+- [x] `route()` adapter + zod error middleware; `call()` client in web; contract coverage test
 - [x] `env.ts` zod schema for env vars (`MC_MOD_DEV`, `MC_MOD_DIR`); dev instance via `apps/cli/.env.local`
-- [ ] CLI options (`--dir` overrides `MC_MOD_DIR`) validated with zod
-- [ ] Stop the published CLI from auto-loading `.env` files from the user's cwd (Bun does this by default). Check the bunfig/`bun build` options
-- [ ] Express app factory, `/api/health` (first contract endpoint), static serving of `dist/web`, SPA fallback
-- [ ] Session token + Host check middleware; web API client sends token
-- [ ] Free port selection, open browser (Chromium `--app` mode if available, `--browser tab|app`), graceful shutdown
-- [ ] Heartbeat + optional `--exit-on-close` idle shutdown
-- [ ] `bun link` works; `mc-mod` opens the UI from any dir
+- [x] CLI options (`--dir` overrides `MC_MOD_DIR`) validated with zod
+- [x] Stop the published CLI from auto-loading `.env` files from the user's cwd: shebang `bun --no-env-file`; dev mode is compiled out of the bundle (D15)
+- [x] Express app factory, `/api/health` (first contract endpoint), static serving of `dist/web`, SPA fallback
+- [x] Session token + Host check middleware; web API client sends token
+- [x] Free port selection, open browser (Chromium `--app` mode if available, `--browser auto|app|tab`), graceful shutdown
+- [x] Heartbeat + optional `--exit-on-close` idle shutdown
+- [x] `bun link` works; `mc-mod` opens the UI from any dir (browser opening checked by hand only: tests use `--no-open`)
 
 ## Phase 3 — Instance detection
 - [ ] Detectors: state override, Prism/MultiMC, CurseForge app, ATLauncher, Modrinth App, version json, server files, mods heuristic
@@ -85,3 +85,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Switched toolchain to Bun only (D11). |
 | 2026-09-22 | Browser UI decision (D12); zod everywhere + shared API contract (D13, zod-contract.md). |
 | 2026-09-22 | Phase 1 scaffolding done: bun workspaces, web (Vite 8/React 19/Tailwind 4/shadcn radix-nova), shared, cli (Express 5), Biome, bun test, build pipeline. check/typecheck/test/build all pass. |
+| 2026-09-22 | Phase 2 done: shared contract (`defineEndpoint`, errors, `api.health`), `route()` adapter + error middleware, token/Host security, web `call()` client, `mc-mod` command with clack/picocolors terminal UI, port fallback, Chromium app mode, `--exit-on-close`, `.env` isolation. `bun link` verified. |

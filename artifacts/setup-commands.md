@@ -84,16 +84,18 @@ Express has no official TS scaffold (`express-generator` is JS/legacy), so start
 mkdir -p apps/cli && cd apps/cli
 bun init -y                      # creates package.json, tsconfig.json, index.ts → move to src/bin.ts
 bun add express commander open env-paths zod yauzl-promise yaml smol-toml
+bun add @clack/prompts picocolors  # terminal UI (D15)
 bun add @mc-mod/shared@workspace:*
 bun add -d @types/express @types/bun typescript
 cd ../..
 ```
 
 - `package.json`: `"name": "mc-mod"`, `"type": "module"`, `"bin": { "mc-mod": "./dist/bin.js" }`, `"files": ["dist"]`.
-- `src/bin.ts` starts with `#!/usr/bin/env bun`. The CLI requires Bun at runtime.
+- `src/bin.ts` starts with `#!/usr/bin/env -S bun --no-env-file` (no `.env` loading from the user's cwd). The CLI requires Bun at runtime.
 - Scripts:
   - `dev` = `MC_MOD_DEV=1 bun --watch src/bin.ts --no-open --port 4719`
-  - `build` = `bun build src/bin.ts --target=bun --outdir=dist` (bundles `@mc-mod/shared`)
+  - `build` = `bun build src/bin.ts --target=bun --outdir=dist --define process.env.NODE_ENV='"production"'`
+    (bundles `@mc-mod/shared`; the define compiles dev mode out, see D15)
   - `compile` = `bun build src/bin.ts --compile --outfile=dist/mc-mod` (optional standalone binary, Phase 9)
   - `typecheck` = `tsc --noEmit` (runs through `bun run`; `typescript` is only used for type-checking)
 - tsconfig: keep what `bun init` generates (`moduleResolution: bundler`, `types: ["bun"]`, `strict`,
