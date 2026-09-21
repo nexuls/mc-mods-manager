@@ -1,0 +1,93 @@
+import { statSync } from 'node:fs'
+import path from 'node:path'
+import { TOKEN_PARAM } from '@mc-mod/shared'
+import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
+import { type Auth, createSessionToken } from '../security'
+import { createApp } from '../server'
+import { VERSION } from '../version'
+import { openBrowser } from './browser'
+import { watchIdle } from './idle'
+import { HOST, listen, PortInUseError } from './listen'
+import { createProgram, DEFAULT_PORT, parseOptions } from './options'
+import * as terminal from './terminal'
+
+/** The `mc-mod` command: parse options, start the server, open the UI, stop on Ctrl+C. */
+export async function run(argv: readonly string[]): Promise<void> {
+  const options = parseOptions(createProgram(), argv)
+  const env = parseEnv()
+  const dev = env.MC_MOD_DEV && !IS_BUNDLE
+
+  terminal.banner(VERSION, dev)
+  if (dev) terminal.devWarning()
+
+  const dir = resolveTargetDir({ dir: options.dir, env })
+  if (!isDirectory(dir)) {
+    terminal.fatal(`Directory not found: ${dir}`, 'Pass an existing directory with --dir.')
+    process.exit(1)
+  }
+
+  const auth: Auth = dev ? { mode: 'dev' } : { mode: 'token', token: createSessionToken() }
+  const idle = options.exitOnClose
+    ? watchIdle({ onIdle: () => void shutdown('UI closed, server stopped.') })
+    : undefined
+
+  const { app } = createApp({
+    auth,
+    // The bundle lives at dist/bin.js with the web build copied to dist/web.
+    webDir: path.join(import.meta.dir, 'web'),
+    validateResponses: dev || process.env.NODE_ENV === 'test',
+    onHeartbeat: () => idle?.beat(),
+    onInternalError: terminal.internalError,
+  })
+
+  const wanted = options.port ?? DEFAULT_PORT
+  let started: Awaited<ReturnType<typeof listen>>
+  try {
+    started = await listen(app, wanted, options.port !== undefined)
+  } catch (err) {
+    if (err instanceof PortInUseError) {
+      terminal.fatal(
+        err.message,
+        'Pick another one with --port, or leave it out to use a free one.',
+      )
+      process.exit(1)
+    }
+    throw err
+  }
+  const { server, port } = started
+
+  const url = new URL(`http://${HOST}:${port}/`)
+  if (auth.mode === 'token') url.searchParams.set(TOKEN_PARAM, auth.token)
+  terminal.ready({
+    dir,
+    url: url.href,
+    portFallback: port !== wanted && wanted !== 0 ? wanted : undefined,
+  })
+
+  if (options.open && !dev) terminal.opened(await openBrowser(url.href, options.browser))
+  terminal.waiting(options.exitOnClose)
+
+  let stopping = false
+  async function shutdown(reason: string): Promise<void> {
+    if (stopping) return
+    stopping = true
+    idle?.stop()
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve())
+      server.closeAllConnections()
+    })
+    terminal.stopped(reason)
+    process.exit(0)
+  }
+
+  process.on('SIGINT', () => {
+    // A second Ctrl+C while shutting down forces the exit.
+    if (stopping) process.exit(130)
+    void shutdown('Server stopped.')
+  })
+  process.on('SIGTERM', () => void shutdown('Server stopped.'))
+}
+
+function isDirectory(p: string): boolean {
+  return statSync(p, { throwIfNoEntry: false })?.isDirectory() ?? false
+}

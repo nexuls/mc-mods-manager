@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "MC_MOD_DEV=1 bun --watch src/bin.ts --no-open --port 4719",
-    "build": "bun build src/bin.ts --target=bun --outdir=dist",
+    "build": "bun build src/bin.ts --target=bun --outdir=dist --define process.env.NODE_ENV='\"production\"'",
     "compile": "bun build src/bin.ts --compile --outfile=dist/mc-mod",
     "typecheck": "tsc --noEmit"
   },
@@ -24,11 +24,13 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@clack/prompts": "^1.8.1",
     "@mc-mod/shared": "workspace:*",
     "commander": "^15.0.0",
     "env-paths": "^4.0.0",
     "express": "^5.2.1",
     "open": "^11.0.4",
+    "picocolors": "^1.1.1",
     "smol-toml": "^1.8.0",
     "yaml": "^2.9.1",
     "yauzl-promise": "^4.0.0",

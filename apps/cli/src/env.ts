@@ -17,7 +17,16 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   return Env.parse(source)
 }
 
-/** Resolves the directory `mc-mod` manages: MC_MOD_DIR if set, otherwise the current directory. */
-export function resolveTargetDir(env: Env, cwd: string = process.cwd()): string {
-  return path.resolve(cwd, env.MC_MOD_DIR ?? '.')
+/**
+ * True in the published bundle: `bun build` defines NODE_ENV as "production" there.
+ * Dev mode is never available in the bundle, whatever the environment says.
+ */
+export const IS_BUNDLE = process.env.NODE_ENV === 'production'
+
+/** Resolves the directory `mc-mod` manages: `--dir`, then MC_MOD_DIR, then the current directory. */
+export function resolveTargetDir(
+  sources: { dir?: string; env: Env },
+  cwd: string = process.cwd(),
+): string {
+  return path.resolve(cwd, sources.dir ?? sources.env.MC_MOD_DIR ?? '.')
 }
