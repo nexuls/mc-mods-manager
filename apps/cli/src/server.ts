@@ -3,8 +3,10 @@ import path from 'node:path'
 import express, { type Express } from 'express'
 import { apiNotFound, createApiRouter, errorHandler } from './routes/adapter'
 import { healthRoutes } from './routes/health'
+import { type Auth, checkHost, requireToken } from './security'
 
 export interface AppOptions {
+  auth: Auth
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string
   /** Validate responses against the contract (dev and tests). */
@@ -19,6 +21,11 @@ export interface AppOptions {
 export function createApp(options: AppOptions): { app: Express; apiRouter: express.Router } {
   const app = express()
   app.disable('x-powered-by')
+  // The Vite dev proxy forwards its own Host, so dev mode skips the checks.
+  if (options.auth.mode === 'token') {
+    app.use(checkHost)
+    app.use('/api', requireToken(options.auth.token))
+  }
 
   const apiRouter = createApiRouter({ validateResponses: options.validateResponses })
   healthRoutes(apiRouter, { onHeartbeat: options.onHeartbeat ?? (() => {}) })
