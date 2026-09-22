@@ -1,5 +1,6 @@
 import {
   type ContentKind,
+  type InstalledMod,
   Loader,
   loaderInfo,
   type ProjectHit,
@@ -12,6 +13,7 @@ import {
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
+  ArrowUpCircleIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -40,6 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { UpdateDialog } from '@/components/update-dialog'
 import { useCategories, useSearch } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { useSettings } from '@/hooks/use-settings'
@@ -79,6 +82,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   )
   const installed = useInstalledProjects()
   const [target, setTarget] = useState<InstallTarget | null>(null)
+  const [updating, setUpdating] = useState<InstalledMod[] | null>(null)
 
   const data = search.data
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1
@@ -216,10 +220,11 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
                 hit={hit}
                 categoryLabels={categoryLabels}
                 location={location}
-                installed={installed.has(projectKey(hit.provider, hit.id))}
+                installed={installed.get(projectKey(hit.provider, hit.id))}
                 onInstall={() =>
                   setTarget({ provider: hit.provider, projectId: hit.id, title: hit.title })
                 }
+                onUpdate={(mod) => setUpdating([mod])}
               />
             ))}
           </ul>
@@ -250,6 +255,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
       )}
 
       <InstallDialog target={target} onOpenChange={(o) => !o && setTarget(null)} />
+      <UpdateDialog mods={updating} onOpenChange={(o) => !o && setUpdating(null)} />
     </div>
   )
 }
@@ -279,12 +285,15 @@ function ProjectCard({
   location,
   installed,
   onInstall,
+  onUpdate,
   categoryLabels,
 }: {
   hit: ProjectHit
   location: { pathname: string; search: string }
-  installed: boolean
+  /** The installed jar of this project, if any. */
+  installed: InstalledMod | undefined
   onInstall: () => void
+  onUpdate: (mod: InstalledMod) => void
   categoryLabels: ReadonlyMap<string, string>
 }) {
   // CurseForge slugs need an extra lookup (they're only unique per class), so link by id there.
@@ -371,7 +380,12 @@ function ProjectCard({
         </div>
         {/* Above the card-wide link. */}
         <div className="relative z-10 mt-auto">
-          {installed ? (
+          {installed?.update ? (
+            <Button variant="secondary" onClick={() => onUpdate(installed)}>
+              <ArrowUpCircleIcon />
+              Update
+            </Button>
+          ) : installed ? (
             <Button variant="secondary" disabled>
               <CheckIcon />
               Installed

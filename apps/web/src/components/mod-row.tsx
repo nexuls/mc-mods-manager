@@ -7,10 +7,12 @@ import {
 } from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
+  ArrowUpCircleIcon,
   ExternalLinkIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PackageIcon,
+  RepeatIcon,
   Trash2Icon,
   UnlinkIcon,
 } from 'lucide-react'
@@ -66,7 +68,17 @@ const sideSourceLabel = {
   unknown: 'unknown',
 } as const
 
-export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void }) {
+export function ModRow({
+  mod,
+  onLink,
+  onUpdate,
+  onChangeVersion,
+}: {
+  mod: InstalledMod
+  onLink: () => void
+  onUpdate: () => void
+  onChangeVersion: () => void
+}) {
   const update = useUpdateMod()
   const remove = useRemoveMod()
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -102,8 +114,9 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
       </TableCell>
 
       <TableCell className="max-w-0 min-w-48">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-medium" title={name}>
+        {/* Badges keep their size; the name gives way, but never entirely. */}
+        <div className="flex items-center gap-2 overflow-hidden *:data-[slot=badge]:shrink-0">
+          <span className="min-w-16 truncate font-medium" title={name}>
             {name}
           </span>
           {(mod.compatibility === 'wrong-loader' || mod.compatibility === 'wrong-game-version') && (
@@ -116,6 +129,27 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
               </TooltipTrigger>
               <TooltipContent>
                 {mod.compatibilityReason ?? 'Not made for this instance'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {mod.update && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  asChild
+                  variant="secondary"
+                  className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                >
+                  <button type="button" onClick={onUpdate} className="cursor-pointer">
+                    <ArrowUpCircleIcon />
+                    Update
+                  </button>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {mod.update.manual
+                  ? `Update to ${mod.update.versionNumber}: download it from ${providerLabel[mod.update.provider]}`
+                  : `Update to ${mod.update.versionNumber}`}
               </TooltipContent>
             </Tooltip>
           )}
@@ -251,6 +285,18 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
               </DropdownMenuSub>
             )}
             {mod.sources.length > 0 && <DropdownMenuSeparator />}
+            {mod.update && (
+              <DropdownMenuItem onSelect={onUpdate}>
+                <ArrowUpCircleIcon />
+                Update to {mod.update.versionNumber}
+              </DropdownMenuItem>
+            )}
+            {mod.sources.length > 0 && (
+              <DropdownMenuItem onSelect={onChangeVersion}>
+                <RepeatIcon />
+                Change version…
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={onLink}>
               <LinkIcon />
               Link to project…

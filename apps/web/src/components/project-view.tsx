@@ -1,7 +1,14 @@
-import { type Project, type Provider, providerLabel, type RankedVersion } from '@mc-mod/shared'
+import {
+  type InstalledMod,
+  type Project,
+  type Provider,
+  providerLabel,
+  type RankedVersion,
+} from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
+  ArrowUpCircleIcon,
   CheckIcon,
   DownloadIcon,
   ExternalLinkIcon,
@@ -37,6 +44,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { UpdateDialog } from '@/components/update-dialog'
 import { useProject, useVersions } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
@@ -118,6 +126,7 @@ function ProjectHeader({
   const recommended = compatible.find((v) => v.recommended)
   const [picked, setPicked] = useState<string | undefined>()
   const selected = picked ?? recommended?.id
+  const [updating, setUpdating] = useState<InstalledMod[] | null>(null)
 
   return (
     // Side by side when the pane is wide enough, not the window: in the split view it's a column.
@@ -169,7 +178,17 @@ function ProjectHeader({
       </div>
 
       <div className="flex shrink-0 flex-col gap-2 @3xl:w-72">
-        {installed ? (
+        {installed?.update ? (
+          <>
+            <Button onClick={() => setUpdating([installed])}>
+              <ArrowUpCircleIcon />
+              Update to {installed.update.versionNumber}
+            </Button>
+            <p className="text-muted-foreground truncate text-xs" title={installed.fileName}>
+              Installed as {installed.fileName}
+            </p>
+          </>
+        ) : installed ? (
           <>
             <Button variant="secondary" disabled>
               <CheckIcon />
@@ -216,6 +235,7 @@ function ProjectHeader({
           </>
         )}
       </div>
+      <UpdateDialog mods={updating} onOpenChange={(o) => !o && setUpdating(null)} />
     </div>
   )
 }

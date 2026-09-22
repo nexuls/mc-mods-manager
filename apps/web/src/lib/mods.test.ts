@@ -73,9 +73,28 @@ describe('filterMods', () => {
     ])
   })
 
+  test('updates: jars the last check found an update for', () => {
+    const updated = mod({
+      ...sodium,
+      update: {
+        provider: 'modrinth',
+        projectId: 'AANobbMI',
+        versionId: 'NEW',
+        versionNumber: '0.7',
+        publishedAt: '2026-02-01T00:00:00Z',
+        fileName: 'sodium-0.7.jar',
+        size: 1,
+        manual: false,
+      },
+    })
+    expect(filterMods([updated, local], 'updates', '')).toEqual([updated])
+    expect(countByFilter([updated, local]).updates).toBe(1)
+  })
+
   test('counts', () => {
     expect(countByFilter(all)).toEqual({
       all: 2,
+      updates: 0,
       disabled: 1,
       unidentified: 1,
       incompatible: 1,

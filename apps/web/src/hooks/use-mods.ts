@@ -18,6 +18,15 @@ export function useRefreshMods() {
   })
 }
 
+/** Looks for updates; the list comes back with `update` set where there is one. */
+export function useCheckUpdates() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => call(api.mods.checkUpdates),
+    onSuccess: (data) => client.setQueryData(key, data),
+  })
+}
+
 export function useUpdateMod() {
   const client = useQueryClient()
   return useMutation({

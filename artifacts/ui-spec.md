@@ -39,8 +39,9 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   updated time below 512px.
 
 ### Installed (`/`)
-- Toolbar: filter chips with counts (All / Disabled / Unidentified / Incompatible / Client-only / Server-side;
-  *Updates available* comes with Phase 7); buttons next to the title: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
+- Toolbar: filter chips with counts (All / Updates / Disabled / Unidentified / Incompatible / Client-only / Server-side);
+  buttons next to the title: **Refresh** (looks every jar up again), **Check updates** (toast with the count; switches to
+  the Updates filter when there are any) and, when the last check found some, **Update all N**.
 - Lookup warnings (e.g. Modrinth unreachable) show as an alert above the table.
 - Table (shadcn `Table`) with a sticky header (below the app header, or at the top of its pane in the split), sorted by name by default; Name, Source (Modrinth, CurseForge, Local), Side (client, server,
   both, unknown) and Enabled (enabled first) headers sort on click, again to reverse, ties by name A→Z. Columns: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
@@ -49,8 +50,16 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   side chip (tint + icon: client sky, server violet, both teal, unknown amber; chip text stays the theme foreground).
   A side from Modrinth/CurseForge is read-only (the tooltip names the platform); otherwise (local file, or the platform
   doesn't know) the chip opens a dropdown (Automatic / Client / Server / Both), enabled `Switch`, row menu (Open on
-  Modrinth/CurseForge, Updates from ▸ when on both, Link to project…, Treat as local / Identify automatically, Remove…).
-  *Update available pill* and *Change version* come with Phase 7.
+  Modrinth/CurseForge, Updates from ▸ when on both, Update to X, Change version…, Link to project…, Treat as local /
+  Identify automatically, Remove…). A green **Update** pill next to the name (new version in its tooltip) opens the update
+  dialog for that jar.
+- **Update dialog** (Update all, the row pill, Browse cards, project pages): one row per jar with `old → new` version and
+  size, then a progress bar, check or error per row; the footer shows the download size. Files the author only allows
+  downloading from the website get a **Download** link and aren't part of the job. All done: toast and close (it stays
+  open when there are manual files or failures).
+- **Change version dialog:** a select of the project's versions for the instance (date, Recommended/Installed/pre-release
+  badges; "Show all versions" adds ones that don't fit, badged and warned about). **Switch version** runs the same job;
+  a manual-only file gets a Download button instead.
 - **Link dialog:** possible matches from both platforms (same mod id, then name search; provider logo per row) and a field for a
   Modrinth or CurseForge URL/slug/id (platform toggle; CurseForge needs a key). It can also remove a manual link.
 - **Remove** asks first, then moves the jar to `.mc-mod/trash/`.
@@ -65,8 +74,8 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - Result cards (Modrinth-app style): large icon; title (links to the project page) + "by author"; two-line summary;
   a row of neutral tags: side (with its icon, left out when unknown), up to two categories, then `+N` for the rest
   (loaders included, listed in a tooltip). On the right: downloads and follows, "updated" time (`Yesterday`), and at
-  the bottom the **Install** button, or a disabled "Installed" when a jar is identified as that project ("Update" comes
-  with Phase 7).
+  the bottom the **Install** button, a disabled "Installed" when a jar is identified as that project, or **Update** when
+  the last check found an update for it.
 - Pagination: 20 per page, Previous/Next with "N results · page X of Y".
 
 ### Project detail (`/project/:provider/:id`)
@@ -76,7 +85,7 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   whichever it was opened from). Typing in the search bar goes back to the results. The Browse nav item stays highlighted.
 - Header with icon/title/summary, downloads, follows, updated, license, side chip, a platform button and the project's
   links (source, issues, wiki, Discord, donations). CurseForge has no side data, so its side chip is left out. On the right when the pane is wide enough (below it otherwise): version dropdown of compatible versions (recommended
-  preselected, pre-releases badged) + Install, or "Installed" with the file name.
+  preselected, pre-releases badged) + Install, or "Installed" with the file name (**Update to X** when there's an update).
 - Tabs: Description (Markdown/HTML, sanitized), Versions (table, compatible by default, "Show all versions" switch;
   Install per row, which warns in the dialog if the version doesn't fit; "Manual download" badge on files the author only
   allows downloading from the website), Gallery (only when there are images).

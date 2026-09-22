@@ -2,6 +2,7 @@ import type { InstalledMod, ModSource, Side, SourceMethod } from '@mc-mod/shared
 
 export const ModFilter = [
   'all',
+  'updates',
   'disabled',
   'unidentified',
   'incompatible',
@@ -12,6 +13,7 @@ export type ModFilter = (typeof ModFilter)[number]
 
 export const filterLabel: Record<ModFilter, string> = {
   all: 'All',
+  updates: 'Updates',
   disabled: 'Disabled',
   unidentified: 'Unidentified',
   incompatible: 'Incompatible',
@@ -21,6 +23,7 @@ export const filterLabel: Record<ModFilter, string> = {
 
 const matchesFilter: Record<ModFilter, (m: InstalledMod) => boolean> = {
   all: () => true,
+  updates: (m) => m.update !== undefined,
   disabled: (m) => !m.enabled,
   unidentified: (m) => m.sources.length === 0,
   incompatible: (m) =>
@@ -98,6 +101,7 @@ export function filterMods(
 export function countByFilter(mods: readonly InstalledMod[]): Record<ModFilter, number> {
   const out: Record<ModFilter, number> = {
     all: 0,
+    updates: 0,
     disabled: 0,
     unidentified: 0,
     incompatible: 0,

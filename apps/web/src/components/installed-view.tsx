@@ -1,8 +1,16 @@
 import type { InstalledMod } from '@mc-mod/shared'
-import { AlertTriangleIcon, CompassIcon, PackageOpenIcon, RefreshCwIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  ArrowUpCircleIcon,
+  CompassIcon,
+  PackageOpenIcon,
+  RefreshCwIcon,
+  SearchCheckIcon,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { ChangeVersionDialog } from '@/components/change-version-dialog'
 import { LinkDialog } from '@/components/link-dialog'
 import { ModRow } from '@/components/mod-row'
 import { SortableHead } from '@/components/sortable-head'
@@ -11,7 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { useMods, useRefreshMods } from '@/hooks/use-mods'
+import { UpdateDialog } from '@/components/update-dialog'
+import { useCheckUpdates, useMods, useRefreshMods } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
 import {
   countByFilter,
@@ -28,16 +37,22 @@ import {
 export function InstalledView({ contentLabel, text }: { contentLabel: string; text: string }) {
   const mods = useMods()
   const refresh = useRefreshMods()
+  const check = useCheckUpdates()
   const [filter, setFilter] = useState<ModFilter>('all')
   const [sort, setSort] = useState<ModSort>(defaultSort)
   const onSort = (key: SortKey) => setSort((s) => toggleSort(s, key))
   // The mod whose link dialog is open, by file name (the row may re-render with new data).
   const [linking, setLinking] = useState<string | null>(null)
+  // A snapshot, so the dialog's rows stay while the list refreshes under it.
+  const [updating, setUpdating] = useState<InstalledMod[] | null>(null)
+  const [changing, setChanging] = useState<string | null>(null)
 
   const all = mods.data?.mods ?? []
   const shown = filterMods(all, filter, text, sort)
   const counts = countByFilter(all)
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
+  const changingMod = all.find((m) => m.fileName === changing)
+  const withUpdates = all.filter((m) => m.update)
 
   return (
     // Split view: the table scrolls on its own below the title and filters.
@@ -51,19 +66,47 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
               : `Everything in the ${contentLabel} folder`}
           </p>
         </div>
-        <Button
-          variant="outline"
-          disabled={refresh.isPending || mods.isPending}
-          onClick={() =>
-            refresh.mutate(undefined, {
-              onSuccess: (r) => toast.success(`Checked ${r.mods.length} files`),
-              onError: (err) => toast.error(errorMessage(err)),
-            })
-          }
-        >
-          <RefreshCwIcon className={refresh.isPending ? 'animate-spin' : undefined} />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={refresh.isPending || mods.isPending}
+            onClick={() =>
+              refresh.mutate(undefined, {
+                onSuccess: (r) => toast.success(`Checked ${r.mods.length} files`),
+                onError: (err) => toast.error(errorMessage(err)),
+              })
+            }
+          >
+            <RefreshCwIcon className={refresh.isPending ? 'animate-spin' : undefined} />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            disabled={check.isPending || mods.isPending}
+            onClick={() =>
+              check.mutate(undefined, {
+                onSuccess: (r) => {
+                  const n = r.mods.filter((m) => m.update).length
+                  if (n > 0) {
+                    toast.success(n === 1 ? '1 update available' : `${n} updates available`)
+                    setFilter('updates')
+                  } else toast.success('Everything is up to date')
+                },
+                onError: (err) => toast.error(errorMessage(err)),
+              })
+            }
+          >
+            <SearchCheckIcon className={check.isPending ? 'animate-pulse' : undefined} />
+            {check.isPending ? 'Checking…' : 'Check updates'}
+          </Button>
+          {withUpdates.length > 0 && (
+            <Button onClick={() => setUpdating(withUpdates)}>
+              <ArrowUpCircleIcon />
+              Update all
+              <span className="tabular-nums opacity-80">{withUpdates.length}</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -146,7 +189,13 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
             </TableHeader>
             <TableBody>
               {shown.map((m) => (
-                <ModRow key={m.fileName} mod={m} onLink={() => setLinking(m.fileName)} />
+                <ModRow
+                  key={m.fileName}
+                  mod={m}
+                  onLink={() => setLinking(m.fileName)}
+                  onUpdate={() => setUpdating([m])}
+                  onChangeVersion={() => setChanging(m.fileName)}
+                />
               ))}
             </TableBody>
           </Table>
@@ -163,6 +212,10 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
       {linkingMod && (
         <LinkDialog mod={linkingMod} open onOpenChange={(o) => !o && setLinking(null)} />
       )}
+      {changingMod && (
+        <ChangeVersionDialog mod={changingMod} onOpenChange={(o) => !o && setChanging(null)} />
+      )}
+      <UpdateDialog mods={updating} onOpenChange={(o) => !o && setUpdating(null)} />
     </div>
   )
 }
