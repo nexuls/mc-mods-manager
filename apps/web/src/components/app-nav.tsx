@@ -17,7 +17,7 @@ const links: {
   { to: '/', label: 'Installed', Icon: PackageIcon, end: true, library: true },
   // Project pages are reached from Browse.
   { to: '/browse', label: 'Browse', Icon: CompassIcon, also: '/project/', library: true },
-  { to: '/export', label: 'Server export', Icon: ServerIcon, modsOnly: true },
+  { to: '/export', label: 'Export', Icon: ServerIcon, modsOnly: true },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
@@ -31,7 +31,7 @@ export function AppNav({ contentKind }: { contentKind: ContentKind }) {
   return (
     <nav
       aria-label="Main"
-      className="flex shrink-0 gap-1 md:sticky md:top-8 md:w-44 md:flex-col md:self-start"
+      className="flex shrink-0 gap-1 max-md:-mx-6 max-md:overflow-x-auto max-md:px-6 md:sticky md:top-8 md:w-44 md:flex-col md:self-start"
     >
       {links
         .filter((l) => !l.modsOnly || contentKind === 'mod')
@@ -42,7 +42,7 @@ export function AppNav({ contentKind }: { contentKind: ContentKind }) {
             end={end}
             className={({ isActive }) =>
               cn(
-                'text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4',
+                'text-muted-foreground hover:bg-muted hover:text-foreground flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4',
                 (isActive || (also && pathname.startsWith(also))) && 'bg-muted text-foreground',
                 // The split view shows Installed and Browse together.
                 library && inLibrary && split && 'bg-muted text-foreground',

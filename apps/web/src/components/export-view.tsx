@@ -203,7 +203,7 @@ function ExportPanel({ settings }: { settings: Settings }) {
                         applyDirName()
                       }}
                     />
-                    <FieldDescription className="break-all">
+                    <FieldDescription className="wrap-break-word">
                       {p ? `In ${parentOf(p.dir)}. ` : ''}The default is set in Settings.
                     </FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -237,7 +237,7 @@ function ExportPanel({ settings }: { settings: Settings }) {
                         Zip
                       </ToggleGroupItem>
                     </ToggleGroup>
-                    <FieldDescription className="break-all">
+                    <FieldDescription className="wrap-break-word">
                       {field.value === 'copy'
                         ? `Jars go into ${p?.dirName ?? dirName}/.`
                         : `One file in the instance folder: ${p?.zipName ?? '…'}`}
