@@ -290,7 +290,7 @@ function ProjectCard({
   const SideIcon = sideIcon(hit.side)
 
   return (
-    <li className="bg-card hover:border-foreground/20 h-38 relative flex items-stretch gap-4 rounded-xl border p-4 transition-colors">
+    <li className="bg-card hover:border-foreground/20 h-36 relative flex items-stretch gap-4 rounded-xl border p-4 transition-colors">
       {/* Narrow lists (the split view) get a smaller icon and title, fewer stats and no author. */}
       <ProjectIcon
         url={hit.iconUrl}
@@ -300,7 +300,7 @@ function ProjectCard({
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
             to={href}
-            className="truncate text-xl font-semibold hover:underline after:absolute after:inset-0 @max-xl:text-lg"
+            className="truncate text-lg font-semibold hover:underline after:absolute after:inset-0 @max-xl:text-base"
           >
             {hit.title}
           </Link>
@@ -310,7 +310,7 @@ function ProjectCard({
             </span>
           )}
         </div>
-        <p className="text-muted-foreground line-clamp-2">{hit.description}</p>
+        <p className="text-muted-foreground line-clamp-2 text-sm">{hit.description}</p>
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
           {hit.side !== 'unknown' && (
             <Tag>
@@ -334,8 +334,8 @@ function ProjectCard({
           )}
         </div>
       </div>
-      <div className="h-full text-muted-foreground flex shrink-0 flex-col items-end justify-between gap-2">
-        <div className="flex items-center gap-4">
+      <div className="h-full text-muted-foreground text-sm flex shrink-0 flex-col items-end justify-between gap-2">
+        <div className="flex flex-col items-end gap-1">
           <span className="flex items-center gap-1.5" title={`${hit.downloads} downloads`}>
             <DownloadIcon className="size-4" />
             {compactNumber(hit.downloads, true)}
@@ -349,16 +349,16 @@ function ProjectCard({
               {compactNumber(hit.follows)}
             </span>
           )}
+          {hit.updatedAt && (
+            <span
+              className="flex items-center gap-1.5 @max-lg:hidden"
+              title={`Updated ${shortDate(hit.updatedAt)}`}
+            >
+              <HistoryIcon className="size-4" />
+              {timeAgo(hit.updatedAt, Date.now(), true)}
+            </span>
+          )}
         </div>
-        {hit.updatedAt && (
-          <span
-            className="flex items-center gap-1.5 @max-lg:hidden"
-            title={`Updated ${shortDate(hit.updatedAt)}`}
-          >
-            <HistoryIcon className="size-4" />
-            {timeAgo(hit.updatedAt, Date.now(), true)}
-          </span>
-        )}
         {/* Above the card-wide link. */}
         <div className="relative z-10 mt-auto">
           {installed ? (

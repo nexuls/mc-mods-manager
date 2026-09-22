@@ -69,7 +69,7 @@ export function LibraryView({
 
   return (
     // Split: fill the viewport below the header (4rem) and the page padding (2 × 2rem).
-    <div className="flex flex-col gap-6 xl:h-[calc(100svh-8rem)]">
+    <div className="flex flex-col gap-6 xl:h-[calc(100svh-8.2rem)]">
       <SearchBar
         value={text}
         onChange={setText}
