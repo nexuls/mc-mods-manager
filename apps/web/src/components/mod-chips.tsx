@@ -80,8 +80,23 @@ const sideStyle: Record<Side, { Icon: LucideIcon; color: string }> = {
   unknown: { Icon: CircleHelpIcon, color: 'var(--color-amber-500)' },
 }
 
+/** Read-only side pill, for sides that come from the platform. */
+export function SideChip({ side, className, ...props }: ComponentProps<'span'> & { side: Side }) {
+  const { Icon, color } = sideStyle[side]
+  return (
+    <span className={cn(chip, className)} style={tint(color)} {...props}>
+      <Icon />
+      {sideLabel[side]}
+    </span>
+  )
+}
+
 /** Side pill that doubles as the trigger of the side menu (pass it to `DropdownMenuTrigger asChild`). */
-export function SideChip({ side, className, ...props }: ComponentProps<'button'> & { side: Side }) {
+export function SideChipButton({
+  side,
+  className,
+  ...props
+}: ComponentProps<'button'> & { side: Side }) {
   const { Icon, color } = sideStyle[side]
   return (
     <button

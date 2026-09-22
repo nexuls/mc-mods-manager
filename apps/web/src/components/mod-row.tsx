@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { SideChip, SourceChip } from '@/components/mod-chips'
+import { SideChip, SideChipButton, SourceChip } from '@/components/mod-chips'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,33 +159,44 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
       </TableCell>
 
       <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SideChip
-              side={mod.side}
-              aria-label={`Side: ${sideLabel[mod.side]}. Change side`}
-              className={cn(!mod.enabled && 'opacity-60')}
-            />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-              Side: {sideSourceLabel[mod.sideSource]}
-            </DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={mod.sideSource === 'override' ? mod.side : 'auto'}
-              onValueChange={(v) =>
-                patch({ sideOverride: v === 'auto' ? null : SIDES.find((s) => s === v) })
-              }
-            >
-              <DropdownMenuRadioItem value="auto">Automatic</DropdownMenuRadioItem>
-              {SIDES.map((s) => (
-                <DropdownMenuRadioItem key={s} value={s}>
-                  {sideLabel[s]}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {mod.sideSource === 'platform' && main ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SideChip side={mod.side} className={cn(!mod.enabled && 'opacity-60')} />
+            </TooltipTrigger>
+            <TooltipContent>
+              From {providerLabel[main.provider]}. Treat as local to set it yourself.
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SideChipButton
+                side={mod.side}
+                aria-label={`Side: ${sideLabel[mod.side]}. Change side`}
+                className={cn(!mod.enabled && 'opacity-60')}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                Side: {sideSourceLabel[mod.sideSource]}
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={mod.sideSource === 'override' ? mod.side : 'auto'}
+                onValueChange={(v) =>
+                  patch({ sideOverride: v === 'auto' ? null : SIDES.find((s) => s === v) })
+                }
+              >
+                <DropdownMenuRadioItem value="auto">Automatic</DropdownMenuRadioItem>
+                {SIDES.map((s) => (
+                  <DropdownMenuRadioItem key={s} value={s}>
+                    {sideLabel[s]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </TableCell>
 
       <TableCell>
