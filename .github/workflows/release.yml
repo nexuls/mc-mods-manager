@@ -33,7 +33,12 @@ permissions:
   contents: write # push the release commit and tag, create the release
 
 jobs:
+  # Tests, builds and smoke-tests on Linux, Windows and macOS first: the release ships binaries for all three.
+  test:
+    uses: ./.github/workflows/test.yml
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -61,12 +66,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - run: bun install --frozen-lockfile
-
-      - name: Lint, typecheck and test
-        run: |
-          bun run check
-          bun run typecheck
-          bun test
 
       - name: Bump the version
         id: version
@@ -96,12 +95,11 @@ jobs:
       - name: Compile standalone binaries
         run: bun run compile --all
 
+      # Checks the bumped version too; the other platforms' binaries were smoke-tested natively by `test`.
       - name: Smoke test
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          test "$(bun apps/cli/dist/bin.js --version)" = "$VERSION"
-          test "$(dist/release/mc-mod-linux-x64 --version)" = "$VERSION"
+          bun scripts/smoke.ts apps/cli/dist/bin.js
+          bun scripts/smoke.ts dist/release/mc-mod-linux-x64
           cat dist/release/SHA256SUMS
 
       - name: Check the npm package

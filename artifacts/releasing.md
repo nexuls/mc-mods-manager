@@ -5,10 +5,12 @@ It only runs when started by hand. Nothing is published on push.
 
 A release does all of this in one run:
 
-1. Lint, typecheck and test.
+1. Run the **Test** workflow ([`test.yml`](../.github/workflows/test.yml)) on Linux, Windows and macOS:
+   lint, typecheck, `bun test`, then build the npm bundle and that OS's binary and smoke-test both
+   (`scripts/smoke.ts` starts it, loads the UI and `/api/health` with the printed link).
 2. Bump the version in `apps/cli/package.json`.
 3. Build the npm package (`bun run build`) and compile the standalone binaries (`bun run compile --all`).
-4. Smoke-test both (`--version` must print the new version) and `bun publish --dry-run`.
+4. Smoke-test the bundle and the Linux binary with the new version, and `bun publish --dry-run`.
 5. Commit `chore(release): vX.Y.Z`, add the annotated tag `vX.Y.Z`, and push both to `main` atomically.
 6. Publish `mc-mod` to npm.
 7. Create the GitHub release `vX.Y.Z` with the binaries, `SHA256SUMS` and generated notes.
@@ -50,7 +52,8 @@ Actions → **Release** → Run workflow, on `main`:
 | `preid` | The prerelease id for `pre*` bumps (default `beta`: `0.2.0-beta.0`) |
 | `dry_run` | Does steps 1–4, then uploads the binaries and notes as a workflow artifact. Pushes, publishes and releases nothing. Works on any branch |
 
-Start with a dry run when the release process itself changed.
+Start with a dry run when the release process itself changed. The Test workflow can also be run on its own
+(Actions → Test → Run workflow) to check a change on Windows and macOS.
 
 The notes group Conventional Commits since the previous tag: breaking changes (`feat!:`), features,
 fixes, performance, then everything else folded away. Write commit subjects with that in mind.
@@ -80,6 +83,7 @@ is fixed by a new patch release, not by replacing it.
 bun run build                          # npm package in apps/cli (dist/, README.md, LICENSE)
 bun run compile                        # binary for this machine in dist/release/
 bun run compile --all                  # every target: linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64
+bun scripts/smoke.ts dist/release/mc-mod-linux-x64   # start it and load the UI (or apps/cli/dist/bin.js)
 (cd apps/cli && bun publish --dry-run) # what would be published (needs a login, or NPM_CONFIG_TOKEN set to anything)
 ```
 

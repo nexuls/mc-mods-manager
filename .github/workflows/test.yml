@@ -1,0 +1,50 @@
+# Lints, typechecks and tests on Linux, Windows and macOS, then builds the npm bundle and this OS's
+# standalone binary and smoke-tests both (scripts/smoke.ts). Runs when started by hand (Actions → Test →
+# Run workflow), and at the start of every release.
+name: Test
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      # No version given: setup-bun reads packageManager (bun@x.y.z) from package.json.
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      # Lint and types don't depend on the OS.
+      - name: Lint and typecheck
+        if: runner.os == 'Linux'
+        run: |
+          bun run check
+          bun run typecheck
+
+      - run: bun test
+
+      - name: Build
+        run: |
+          bun run build
+          bun run compile
+
+      - name: Smoke test
+        run: |
+          bun scripts/smoke.ts apps/cli/dist/bin.js
+          for binary in dist/release/mc-mod-*; do bun scripts/smoke.ts "$binary"; done
