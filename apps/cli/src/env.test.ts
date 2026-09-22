@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import path from 'node:path'
 import { parseEnv, resolveTargetDir } from './env'
 
 describe('parseEnv', () => {
@@ -24,17 +25,19 @@ describe('parseEnv', () => {
 
 describe('resolveTargetDir', () => {
   test('falls back to cwd', () => {
-    expect(resolveTargetDir({ env: parseEnv({}) }, '/tmp/x')).toBe('/tmp/x')
+    expect(resolveTargetDir({ env: parseEnv({}) }, '/tmp/x')).toBe(path.resolve('/tmp/x'))
   })
 
   test('uses MC_MOD_DIR, resolved against cwd', () => {
     const abs = parseEnv({ MC_MOD_DIR: '/games/NeoForge 1.21.1/mods' })
-    expect(resolveTargetDir({ env: abs }, '/tmp')).toBe('/games/NeoForge 1.21.1/mods')
-    expect(resolveTargetDir({ env: parseEnv({ MC_MOD_DIR: 'inst' }) }, '/tmp')).toBe('/tmp/inst')
+    expect(resolveTargetDir({ env: abs }, '/tmp')).toBe(path.resolve('/games/NeoForge 1.21.1/mods'))
+    expect(resolveTargetDir({ env: parseEnv({ MC_MOD_DIR: 'inst' }) }, '/tmp')).toBe(
+      path.resolve('/tmp/inst'),
+    )
   })
 
   test('--dir overrides MC_MOD_DIR', () => {
     const env = parseEnv({ MC_MOD_DIR: '/games/a' })
-    expect(resolveTargetDir({ dir: '../b', env }, '/tmp/x')).toBe('/tmp/b')
+    expect(resolveTargetDir({ dir: '../b', env }, '/tmp/x')).toBe(path.resolve('/tmp/b'))
   })
 })

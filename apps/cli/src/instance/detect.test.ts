@@ -25,7 +25,7 @@ describe('launcher manifests', () => {
     expect(i).toMatchObject({
       root: '.',
       gameDir: 'minecraft',
-      contentDir: 'minecraft/mods',
+      contentDir: path.join('minecraft', 'mods'),
       kind: 'client',
       gameVersion: '1.21.4',
       loader: 'fabric',
@@ -38,7 +38,7 @@ describe('launcher manifests', () => {
     expect((await detect('prism', 'minecraft')).root).toBe('.')
     expect(await detect('prism', 'minecraft/mods')).toMatchObject({
       root: '.',
-      contentDir: 'minecraft/mods',
+      contentDir: path.join('minecraft', 'mods'),
     })
   })
 
@@ -84,11 +84,11 @@ describe('version json', () => {
   test('TLauncher home/<id> game dir, started in its mods folder', async () => {
     const i = await detect('tlauncher', '.minecraft/home/NeoForge 1.21.1/mods')
     expect(i).toMatchObject({
-      root: '.minecraft/home/NeoForge 1.21.1',
+      root: path.join('.minecraft', 'home', 'NeoForge 1.21.1'),
       gameVersion: '1.21.1',
       loader: 'neoforge',
       loaderVersion: '21.1.250',
-      contentDir: '.minecraft/home/NeoForge 1.21.1/mods',
+      contentDir: path.join('.minecraft', 'home', 'NeoForge 1.21.1', 'mods'),
     })
     expect(i.detection[0]?.confidence).toBe('high')
   })
@@ -115,7 +115,7 @@ describe('version json', () => {
     const i = await detect('vanilla-launcher', '.minecraft/versions/neoforge-21.1.77')
     expect(i).toMatchObject({
       root: '.minecraft',
-      contentDir: '.minecraft/mods',
+      contentDir: path.join('.minecraft', 'mods'),
       gameVersion: '1.21.1',
       loader: 'neoforge',
       loaderVersion: '21.1.77',

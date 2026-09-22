@@ -26,7 +26,7 @@ describe('isInside / resolveInside', () => {
   })
 
   test('resolves relative paths and rejects traversal', () => {
-    expect(resolveInside('/inst', 'mods')).toBe('/inst/mods')
+    expect(resolveInside('/inst', 'mods')).toBe(path.resolve('/inst/mods'))
     expect(() => resolveInside('/inst', '../etc/passwd')).toThrow('outside')
     expect(() => resolveInside('/inst', '/etc/passwd')).toThrow('outside')
   })
@@ -115,7 +115,7 @@ describe('renameInside / moveToTrash', () => {
 
   test('renames, refusing to replace or leave the base', async () => {
     await renameInside(dir, 'mods/a.jar', 'mods/a.jar.disabled')
-    expect(await readdir(path.join(dir, 'mods'))).toEqual(['a.jar.disabled', 'b.jar'])
+    expect((await readdir(path.join(dir, 'mods'))).sort()).toEqual(['a.jar.disabled', 'b.jar'])
     await expect(renameInside(dir, 'mods/b.jar', 'mods/a.jar.disabled')).rejects.toMatchObject({
       code: 'CONFLICT',
     })

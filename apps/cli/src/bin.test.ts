@@ -78,6 +78,12 @@ test('serves the API with a session token and stops on SIGINT', async () => {
   expect((await fetch(new URL('/api/health', url))).status).toBe(401)
 
   proc.kill('SIGINT')
+  // Windows can't send a child process SIGINT: kill() ends it without running the handler. (A real
+  // Ctrl+C in the console does reach it.)
+  if (process.platform === 'win32') {
+    expect(await proc.exited).not.toBe(0)
+    return
+  }
   expect(await proc.exited).toBe(0)
   expect(await out.rest()).toContain('Server stopped.')
 })

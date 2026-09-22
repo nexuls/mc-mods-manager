@@ -6,7 +6,8 @@ const FIXTURES = path.join(import.meta.dir, 'fixtures')
 
 /**
  * Copies `test/fixtures/<name>` into a fresh temp dir, so tests never touch a real Minecraft folder
- * or the checked-in fixtures. `__ROOT__` in JSON files becomes the copy's absolute path.
+ * or the checked-in fixtures. `__ROOT__` in JSON files becomes the copy's absolute path (JSON-escaped:
+ * Windows paths have backslashes).
  * Use with `await using`.
  */
 export async function copyFixture(name: string) {
@@ -16,7 +17,8 @@ export async function copyFixture(name: string) {
     if (!rel.endsWith('.json')) continue
     const file = Bun.file(path.join(dir, rel))
     const text = await file.text()
-    if (text.includes('__ROOT__')) await Bun.write(file, text.replaceAll('__ROOT__', dir))
+    const escaped = JSON.stringify(dir).slice(1, -1)
+    if (text.includes('__ROOT__')) await Bun.write(file, text.replaceAll('__ROOT__', escaped))
   }
   return {
     dir,
