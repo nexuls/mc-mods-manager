@@ -1,0 +1,1 @@
+{"id":"NeoForge 1.21.1","jar":"1.21.1","type":"modified","libraries":[{"name":"net.neoforged.fancymodloader:loader:4.0.44"}],"arguments":{"game":["--username","${auth_player_name}",{"rules":[],"value":["--width","${resolution_width}"]},"--fml.neoForgeVersion","21.1.250","--fml.mcVersion","1.21.1","--launchTarget","forgeclient"]}}

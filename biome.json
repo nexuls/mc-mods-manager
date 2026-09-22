@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/dist", "!**/bun.lock", "!apps/web/src/components/ui"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/bun.lock",
+      "!apps/web/src/components/ui",
+      "!apps/cli/test/fixtures"
+    ]
   },
   "formatter": {
     "enabled": true,
