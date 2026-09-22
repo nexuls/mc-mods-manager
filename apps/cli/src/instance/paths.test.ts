@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { isInside, resolveInside, safeJarName, writeFileAtomic } from './paths'
+import {
+  isInside,
+  moveToTrash,
+  renameInside,
+  resolveInside,
+  safeJarName,
+  writeFileAtomic,
+} from './paths'
 
 describe('isInside / resolveInside', () => {
   test.each([
@@ -49,4 +56,32 @@ test('safeJarName', () => {
   expect(safeJarName('..\\..\\evil.jar')).toBe('evil.jar')
   expect(() => safeJarName('run.sh')).toThrow()
   expect(() => safeJarName('.hidden.jar')).toThrow()
+})
+
+describe('renameInside / moveToTrash', () => {
+  let dir: string
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), 'mc-mod-rename-'))
+    await Bun.write(path.join(dir, 'mods/a.jar'), 'a')
+    await Bun.write(path.join(dir, 'mods/b.jar'), 'b')
+  })
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('renames, refusing to replace or leave the base', async () => {
+    await renameInside(dir, 'mods/a.jar', 'mods/a.jar.disabled')
+    expect(await readdir(path.join(dir, 'mods'))).toEqual(['a.jar.disabled', 'b.jar'])
+    await expect(renameInside(dir, 'mods/b.jar', 'mods/a.jar.disabled')).rejects.toMatchObject({
+      code: 'CONFLICT',
+    })
+    await expect(renameInside(dir, 'mods/b.jar', '../b.jar')).rejects.toThrow('outside')
+  })
+
+  test('moves a file to .mc-mod/trash with a timestamp', async () => {
+    const dest = await moveToTrash(dir, path.join(dir, 'mods/a.jar'), 123)
+    expect(dest).toBe(path.join(dir, '.mc-mod/trash/123-a.jar'))
+    expect(await Bun.file(dest).text()).toBe('a')
+    expect(await readdir(path.join(dir, 'mods'))).toEqual(['b.jar'])
+  })
 })

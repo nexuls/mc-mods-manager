@@ -53,6 +53,16 @@ export async function scanJars(
   return { jars, cache: { version: JAR_CACHE_VERSION, files } }
 }
 
+/** Scans one file in `dir`; null if it isn't there. */
+export function scanJar(
+  dir: string,
+  fileName: string,
+  cache: JarCache | undefined,
+): Promise<ScannedJar | null> {
+  const cached = cache?.version === JAR_CACHE_VERSION ? cache.files : {}
+  return scanOne(path.join(dir, fileName), fileName, cached[enabledName(fileName)])
+}
+
 async function scanOne(
   file: string,
   fileName: string,

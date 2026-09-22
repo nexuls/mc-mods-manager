@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, rename, rm } from 'node:fs/promises'
+import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { AppError } from '../errors'
 
@@ -48,6 +48,37 @@ export async function writeFileAtomic(
     await rm(tmp, { force: true })
     throw err
   }
+}
+
+/**
+ * Renames `from` to `to`, both of which must be inside `base`. Fails with CONFLICT instead of replacing
+ * an existing file.
+ */
+export async function renameInside(base: string, from: string, to: string): Promise<void> {
+  const src = resolveInside(base, from)
+  const dest = resolveInside(base, to)
+  if (await stat(dest).catch(() => null)) {
+    throw new AppError('CONFLICT', `${path.basename(dest)} already exists`)
+  }
+  await mkdir(path.dirname(dest), { recursive: true })
+  try {
+    await rename(src, dest)
+  } catch (err) {
+    // A mods folder symlinked to another drive can't be renamed across devices; copy instead.
+    if (!(err instanceof Error && 'code' in err && err.code === 'EXDEV')) throw err
+    await copyFile(src, dest)
+    await rm(src)
+  }
+}
+
+/**
+ * Moves a file from the content dir to `<root>/.mc-mod/trash/<timestamp>-<name>` instead of deleting it.
+ * Returns the trash path.
+ */
+export async function moveToTrash(root: string, file: string, now = Date.now()): Promise<string> {
+  const dest = path.join(stateDir(root), 'trash', `${now}-${path.basename(file)}`)
+  await renameInside(root, file, dest)
+  return dest
 }
 
 /** Sanitizes a filename from a platform API to a plain `.jar` basename. */
