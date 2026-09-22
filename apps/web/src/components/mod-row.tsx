@@ -7,7 +7,6 @@ import {
 } from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
-  ChevronDownIcon,
   ExternalLinkIcon,
   LinkIcon,
   MoreHorizontalIcon,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { SideChip, SourceChip } from '@/components/mod-chips'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,10 +142,11 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
         {main ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant={main.method === 'launcher-metadata' ? 'outline' : 'secondary'}>
-                {providerLabel[main.provider]}
-                {other && ` +${providerLabel[other.provider]}`}
-              </Badge>
+              <SourceChip
+                provider={main.provider}
+                also={other?.provider}
+                className={cn(!mod.enabled && 'opacity-60')}
+              />
             </TooltipTrigger>
             <TooltipContent>
               {methodLabel[main.method]}
@@ -153,19 +154,18 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
             </TooltipContent>
           </Tooltip>
         ) : (
-          <Badge variant="outline">{mod.unlinked ? 'Local (by you)' : 'Local'}</Badge>
+          <SourceChip local={mod.unlinked ? 'Local (by you)' : 'Local'} />
         )}
       </TableCell>
 
       <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="-ml-2">
-              <span className={cn(mod.side === 'unknown' && 'text-amber-600 dark:text-amber-400')}>
-                {sideLabel[mod.side]}
-              </span>
-              <ChevronDownIcon />
-            </Button>
+            <SideChip
+              side={mod.side}
+              aria-label={`Side: ${sideLabel[mod.side]}. Change side`}
+              className={cn(!mod.enabled && 'opacity-60')}
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
@@ -197,7 +197,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
         />
       </TableCell>
 
-      <TableCell className="w-10">
+      <TableCell className="w-16">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`}>

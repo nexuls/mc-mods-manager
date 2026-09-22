@@ -28,8 +28,10 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   *Updates available* comes with Phase 7), buttons: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
 - Lookup warnings (e.g. Modrinth unreachable) show as an alert above the table.
 - Table (shadcn `Table`), sorted by name: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
-  badge, version, source badge (Modrinth/CurseForge/Local, with "+CurseForge" when on both; the tooltip says how it was found),
-  side (dropdown: Automatic / Client / Server / Both; unknown is highlighted), enabled `Switch`, row menu (Open on
+  badge, version, source chip (solid brand colour + logo: Modrinth green, CurseForge orange; the second provider's logo
+  is added when on both; Local is a quiet grey chip; the tooltip says how it was found),
+  side chip that opens a dropdown (Automatic / Client / Server / Both; solid colour + icon: client sky, server violet,
+  both teal, unknown amber), enabled `Switch`, row menu (Open on
   Modrinth/CurseForge, Updates from ▸ when on both, Link to project…, Treat as local / Identify automatically, Remove…).
   *Update available pill* and *Change version* come with Phase 7.
 - **Link dialog:** possible matches (same mod id, then name search) and a field for a Modrinth URL/slug/id. It can also remove a manual link.
