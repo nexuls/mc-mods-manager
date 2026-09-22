@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 3 — Instance detection (Phase 2 CLI skeleton & serving done).
+**Current phase:** 4 — Installed mods (Phase 3 instance detection done; jar metadata parsers already in).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -36,14 +36,14 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] `bun link` works; `mc-mod` opens the UI from any dir (browser opening checked by hand only: tests use `--no-open`)
 
 ## Phase 3 — Instance detection
-- [ ] Detectors: state override, Prism/MultiMC, CurseForge app, ATLauncher, Modrinth App, version json, server files, mods heuristic
-- [ ] `GET/PUT /api/instance`, setup dialog in UI
-- [ ] Fixture directories for each layout + tests
-- [ ] Resolve a `mods/`/`plugins/` target dir to its parent instance root
-- [ ] Manual test instance (dev): vanilla-launcher profile dir `NeoForge 1.21.1` (options.txt, 38 NeoForge 1.21.1 jars, no version json → mods heuristic)
+- [x] Detectors: state override, Prism/MultiMC, CurseForge app, ATLauncher, Modrinth App, version json (+ TLauncher `home/<id>`, `launcher_profiles.json` game dirs), server files, mods heuristic
+- [x] `GET/PUT /api/instance`, setup dialog in UI (+ header badge, startup summary in the terminal)
+- [x] Fixture directories for each layout + tests (`apps/cli/test/fixtures`, copied to a temp dir per test)
+- [x] Resolve a `mods/`/`plugins/` target dir to its parent instance root (also Prism game dirs and `versions/<id>`)
+- [x] Manual test instance (dev): `NeoForge 1.21.1` is a TLauncher `home/<id>` dir, so it resolves with high confidence from `versions/NeoForge 1.21.1/*.json` (NeoForge 21.1.250). The jar heuristic on its 38 jars also gives NeoForge 1.21.1 (30 of 34 agree)
 
 ## Phase 4 — Installed mods
-- [ ] Jar metadata parsers (fabric, quilt, forge, neoforge, mcmod.info, plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json)
+- [x] Jar metadata parsers (fabric, quilt, forge, neoforge, mcmod.info, plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json) — done in Phase 3 for the heuristic
 - [ ] sha1/sha512 + CurseForge murmur2 fingerprint (tested)
 - [ ] Hash cache in state.json
 - [ ] Identification pipeline (architecture §7.2): install record, Modrinth `/version_files`, launcher metadata (packwiz `.pw.toml`, CF `minecraftinstance.json`, ATLauncher), dual-source merge, compatibility check
@@ -86,3 +86,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Browser UI decision (D12); zod everywhere + shared API contract (D13, zod-contract.md). |
 | 2026-09-22 | Phase 1 scaffolding done: bun workspaces, web (Vite 8/React 19/Tailwind 4/shadcn radix-nova), shared, cli (Express 5), Biome, bun test, build pipeline. check/typecheck/test/build all pass. |
 | 2026-09-22 | Phase 2 done: shared contract (`defineEndpoint`, errors, `api.health`), `route()` adapter + error middleware, token/Host security, web `call()` client, `mc-mod` command with clack/picocolors terminal UI, port fallback, Chromium app mode, `--exit-on-close`, `.env` isolation. `bun link` verified. |
+| 2026-09-22 | Phase 3 done: version ranges (`lib/mc-version.ts`), jar metadata parsers (fflate), safe paths + `state.json`, detectors with fixtures, `GET/PUT /api/instance`, CLI startup summary, web header + setup dialog (checked with headless Chrome screenshots). |

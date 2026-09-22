@@ -35,9 +35,14 @@ If nothing is found, the UI starts in setup mode: pick version + loader, `mods/`
    - `minecraftinstance.json` → `gameVersion`, `baseModLoader.name` (e.g. `forge-47.2.0`, `fabric-0.15.0-1.20.1`).
    - `instance.json` (ATLauncher) → `id`/`minecraftVersion`, `launcher.loaderVersion`.
    - `profile.json` (Modrinth App) → `metadata.game_version`, `metadata.loader`.
-3. **Vanilla version json** – `versions/<id>/<id>.json`: `inheritsFrom` = game version,
-   `id`/`mainClass`/`libraries` reveal loader (`net.fabricmc:fabric-loader`, `net.neoforged`, `net.minecraftforge`,
-   `org.quiltmc`). When run at `.minecraft` root with several versions, list them and let the user pick.
+3. **Vanilla version json** – `versions/<id>/<id>.json`: `--fml.mcVersion` arg, else `inheritsFrom`, else `jar` = game version;
+   `libraries` (`net.fabricmc:fabric-loader`, `net.neoforged:neoforge`, `net.minecraftforge:forge`, `org.quiltmc:quilt-loader`)
+   and `--fml.neoForgeVersion`/`--fml.forgeVersion` args reveal the loader + version. The json is found by (in order):
+   - running inside `versions/<id>` (warns that `.minecraft/mods` is shared);
+   - TLauncher "separate directories": game dir `.minecraft/home/<id>` ↔ `.minecraft/versions/<id>` (high);
+   - `launcher_profiles.json` in the root or up to 4 levels above: profiles whose `gameDir` (default: the `.minecraft`
+     folder) is the instance → `lastVersionId` (high for its own game dir, medium at the `.minecraft` root, where the
+     most recently used profile wins and all modded versions become **suggestions** in the setup dialog).
 4. **Server files**
    - `.fabric/server/`, `fabric-server-launch.jar`, `.fabric-installer`, `fabric-server-launcher.properties`
    - `libraries/net/neoforged/neoforge/<ver>/`, `libraries/net/minecraftforge/forge/<mc>-<ver>/`,
@@ -47,14 +52,19 @@ If nothing is found, the UI starts in setup mode: pick version + loader, `mods/`
    - `velocity.toml` → Velocity; BungeeCord `config.yml` with `listeners:` → BungeeCord/Waterfall
    - Game version: `version_history.json` (Paper: `currentVersion` "git-Paper-123 (MC: 1.21.4)"),
      `versions/<mc>/` folder inside server dir, or server jar name `paper-1.21.4-123.jar`.
-5. **Mods heuristic** (`confidence: low`) – majority loader and game version across jar metadata in `mods/`
-   (e.g. `fabric.mod.json` `depends.minecraft`, `mods.toml` minecraft `versionRange`).
+5. **Mods heuristic** (`confidence: low`, only when 1–4 left version or loader unknown) – majority loader across jar
+   metadata in the content dir, then the release version accepted by the most of that loader's jars
+   (`fabric.mod.json` `depends.minecraft`, `mods.toml` minecraft `versionRange`; see `lib/mc-version.ts`). Warns how many
+   jars disagree.
 
-Client vs server: `server.properties` / `eula.txt` present → `server`, otherwise `client`.
+Client vs server: `server.properties` / `eula.txt` present (or proxy config) → `server`, otherwise `client`.
+
+Merging: per field, highest confidence wins, and on a tie the earlier detector wins. The loader version only comes from a finding with the same
+loader. Every detection is returned with the fields it supplied, so the Instance dialog can show where each value came from.
 
 ## Jar metadata parsers
 
-Open jars with a zip reader (e.g. `yauzl-promise` or `fflate`) and read only the needed entries.
+Jars are read into memory and unzipped with `fflate` (`unzipSync` with a filter for the entries below). See D16.
 
 | Entry | Loader | Useful fields |
 |---|---|---|

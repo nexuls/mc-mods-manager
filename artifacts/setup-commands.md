@@ -83,7 +83,7 @@ Express has no official TS scaffold (`express-generator` is JS/legacy), so start
 ```sh
 mkdir -p apps/cli && cd apps/cli
 bun init -y                      # creates package.json, tsconfig.json, index.ts → move to src/bin.ts
-bun add express commander open env-paths zod yauzl-promise yaml smol-toml
+bun add express commander open env-paths zod fflate yaml smol-toml   # fflate replaced yauzl-promise (D16)
 bun add @clack/prompts picocolors  # terminal UI (D15)
 bun add @mc-mod/shared@workspace:*
 bun add -d @types/express @types/bun typescript

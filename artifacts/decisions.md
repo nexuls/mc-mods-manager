@@ -82,3 +82,20 @@ Accepted.
   constant `true`, and `MC_MOD_DEV` is ignored when it is set. The shebang is `#!/usr/bin/env -S bun --no-env-file`, so
   a `.env` in the user's instance folder isn't loaded. Windows shim handling of `env -S` is unverified (Phase 9 testing).
 
+### D16 — Instance detection details
+Accepted.
+- **fflate instead of yauzl-promise** for reading jars. Phase 4 reads each jar's full bytes for hashing anyway, so
+  unzipping the same buffer in memory is simpler (one read, sync, no streams). Tests build jars in memory with `zipSync`,
+  so there are no binary fixtures.
+- **Extra version-json sources.** TLauncher's "separate directories" layout (`.minecraft/home/<id>` ↔ `versions/<id>`) and
+  `launcher_profiles.json` profiles whose `gameDir` is the instance give an exact version + loader with high confidence.
+  The mods heuristic only runs when these fail. At a `.minecraft` root, the most recently used profile wins (medium), and
+  every modded version in `versions/` is offered as a suggestion.
+- **Merge:** per field, highest confidence wins, and on a tie the earlier detector wins. The loader version is only taken from a
+  finding that reports the same loader. Overrides from `state.json` count as a high-confidence finding placed first.
+- **Mods heuristic:** majority loader across jars, then the game version that most of that loader's jars accept
+  (candidates are the release versions named in their ranges; ties go to exact pins, then the newest). Mixed folders are
+  common (the dev instance has 1.21.11 and 1.20.4 jars), and a "most jars accept" vote handles them without trusting any one jar.
+- **`PUT /api/instance` replaces the overrides** instead of merging them. The UI sends the whole form, and `{}` means "back to detection".
+  It re-detects before saving, so an invalid `contentDir` never reaches `state.json`.
+- **Plugin metadata never sets the game version**, because `api-version` is only a minimum.

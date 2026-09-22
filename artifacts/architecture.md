@@ -89,11 +89,15 @@ apps/cli/src/
 ├── config.ts               # global config (~/.config/mc-mod/config.json): CF API key, defaults
 ├── security.ts             # token middleware, host/origin checks
 ├── instance/
-│   ├── detect.ts           # figure out kind, MC version, loader from files on disk
+│   ├── layout.ts           # start dir → instance root + game dir (mods/, Prism game dir, versions/<id>)
+│   ├── detect.ts           # run detectors, merge per field by confidence, apply overrides
+│   ├── detectors/          # launchers, version-json, server, mods-heuristic (schemas at the top of each file)
 │   ├── state.ts            # .mc-mod/state.json read/write (lock-ish manifest)
-│   └── paths.ts            # safe path helpers (no traversal outside instance dir)
+│   └── paths.ts            # safe path helpers (no traversal outside instance dir), atomic writes
+├── lib/
+│   └── mc-version.ts       # version compare, Maven + Fabric ranges, "most jars accept" version vote
 ├── jar/
-│   ├── read-metadata.ts    # open jar (zip), dispatch to format parsers
+│   ├── read-metadata.ts    # unzip jar in memory (fflate), dispatch to format parsers
 │   ├── formats/            # fabric, quilt, forge (mods.toml), neoforge, legacy mcmod.info,
 │   │                       # bukkit plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json
 │   └── hash.ts             # Bun.CryptoHasher sha1/sha512 (Modrinth) + murmur2 fingerprint (CurseForge)
@@ -102,6 +106,7 @@ apps/cli/src/
 │   ├── modrinth.ts
 │   └── curseforge.ts
 ├── services/
+│   ├── instance.ts         # current Instance for this run; overrides → state.json → re-detect
 │   ├── library.ts          # list installed, identify, enable/disable/remove
 │   ├── installer.ts        # pick version, resolve deps, download, verify hash, write
 │   ├── updates.ts          # check updates for identified mods

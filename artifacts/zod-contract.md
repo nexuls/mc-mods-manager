@@ -13,8 +13,8 @@ Use Zod v4 (`import { z } from 'zod'`), and the same version in every workspace.
 | SSE event payloads | `packages/shared/src/contract/jobs.ts` | frontend event stream helper |
 | Domain model (`Instance`, `InstalledMod`, `Loader`, `Side`, …) | `packages/shared/src/domain/*` | reused by contract + backend |
 | Modrinth / CurseForge responses | `apps/cli/src/providers/<name>.schemas.ts` (private, not shared) | provider clients |
-| Jar metadata (`fabric.mod.json`, `mods.toml`, `plugin.yml`, …) | `apps/cli/src/jar/formats/*.schema.ts` | jar parsers (use `safeParse`, since broken jars are common) |
-| Launcher manifests (`mmc-pack.json`, `minecraftinstance.json`, …) | `apps/cli/src/instance/detectors/*.schema.ts` | detectors (`safeParse`) |
+| Jar metadata (`fabric.mod.json`, `mods.toml`, `plugin.yml`, …) | top of each `apps/cli/src/jar/formats/*.ts` | jar parsers (use `safeParse`, since broken jars are common) |
+| Launcher manifests (`mmc-pack.json`, `minecraftinstance.json`, …) | top of each `apps/cli/src/instance/detectors/*.ts` | detectors (`safeParse`) |
 | `.mc-mod/state.json`, global `config.json` | `packages/shared/src/domain/state.ts`, `config.ts` | backend (with `schemaVersion` migrations) |
 | CLI args + env vars (`--port`, `CURSEFORGE_API_KEY`, `MC_MOD_DEV`) | `apps/cli/src/env.ts` | `bin.ts` at startup (commander parses, zod validates) |
 | Forms (instance setup, settings) | shared request schema, reused | react-hook-form + `@hookform/resolvers/zod` (shadcn `Field`) |
