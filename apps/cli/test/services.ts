@@ -38,13 +38,14 @@ export function makeServices(o: ServiceOptions) {
       async () => new Response('{}', { status: 404 }),
     )
   const library = new LibraryService({ instance, modrinth, curseforge, config, now })
-  const catalog = new CatalogService(instance, modrinth, config)
+  const catalog = new CatalogService(instance, modrinth, curseforge, config)
   const jobs = new JobService()
   const installer = new InstallerService({
     instance,
     library,
     catalog,
     modrinth,
+    curseforge,
     jobs,
     fetch: o.fetch,
     now,

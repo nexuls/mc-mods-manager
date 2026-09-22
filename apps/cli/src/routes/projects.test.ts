@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import path from 'node:path'
 import { ApiErrorSchema, api, type ProjectVersion, TOKEN_HEADER } from '@mc-mod/shared'
+import { type FakeCurseForge, fakeCurseForge } from '../../test/fake-curseforge'
 import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { listen } from '../../test/http'
@@ -35,7 +36,7 @@ const version = (over: Partial<ProjectVersion>): ProjectVersion => ({
 })
 
 /** The prism fixture is a Fabric 1.21.4 instance. */
-async function setup() {
+async function setup(curseforge?: FakeCurseForge) {
   const f = await copyFixture('prism')
   const fake = fakeModrinth({
     projects: [sodium],
@@ -49,7 +50,7 @@ async function setup() {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: makeServices({ instance, modrinth: fake.modrinth }),
+    services: makeServices({ instance, modrinth: fake.modrinth, curseforge }),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
     onInternalError: (err) => {
@@ -102,6 +103,38 @@ test('CurseForge is disabled until a key is set', async () => {
   const res = await t.get('/api/search?provider=curseforge')
   expect(res.status).toBe(409)
   expect(ApiErrorSchema.parse(await res.json()).error.code).toBe('PROVIDER_DISABLED')
+})
+
+test('CurseForge with a key: search, project, compatible versions only, categories', async () => {
+  const cfv = (id: string, loaders: string[]): ProjectVersion =>
+    version({ provider: 'curseforge', id, projectId: '238222', loaders })
+  const cf = fakeCurseForge({
+    projects: [{ id: '238222', slug: 'jei', title: 'JEI', description: '', side: 'unknown' }],
+    versions: [cfv('1', ['fabric']), cfv('2', ['forge'])],
+  })
+  await using t = await setup(cf.curseforge)
+  const search = api.projects.search.response.parse(
+    await (await t.get('/api/search?provider=curseforge&q=jei')).json(),
+  )
+  expect(search.hits.map((h) => [h.provider, h.id])).toEqual([['curseforge', '238222']])
+  const page = api.projects.project.response.parse(
+    await (await t.get('/api/projects/curseforge/jei')).json(),
+  )
+  expect(page.id).toBe('238222')
+  const { versions } = api.projects.versions.response.parse(
+    await (await t.get('/api/projects/curseforge/238222/versions')).json(),
+  )
+  // CurseForge can't filter on every loader, so the Forge file is dropped here.
+  expect(versions.map((v) => [v.id, v.recommended])).toEqual([['1', true]])
+  const all = api.projects.versions.response.parse(
+    await (await t.get('/api/projects/curseforge/238222/versions?all=true')).json(),
+  )
+  expect(all.versions).toHaveLength(2)
+  const cats = api.meta.categories.response.parse(
+    await (await t.get('/api/meta/categories?kind=mod&provider=curseforge')).json(),
+  )
+  expect(cats.categories[0]?.name).toBe('map-information')
+  expect((await t.get('/api/projects/curseforge/999')).status).toBe(404)
 })
 
 test('bad query values are a 400', async () => {

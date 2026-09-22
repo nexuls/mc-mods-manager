@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ContentKind } from '../domain/loader'
+import { Provider } from '../domain/mod'
 import { Category } from '../domain/project'
 import { defineEndpoint } from './define'
 import { QueryBool } from './query'
@@ -12,10 +13,10 @@ export const gameVersions = defineEndpoint({
   response: z.strictObject({ versions: z.array(z.string()) }),
 })
 
-/** Browse categories for mods or plugins. */
+/** Browse categories for mods or plugins on a platform. */
 export const categories = defineEndpoint({
   method: 'GET',
   path: '/api/meta/categories',
-  query: z.strictObject({ kind: ContentKind }),
+  query: z.strictObject({ kind: ContentKind, provider: Provider.default('modrinth') }),
   response: z.strictObject({ categories: z.array(Category) }),
 })

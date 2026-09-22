@@ -15,6 +15,6 @@ export function projectsRoutes(router: Router, deps: { catalog: CatalogService }
     versions: await deps.catalog.gameVersions(query.includeSnapshots),
   }))
   route(router, api.meta.categories, async ({ query }) => ({
-    categories: await deps.catalog.categories(query.kind),
+    categories: await deps.catalog.categories(query.provider, query.kind),
   }))
 }

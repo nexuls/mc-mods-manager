@@ -8,6 +8,7 @@ import {
   type ProjectVersion,
   TOKEN_HEADER,
 } from '@mc-mod/shared'
+import { fakeCurseForge } from '../../test/fake-curseforge'
 import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { listen } from '../../test/http'
@@ -55,7 +56,10 @@ const version = (over: Partial<ProjectVersion> = {}): ProjectVersion => ({
   ...over,
 })
 
-async function setup(versions: ProjectVersion[] = [version()]) {
+async function setup(
+  versions: ProjectVersion[] = [version()],
+  curseforge?: ReturnType<typeof fakeCurseForge>['curseforge'],
+) {
   const f = await copyFixture('prism')
   const fake = fakeModrinth({ projects: [lithium], versions })
   const downloads: string[] = []
@@ -63,6 +67,7 @@ async function setup(versions: ProjectVersion[] = [version()]) {
     instance: await InstanceService.load(f.dir),
     modrinth: fake.modrinth,
     now: () => 1000,
+    curseforge,
     fetch: async (url) => {
       downloads.push(url)
       return new Response(jar)
@@ -87,7 +92,9 @@ async function setup(versions: ProjectVersion[] = [version()]) {
     })
 
   /** Starts an install and collects its events until `done`. */
-  const install = async (items: { versionId: string }[]): Promise<JobEvent[]> => {
+  const install = async (
+    items: { versionId: string; provider?: string; projectId?: string }[],
+  ): Promise<JobEvent[]> => {
     const res = await request('POST', '/api/install', {
       items: items.map((i) => ({ provider: 'modrinth', projectId: lithium.id, ...i })),
     })
@@ -178,4 +185,47 @@ test('unknown versions and jobs are 404s', async () => {
   const job = await t.request('GET', `/api/jobs/${crypto.randomUUID()}/events`)
   expect(job.status).toBe(404)
   expect((await t.request('GET', '/api/jobs/not-a-uuid/events')).status).toBe(400)
+})
+
+test('installs from CurseForge (sha1 only) and fails manual-only files cleanly', async () => {
+  const cfFile = (id: string, url: string | null): ProjectVersion => ({
+    ...version(),
+    provider: 'curseforge',
+    id,
+    projectId: '394468',
+    file: {
+      name: `cf-${id}.jar`,
+      url: url && 'https://edge.forgecdn.net/files/5/1/cf.jar',
+      size: jar.length,
+      sha1: hashes.sha1,
+    },
+    pageUrl: `https://www.curseforge.com/minecraft/mc-mods/lithium/files/${id}`,
+  })
+  const cf = fakeCurseForge({
+    projects: [{ ...lithium, id: '394468' }],
+    versions: [cfFile('51', 'yes'), cfFile('52', null)],
+  })
+  await using t = await setup([], cf.curseforge)
+  const events = await t.install([
+    { provider: 'curseforge', projectId: '394468', versionId: '51' },
+    { provider: 'curseforge', projectId: '394468', versionId: '52' },
+  ])
+  expect(events.filter((e) => e.type !== 'progress')).toEqual([
+    { type: 'item-done', index: 0, fileName: 'cf-51.jar', skipped: false },
+    {
+      type: 'item-failed',
+      index: 1,
+      code: 'MANUAL_DOWNLOAD_REQUIRED',
+      message: 'The author only allows downloading cf-52.jar from the CurseForge website',
+    },
+    { type: 'done', installed: 1, failed: 1 },
+  ])
+  expect(t.downloads).toEqual(['https://edge.forgecdn.net/files/5/1/cf.jar'])
+  const { state } = await readState(t.dir)
+  expect(state.mods?.[hashes.sha1]?.sources?.[0]).toMatchObject({
+    provider: 'curseforge',
+    projectId: '394468',
+    versionId: '51',
+    method: 'install-record',
+  })
 })

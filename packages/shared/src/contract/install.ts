@@ -13,8 +13,10 @@ export type PlanRole = z.infer<typeof PlanRole>
  * - `install`: will be downloaded (optional ones only when the user ticks them)
  * - `installed`: already in the content dir, skipped
  * - `unavailable`: no version fits the instance; see `reason`
+ * - `manual`: a version fits, but its author only allows downloads from the platform's website
+ *   (CurseForge); the user downloads it from `pageUrl` into the content dir
  */
-export const PlanStatus = z.enum(['install', 'installed', 'unavailable'])
+export const PlanStatus = z.enum(['install', 'installed', 'unavailable', 'manual'])
 export type PlanStatus = z.infer<typeof PlanStatus>
 
 export const PlanItem = z.strictObject({
@@ -34,8 +36,10 @@ export const PlanItem = z.strictObject({
   requiredBy: z.array(z.string()),
   /** A less direct fit, e.g. `Fabric build` on Quilt. */
   note: z.string().optional(),
-  /** Why it's unavailable, or the file it's installed as. */
+  /** Why it's unavailable or manual, or the file it's installed as. */
   reason: z.string().optional(),
+  /** The version's page on the platform, for `manual` items. */
+  pageUrl: z.string().optional(),
 })
 export type PlanItem = z.infer<typeof PlanItem>
 

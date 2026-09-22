@@ -56,7 +56,7 @@ export async function run(argv: readonly string[]): Promise<void> {
   const modrinth = new ModrinthProvider()
   const curseforge = new CurseForgeProvider(() => config.curseforgeKey())
   const library = new LibraryService({ instance, modrinth, curseforge, config })
-  const catalog = new CatalogService(instance, modrinth, config)
+  const catalog = new CatalogService(instance, modrinth, curseforge, config)
   const jobs = new JobService()
   const { app } = createApp({
     auth,
@@ -71,6 +71,7 @@ export async function run(argv: readonly string[]): Promise<void> {
         library,
         catalog,
         modrinth,
+        curseforge,
         jobs,
         onInternalError: terminal.internalError,
       }),

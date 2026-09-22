@@ -1,30 +1,43 @@
 import { rm, stat } from 'node:fs/promises'
 import path from 'node:path'
-import type {
-  InstallBody,
-  InstalledMod,
-  ModSource,
-  PlanBody,
-  PlanItem,
-  PlanResponse,
-  PlanRole,
-  ProjectVersion,
-  RankedVersion,
+import {
+  contentDirName,
+  type InstallBody,
+  type InstalledMod,
+  type ModSource,
+  type PlanBody,
+  type PlanItem,
+  type PlanResponse,
+  type PlanRole,
+  type ProjectVersion,
+  type Provider,
+  providerLabel,
+  type RankedVersion,
 } from '@mc-mod/shared'
 import { AppError } from '../errors'
 import { renameInside, resolveInside, safeJarName, stateDir } from '../instance/paths'
 import { updateState } from '../instance/state'
 import { hashBytes } from '../jar/hash'
 import { downloadVerified } from '../lib/download'
+import type { CurseForgeProvider } from '../providers/curseforge'
 import { type ModrinthProvider, USER_AGENT } from '../providers/modrinth'
 import type { Fetch, ProjectInfo } from '../providers/types'
-import { type CatalogService, requireModrinth } from './catalog'
+import type { CatalogService } from './catalog'
+import { projectKey } from './identify'
 import type { InstanceService } from './instance'
 import type { Job, JobService } from './jobs'
 import type { LibraryService } from './library'
 import { rankVersions } from './versions'
 
 type Modrinth = Pick<ModrinthProvider, 'getProject' | 'getProjects' | 'getVersionsByIds'>
+type CurseForge = Pick<CurseForgeProvider, 'getProject' | 'getProjects' | 'getVersionsByIds'>
+
+/** What installing needs from a platform. */
+interface Platform {
+  getProject(id: string): Promise<ProjectInfo | null>
+  getProjects(ids: readonly string[]): Promise<Map<string, ProjectInfo>>
+  getVersionsByIds(ids: readonly string[]): Promise<Map<string, ProjectVersion>>
+}
 
 /** Progress events per item are sent at most this often. */
 const PROGRESS_INTERVAL_MS = 150
@@ -34,6 +47,7 @@ export interface InstallerDeps {
   library: Pick<LibraryService, 'list'>
   catalog: Pick<CatalogService, 'bestVersion' | 'versionContext' | 'describeTarget'>
   modrinth: Modrinth
+  curseforge: CurseForge
   jobs: JobService
   /** Downloads; tests pass a fake. */
   fetch?: Fetch
@@ -49,35 +63,53 @@ const MAX_PLAN_ITEMS = 60
 export class InstallerService {
   private readonly library: InstallerDeps['library']
   private readonly catalog: InstallerDeps['catalog']
-  private readonly modrinth: Modrinth
 
   constructor(private readonly deps: InstallerDeps) {
     this.library = deps.library
     this.catalog = deps.catalog
-    this.modrinth = deps.modrinth
+  }
+
+  /** CurseForge calls fail with PROVIDER_DISABLED on their own while there's no key. */
+  private platform(provider: Provider): Platform {
+    if (provider === 'modrinth') return this.deps.modrinth
+    const cf = this.deps.curseforge
+    return {
+      // Slugs are only unique within a class on CurseForge.
+      getProject: (id) => cf.getProject(id, this.deps.instance.instance.contentKind),
+      getProjects: (ids) => cf.getProjects(ids),
+      getVersionsByIds: (ids) => cf.getVersionsByIds(ids),
+    }
   }
 
   /**
    * Resolves a project and its dependencies without touching disk. Required dependencies are followed
    * recursively; optional ones are listed for the main project only, and aren't followed. Projects that
-   * are already installed (by Modrinth project id) are listed as `installed` and not followed either.
+   * are already installed (by project id on that platform) are listed as `installed` and not followed
+   * either. Dependencies are on the same platform as the project.
    */
   async plan(body: PlanBody): Promise<PlanResponse> {
-    requireModrinth(body.provider)
+    const { provider } = body
+    const platform = this.platform(provider)
     const target = this.catalog.describeTarget()
     const { mods } = await this.library.list()
-    const installed = new Map<string, InstalledMod>()
+    const installedMods = new Map<string, InstalledMod>()
     for (const m of mods) {
-      for (const s of m.sources) if (s.provider === 'modrinth') installed.set(s.projectId, m)
+      for (const s of m.sources) installedMods.set(projectKey(s.provider, s.projectId), m)
+    }
+    const installed = {
+      get: (id: string) => installedMods.get(projectKey(provider, id)),
+      has: (id: string) => installedMods.has(projectKey(provider, id)),
     }
 
-    const main = await this.modrinth.getProject(body.projectId)
-    if (!main) throw new AppError('NOT_FOUND', `No Modrinth project "${body.projectId}"`)
+    const main = await platform.getProject(body.projectId)
+    if (!main) {
+      throw new AppError('NOT_FOUND', `No ${providerLabel[provider]} project "${body.projectId}"`)
+    }
 
     const warnings: string[] = []
     let mainVersion: RankedVersion | undefined
     if (body.versionId) {
-      const v = (await this.modrinth.getVersionsByIds([body.versionId])).get(body.versionId)
+      const v = (await platform.getVersionsByIds([body.versionId])).get(body.versionId)
       if (!v || v.projectId !== main.id) {
         throw new AppError('NOT_FOUND', `${main.title} has no version "${body.versionId}"`)
       }
@@ -86,7 +118,7 @@ export class InstallerService {
         warnings.push(`${main.title} ${v.versionNumber} isn't made for ${target}.`)
       }
     } else {
-      mainVersion = await this.catalog.bestVersion(main.id)
+      mainVersion = await this.catalog.bestVersion(provider, main.id)
     }
 
     const items: PlanItem[] = []
@@ -102,14 +134,15 @@ export class InstallerService {
       requiredBy: string | undefined,
     ): PlanItem => {
       const have = installed.get(project.id)
+      const manual = version?.file && !version.file.url
       const item: PlanItem = {
-        provider: 'modrinth',
+        provider,
         projectId: project.id,
         slug: project.slug || undefined,
         title: project.title,
         iconUrl: project.iconUrl,
         role,
-        status: have ? 'installed' : version ? 'install' : 'unavailable',
+        status: have ? 'installed' : !version ? 'unavailable' : manual ? 'manual' : 'install',
         side: version?.side ?? project.side,
         requiredBy: requiredBy ? [requiredBy] : [],
       }
@@ -121,6 +154,15 @@ export class InstallerService {
         item.fileName = version.file?.name
         item.size = version.file?.size
         item.note = version.note
+        if (manual) {
+          item.pageUrl = version.pageUrl
+          item.reason = `Download by hand from ${providerLabel[provider]}`
+          if (role !== 'optional') {
+            warnings.push(
+              `${project.title}'s author only allows downloads from the ${providerLabel[provider]} website. Download it there and put it in the ${contentDirName[this.deps.instance.instance.contentKind]} folder.`,
+            )
+          }
+        }
         if (role === 'optional') optionalVersions.set(project.id, version)
         else queue.push({ version, item })
       } else {
@@ -142,10 +184,10 @@ export class InstallerService {
 
     for (let next = queue.shift(); next; next = queue.shift()) {
       const { version, item: parent } = next
-      const deps = await this.resolveDependencyProjects(version)
+      const deps = await this.resolveDependencyProjects(platform, version)
       const wanted = deps.filter((d) => !byProject.has(d.projectId)).map((d) => d.projectId)
       const projects: ReadonlyMap<string, ProjectInfo> =
-        wanted.length > 0 ? await this.modrinth.getProjects(wanted) : new Map()
+        wanted.length > 0 ? await platform.getProjects(wanted) : new Map()
 
       for (const dep of deps) {
         if (dep.type === 'incompatible') {
@@ -186,7 +228,7 @@ export class InstallerService {
         }
         const version = installed.has(dep.projectId)
           ? undefined
-          : await this.catalog.bestVersion(dep.projectId)
+          : await this.catalog.bestVersion(provider, dep.projectId)
         add(project, dep.type, version, parent.title)
       }
     }
@@ -198,19 +240,29 @@ export class InstallerService {
    * Returns the job id right away; progress comes as job events.
    */
   async install(body: InstallBody): Promise<{ jobId: string }> {
-    for (const item of body.items) requireModrinth(item.provider)
-    const versions = await this.modrinth.getVersionsByIds(body.items.map((i) => i.versionId))
+    const versions = new Map<string, ProjectVersion>()
+    const projects = new Map<string, ProjectInfo>()
+    for (const provider of new Set(body.items.map((i) => i.provider))) {
+      const platform = this.platform(provider)
+      const ids = body.items.filter((i) => i.provider === provider).map((i) => i.versionId)
+      for (const [id, v] of await platform.getVersionsByIds(ids)) {
+        versions.set(projectKey(provider, id), v)
+      }
+      // Titles and icons for the install records; only nice to have.
+      const found = await platform
+        .getProjects(
+          [...versions.values()].filter((v) => v.provider === provider).map((v) => v.projectId),
+        )
+        .catch(() => new Map<string, ProjectInfo>())
+      for (const [id, p] of found) projects.set(projectKey(provider, id), p)
+    }
     const list = body.items.map((item) => {
-      const version = versions.get(item.versionId)
+      const version = versions.get(projectKey(item.provider, item.versionId))
       if (!version || version.projectId !== item.projectId) {
         throw new AppError('NOT_FOUND', `Version ${item.versionId} of ${item.projectId} not found`)
       }
       return version
     })
-    // Titles and icons for the install records; only nice to have.
-    const projects = await this.modrinth
-      .getProjects(list.map((v) => v.projectId))
-      .catch(() => new Map<string, ProjectInfo>())
 
     const job = this.deps.jobs.create()
     void this.run(job, list, projects)
@@ -226,7 +278,8 @@ export class InstallerService {
     let failed = 0
     for (const [index, version] of versions.entries()) {
       try {
-        const done = await this.installOne(job, index, version, projects.get(version.projectId))
+        const project = projects.get(projectKey(version.provider, version.projectId))
+        const done = await this.installOne(job, index, version, project)
         job.emit({ type: 'item-done', index, ...done })
         installed++
       } catch (err) {
@@ -261,7 +314,7 @@ export class InstallerService {
     if (!url) {
       throw new AppError(
         'MANUAL_DOWNLOAD_REQUIRED',
-        `The author only allows downloading ${fileName} from the platform's website`,
+        `The author only allows downloading ${fileName} from the ${providerLabel[version.provider]} website`,
         { pageUrl: version.pageUrl },
       )
     }
@@ -345,12 +398,13 @@ export class InstallerService {
 
   /** A version's non-embedded dependencies, with the project id looked up for version-only ones. */
   private async resolveDependencyProjects(
+    platform: Platform,
     version: ProjectVersion,
   ): Promise<{ projectId: string; type: 'required' | 'optional' | 'incompatible' }[]> {
     const deps = version.dependencies.filter((d) => d.type !== 'embedded')
     const versionOnly = deps.flatMap((d) => (!d.projectId && d.versionId ? [d.versionId] : []))
     const byVersion: ReadonlyMap<string, ProjectVersion> =
-      versionOnly.length > 0 ? await this.modrinth.getVersionsByIds(versionOnly) : new Map()
+      versionOnly.length > 0 ? await platform.getVersionsByIds(versionOnly) : new Map()
     return deps.flatMap((d) => {
       const projectId = d.projectId ?? (d.versionId ? byVersion.get(d.versionId)?.projectId : null)
       if (!projectId || projectId === version.projectId || d.type === 'embedded') return []

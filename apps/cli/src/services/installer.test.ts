@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import path from 'node:path'
 import type { ProjectVersion, VersionDependency } from '@mc-mod/shared'
+import { fakeCurseForge } from '../../test/fake-curseforge'
 import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { makeJar } from '../../test/jar'
@@ -162,5 +163,81 @@ describe('plan', () => {
       reason: 'No version for Fabric 1.21.4',
     })
     expect(res.warnings).toEqual(['MAIN mod has no version for Fabric 1.21.4.'])
+  })
+})
+
+describe('plan on CurseForge', () => {
+  const cfVersion = (projectId: string, deps: VersionDependency[] = [], url: string | null = 'x') =>
+    version(projectId, deps, {
+      provider: 'curseforge',
+      id: `${projectId}0`,
+      loaders: ['fabric'],
+      file: {
+        name: `cf-${projectId}.jar`,
+        url: url && 'https://edge.forgecdn.net/files/1/2/x.jar',
+        size: 9,
+        sha1: 'a'.repeat(40),
+      },
+      pageUrl: `https://www.curseforge.com/minecraft/mc-mods/p${projectId}/files/${projectId}0`,
+    })
+
+  async function cfSetup() {
+    const f = await copyFixture('prism')
+    await Bun.write(path.join(f.dir, 'minecraft/mods/have-1.0.jar'), installedJar)
+    const cf = fakeCurseForge({
+      projects: ['100', '200', '300', '400'].map((id) => project(id)),
+      versions: [
+        cfVersion('100', [req('200'), req('300'), req('400')]),
+        cfVersion('200'),
+        cfVersion('300', [], null),
+      ],
+      matches: {
+        [hashBytes(installedJar).cfFingerprint]: {
+          projectId: '400',
+          versionId: '4000',
+          versionNumber: '1',
+          loaders: ['fabric'],
+          gameVersions: ['1.21.4'],
+        },
+      },
+    })
+    const services = makeServices({
+      instance: await InstanceService.load(f.dir),
+      modrinth: fakeModrinth().modrinth,
+      curseforge: cf.curseforge,
+    })
+    return { installer: services.installer, [Symbol.asyncDispose]: f[Symbol.asyncDispose] }
+  }
+
+  test('follows deps on CurseForge; no download URL means a manual item', async () => {
+    await using t = await cfSetup()
+    const { items, warnings } = await t.installer.plan({
+      provider: 'curseforge',
+      projectId: '100',
+    })
+    expect(items.map((i) => [i.provider, i.projectId, i.status])).toEqual([
+      ['curseforge', '100', 'install'],
+      ['curseforge', '200', 'install'],
+      ['curseforge', '300', 'manual'],
+      ['curseforge', '400', 'installed'],
+    ])
+    expect(items[2]).toMatchObject({
+      pageUrl: 'https://www.curseforge.com/minecraft/mc-mods/p300/files/3000',
+      reason: 'Download by hand from CurseForge',
+    })
+    expect(warnings).toEqual([
+      "300 mod's author only allows downloads from the CurseForge website. Download it there and put it in the mods folder.",
+    ])
+  })
+
+  test('without a key CurseForge plans are PROVIDER_DISABLED', async () => {
+    await using f = await copyFixture('prism')
+    const services = makeServices({
+      instance: await InstanceService.load(f.dir),
+      modrinth: fakeModrinth().modrinth,
+    })
+    expect(
+      services.installer.plan({ provider: 'curseforge', projectId: '100' }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_DISABLED' })
   })
 })
