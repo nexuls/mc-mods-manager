@@ -35,6 +35,8 @@ export function AppNav() {
             cn(
               'text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4',
               (isActive || (also && pathname.startsWith(also))) && 'bg-muted text-foreground',
+              // Wide screens show Installed and Browse together.
+              library && inLibrary && 'xl:bg-muted xl:text-foreground',
             )
           }
         >

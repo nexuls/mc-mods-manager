@@ -23,9 +23,21 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 
 ## Views
 
+### Installed + Browse (`/`, `/browse`)
+- One **search bar** above both lists (large, `h-12`): search icon (a spinner while the catalog search runs or the
+  debounce waits), a clear button when there is text, and a `Ctrl K` / `⌘K` hint when empty and unfocused.
+  `Ctrl+K` / `⌘K`, or `/` outside other inputs, focuses it; Escape clears it, a second Escape leaves it; Enter searches
+  right away. The text filters Installed as you type and searches Browse after 300ms. It lives in `?q=`, and the nav
+  keeps the query when moving between the two routes.
+- **Wide screens (≥ `xl`, 1280px):** both routes show Installed and Browse side by side, each with its own scrolling list
+  below its title and filters (pagination stays pinned under the results); both nav items are highlighted. The page is
+  up to 1536px wide. Narrower: each route shows its own list, with the same search bar.
+- Both lists adapt to their own width (container queries): Installed moves the version into the file-name line below
+  768px and drops the Side column below 576px; Browse cards use a smaller icon and title and hide follows below 576px.
+
 ### Installed (`/`)
-- Toolbar: search filter, filter chips with counts (All / Disabled / Unidentified / Incompatible / Client-only / Server-side;
-  *Updates available* comes with Phase 7), buttons: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
+- Toolbar: filter chips with counts (All / Disabled / Unidentified / Incompatible / Client-only / Server-side;
+  *Updates available* comes with Phase 7); buttons next to the title: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
 - Lookup warnings (e.g. Modrinth unreachable) show as an alert above the table.
 - Table (shadcn `Table`), sorted by name by default; Name, Source (Modrinth, CurseForge, Local), Side (client, server,
   both, unknown) and Enabled (enabled first) headers sort on click, again to reverse, ties by name A→Z. Columns: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
@@ -45,7 +57,7 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - Provider tabs: Modrinth | CurseForge (provider in the URL; switching clears the category). Without a key the CurseForge tab
   shows a "needs an API key" state with a button to Settings. A pasted CurseForge page URL or project id shows an "Open
   CurseForge project" card above the results, since some keys can't search (the results area then explains that).
-- Search input (debounced 300ms), sort select, category filter, "Show incompatible" toggle. The line under the title says
+- The shared search bar (above), sort select, category filter, "Show incompatible" toggle. The line under the title says
   what the server filtered on ("Showing NeoForge mods for 1.21.1"). All of it lives in the URL.
 - Result cards (Modrinth-app style): large icon; title (links to the project page) + "by author"; two-line summary;
   a row of neutral tags: side (with its icon, left out when unknown), up to two categories, then `+N` for the rest

@@ -40,14 +40,30 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Installed {contentLabel}</h1>
-        <p className="text-muted-foreground text-sm">
-          {mods.data
-            ? `${all.length} ${all.length === 1 ? 'file' : 'files'} in the ${contentLabel} folder`
-            : `Everything in the ${contentLabel} folder`}
-        </p>
+    // Split view (xl): the table scrolls on its own below the title and filters.
+    <div className="flex flex-col gap-6 xl:h-full xl:min-h-0">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Installed {contentLabel}</h1>
+          <p className="text-muted-foreground text-sm">
+            {mods.data
+              ? `${all.length} ${all.length === 1 ? 'file' : 'files'} in the ${contentLabel} folder`
+              : `Everything in the ${contentLabel} folder`}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          disabled={refresh.isPending || mods.isPending}
+          onClick={() =>
+            refresh.mutate(undefined, {
+              onSuccess: (r) => toast.success(`Checked ${r.mods.length} files`),
+              onError: (err) => toast.error(errorMessage(err)),
+            })
+          }
+        >
+          <RefreshCwIcon className={refresh.isPending ? 'animate-spin' : undefined} />
+          Refresh
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -65,20 +81,6 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <Button
-          variant="outline"
-          className="ml-auto"
-          disabled={refresh.isPending || mods.isPending}
-          onClick={() =>
-            refresh.mutate(undefined, {
-              onSuccess: (r) => toast.success(`Checked ${r.mods.length} files`),
-              onError: (err) => toast.error(errorMessage(err)),
-            })
-          }
-        >
-          <RefreshCwIcon className={refresh.isPending ? 'animate-spin' : undefined} />
-          Refresh
-        </Button>
       </div>
 
       {mods.data?.warnings.map((w) => (
@@ -118,7 +120,7 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
           </Button>
         </div>
       ) : (
-        <div className="bg-card overflow-hidden rounded-xl border">
+        <div className="bg-card overflow-hidden rounded-xl border xl:min-h-0 xl:overflow-y-auto">
           <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
             <TableHeader className="bg-muted/40">
               <TableRow>
@@ -126,11 +128,11 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
                 <SortableHead column="name" sort={sort} onSort={onSort}>
                   Name
                 </SortableHead>
-                <TableHead>Version</TableHead>
+                <TableHead className="@max-3xl:hidden">Version</TableHead>
                 <SortableHead column="source" sort={sort} onSort={onSort}>
                   Source
                 </SortableHead>
-                <SortableHead column="side" sort={sort} onSort={onSort}>
+                <SortableHead column="side" sort={sort} onSort={onSort} className="@max-xl:hidden">
                   Side
                 </SortableHead>
                 <SortableHead column="enabled" sort={sort} onSort={onSort}>

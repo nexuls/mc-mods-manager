@@ -194,3 +194,14 @@ Accepted.
 - **Suggestions** come from both platforms (up to 6 Modrinth, then up to 4 CurseForge); CurseForge failures are skipped.
 - **Web:** API errors are retried once instead of three times (a rejected key answered quickly but showed ~7 s late), and
   the page sends no referrer, which fixed imgur images in descriptions.
+
+### D22 — Installed and Browse side by side, one search bar
+- **One `LibraryView` for `/` and `/browse`.** From `xl` (1280px) it shows both lists side by side; below that, the route
+  picks one. The split is decided with `matchMedia` rather than CSS `hidden`, so a narrow Installed page doesn't also run
+  a catalog search it never shows. The routes stay separate so narrow screens, links and project-page "back" keep working.
+- **The search text is shared and lives in `?q=`.** Installed filters on the live text; Browse reads the debounced URL
+  value. The nav carries the query between the two routes. The same URL on `/` keeps Browse's provider, sort and page.
+- **Each list scrolls on its own** in the split, so a long installed list and the search results can be compared at
+  any depth; the page is sized to the viewport there (a fixed `100svh - 8rem`, the header plus padding).
+- **Container queries** (Tailwind v4 `@container`) instead of viewport breakpoints for the table columns and result
+  cards, because a pane's width depends on the split, not the window. The page max width grew from 1280px to 1536px.

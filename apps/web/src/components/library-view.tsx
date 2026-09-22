@@ -5,13 +5,20 @@ import { useSearchParams } from 'react-router'
 import { BrowseView } from '@/components/browse-view'
 import { InstalledView } from '@/components/installed-view'
 import { SearchBar } from '@/components/search-bar'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { parseBrowseParams, toBrowseParams } from '@/lib/browse'
 
 const SEARCH_DEBOUNCE_MS = 300
+/**
+ * Tailwind's `xl`. From here up both lists show side by side, and the `xl:` classes in InstalledView and
+ * BrowseView give each its own scrolling list.
+ */
+const SPLIT_QUERY = '(min-width: 80rem)'
 
 /**
- * Installed and Browse behind one search bar. The text filters the installed list as you type and
- * searches the catalog after a pause; it lives in the URL (`?q=`), so it carries over between the two.
+ * Installed and Browse behind one search bar, side by side on wide screens (`pane` picks one otherwise).
+ * The text filters the installed list as you type and searches the catalog after a pause; it lives in
+ * the URL (`?q=`), so it carries over between the two.
  */
 export function LibraryView({
   contentKind,
@@ -48,24 +55,41 @@ export function LibraryView({
 
   const searching = useIsFetching({ queryKey: ['search'] }) > 0
   const waiting = text.trim() !== state.q
-  const browsing = pane === 'browse'
+  const split = useMediaQuery(SPLIT_QUERY)
+  const browsing = split || pane === 'browse'
   const provider = providerLabel[state.provider]
+  const [placeholder, label] = split
+    ? [`Search installed ${contentLabel} and ${provider}`, `Search ${contentLabel}`]
+    : browsing
+      ? [`Search ${contentLabel} on ${provider}`, `Search ${contentLabel}`]
+      : [`Filter ${contentLabel}`, `Filter ${contentLabel}`]
+
+  const installed = <InstalledView contentLabel={contentLabel} text={text} />
+  const browse = <BrowseView contentKind={contentKind} />
 
   return (
-    <div className="flex flex-col gap-6">
+    // Split: fill the viewport below the header (4rem) and the page padding (2 × 2rem).
+    <div className="flex flex-col gap-6 xl:h-[calc(100svh-8rem)]">
       <SearchBar
         value={text}
         onChange={setText}
         onSubmit={() => text.trim() !== state.q && push(text.trim())}
-        placeholder={browsing ? `Search ${contentLabel} on ${provider}` : `Filter ${contentLabel}`}
-        label={browsing ? `Search ${contentLabel}` : `Filter ${contentLabel}`}
+        placeholder={placeholder}
+        label={label}
         busy={browsing && (searching || waiting)}
-        autoFocus={browsing}
+        autoFocus={pane === 'browse'}
       />
-      {browsing ? (
-        <BrowseView contentKind={contentKind} />
+      {split ? (
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-8">
+          <section aria-label={`Installed ${contentLabel}`} className="@container min-h-0">
+            {installed}
+          </section>
+          <section aria-label={`Browse ${contentLabel}`} className="@container min-h-0">
+            {browse}
+          </section>
+        </div>
       ) : (
-        <InstalledView contentLabel={contentLabel} text={text} />
+        <div className="@container">{pane === 'browse' ? browse : installed}</div>
       )}
     </div>
   )

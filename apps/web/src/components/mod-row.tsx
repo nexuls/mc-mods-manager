@@ -73,6 +73,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
   const main = primary(mod)
   const other = mod.sources.find((s) => s !== main)
   const name = displayName(mod)
+  const version = displayVersion(mod)
 
   const patch = (body: UpdateModBody, done?: string) =>
     update.mutate(
@@ -85,7 +86,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
 
   return (
     <TableRow className={cn(!mod.enabled && 'text-muted-foreground')}>
-      <TableCell className="w-16 p-2!">
+      <TableCell className="w-16 min-w-16 p-2!">
         {main?.iconUrl ? (
           <img
             src={main.iconUrl}
@@ -130,12 +131,14 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
           )}
         </div>
         <div className="text-muted-foreground truncate text-xs" title={mod.fileName}>
+          {/* The Version column is hidden in narrow tables. */}
+          {version && <span className="@3xl:hidden">{version} · </span>}
           {mod.fileName}
         </div>
       </TableCell>
 
-      <TableCell className="text-muted-foreground max-w-32 truncate text-sm">
-        {displayVersion(mod) ?? '—'}
+      <TableCell className="text-muted-foreground max-w-32 truncate text-sm @max-3xl:hidden">
+        {version ?? '—'}
       </TableCell>
 
       <TableCell>
@@ -158,7 +161,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
         )}
       </TableCell>
 
-      <TableCell>
+      <TableCell className="@max-xl:hidden">
         {mod.sideSource === 'platform' && main ? (
           <Tooltip>
             <TooltipTrigger asChild>

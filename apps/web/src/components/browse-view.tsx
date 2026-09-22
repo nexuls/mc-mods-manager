@@ -21,7 +21,7 @@ import {
   KeyRoundIcon,
   SearchXIcon,
 } from 'lucide-react'
-import { type ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { ProviderLogo, sideIcon } from '@/components/mod-chips'
@@ -76,13 +76,16 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   const data = search.data
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1
   const noun = contentKind === 'plugin' ? 'plugins' : 'mods'
+  // The results scroll on their own in the split view (xl), and with the page otherwise.
+  const results = useRef<HTMLUListElement>(null)
   const goToPage = (page: number) => {
     update({ page })
+    results.current?.scrollTo({ top: 0 })
     window.scrollTo({ top: 0 })
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 xl:h-full xl:min-h-0">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Browse {noun}</h1>
@@ -194,8 +197,9 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
       ) : (
         <>
           <ul
+            ref={results}
             className={cn(
-              'flex flex-col gap-3 transition-opacity',
+              'flex flex-col gap-3 transition-opacity xl:min-h-0 xl:overflow-y-auto',
               search.isPlaceholderData && 'opacity-60',
             )}
           >
@@ -287,12 +291,16 @@ function ProjectCard({
 
   return (
     <li className="bg-card hover:border-foreground/20 h-38 relative flex items-stretch gap-4 rounded-xl border p-4 transition-colors">
-      <ProjectIcon url={hit.iconUrl} className="h-full size-auto rounded-2xl" />
+      {/* Smaller icon, title and stats when the list is narrow (the split view). */}
+      <ProjectIcon
+        url={hit.iconUrl}
+        className="h-full size-auto rounded-2xl @max-xl:size-20 @max-xl:rounded-xl"
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
             to={href}
-            className="truncate text-xl font-semibold hover:underline after:absolute after:inset-0"
+            className="truncate text-xl font-semibold hover:underline after:absolute after:inset-0 @max-xl:text-lg"
           >
             {hit.title}
           </Link>
@@ -331,7 +339,10 @@ function ProjectCard({
             {compactNumber(hit.downloads, true)}
           </span>
           {hit.follows !== undefined && (
-            <span className="flex items-center gap-1.5" title={`${hit.follows} followers`}>
+            <span
+              className="flex items-center gap-1.5 @max-xl:hidden"
+              title={`${hit.follows} followers`}
+            >
               <HeartIcon className="size-4" />
               {compactNumber(hit.follows)}
             </span>

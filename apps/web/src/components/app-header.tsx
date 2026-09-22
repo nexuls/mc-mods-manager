@@ -11,7 +11,7 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
 
   return (
     <header className="bg-background/85 sticky top-0 z-20 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-6">
+      <div className="mx-auto flex h-16 w-full max-w-(--breakpoint-2xl) items-center gap-4 px-6">
         <span className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
             <BlocksIcon className="size-4" />

@@ -11,17 +11,22 @@ export function SortableHead({
   sort,
   onSort,
   children,
+  className,
 }: {
   column: SortKey
   sort: ModSort
   onSort: (column: SortKey) => void
   children: ReactNode
+  className?: string
 }) {
   const active = sort.key === column
   const Icon = !active ? ArrowUpDownIcon : sort.desc ? ArrowDownIcon : ArrowUpIcon
 
   return (
-    <TableHead aria-sort={active ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+    <TableHead
+      aria-sort={active ? (sort.desc ? 'descending' : 'ascending') : 'none'}
+      className={className}
+    >
       <Button
         variant="ghost"
         size="sm"
