@@ -95,7 +95,9 @@ apps/cli/src/
 │   ├── state.ts            # .mc-mod/state.json read/write (lock-ish manifest)
 │   └── paths.ts            # safe path helpers (no traversal outside instance dir), atomic writes
 ├── lib/
-│   └── mc-version.ts       # version compare, Maven + Fabric ranges, "most jars accept" version vote
+│   ├── mc-version.ts       # version compare, Maven + Fabric ranges, "most jars accept" version vote
+│   ├── ttl-cache.ts        # in-memory promise cache for provider GETs
+│   └── download.ts         # allowlisted, hash-verified streaming download
 ├── jar/
 │   ├── read-metadata.ts    # unzip jar in memory (fflate), dispatch to format parsers
 │   ├── formats/            # fabric, quilt, forge (mods.toml), neoforge, legacy mcmod.info,
@@ -108,7 +110,10 @@ apps/cli/src/
 ├── services/
 │   ├── instance.ts         # current Instance for this run; overrides → state.json → re-detect
 │   ├── library.ts          # list installed, identify, enable/disable/remove
-│   ├── installer.ts        # pick version, resolve deps, download, verify hash, write
+│   ├── catalog.ts          # search, project pages, ranked versions, tags
+│   ├── versions.ts         # best-version picking (§7.3)
+│   ├── installer.ts        # install plan (deps), install job: download, verify hash, write, record
+│   ├── jobs.ts             # in-memory background jobs + their event logs
 │   ├── updates.ts          # check updates for identified mods
 │   └── server-export.ts    # compute server-side set and copy to export dir
 ├── env.ts                  # zod schema for env vars + parsed CLI options
@@ -117,7 +122,8 @@ apps/cli/src/
     ├── health.ts
     ├── instance.ts
     ├── mods.ts
-    ├── search.ts
+    ├── projects.ts         # search, projects, versions, meta
+    ├── install.ts          # plan, install, job events (SSE)
     └── export.ts
 ```
 

@@ -113,7 +113,8 @@ export function route<E extends Endpoint>(router: Router, e: E,
 }
 ```
 
-- Routers register endpoints only through `route()`. Never call `router.get(...)` directly for `/api`.
+- Routers register endpoints only through `route()` (or `streamRoute()` for Server-Sent Events, where `response` is the
+  schema of one event and each event is validated in dev/test). Never call `router.get(...)` directly for `/api`.
 - The error middleware maps `ZodError` → `400 BAD_REQUEST` with `z.flattenError(err)` in `details`, and
   `AppError(code)` → the matching status. The body always matches `ApiErrorSchema`.
 - A test walks the `api` contract object and checks that every endpoint is registered, so none are left orphaned.
@@ -133,6 +134,9 @@ export async function call<E extends Endpoint>(e: E, req: Partial<Req<E>> = {}):
   return e.response.parse(json);
 }
 ```
+
+SSE endpoints are read with `stream(endpoint, req, onEvent)` from the same file: `fetch` plus a small `data:` parser
+(EventSource can't send the token header), parsing every event with the endpoint's `response` schema.
 
 TanStack Query hooks wrap `call`, for example `useQuery({ queryKey: ['mods'], queryFn: () => call(api.mods.list) })`.
 Never `fetch('/api/...')` directly in components.

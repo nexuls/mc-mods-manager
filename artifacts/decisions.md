@@ -139,3 +139,30 @@ Accepted.
   platform doesn't know the side) get the side menu.
 - `PATCH sideOverride` is still accepted and stored for any file, but it's ignored while the platform has a side. So an
   older override on a now-identified file does nothing, and it comes back if the file is later treated as local.
+
+### D20 — Search and install (Phase 5)
+- **Version picking** (`services/versions.ts`): native loader build first, a compatible loader's build (Fabric on
+  Quilt, Spigot on Paper…) only when there's none, then exact game version, then release > beta > alpha, then newest.
+  Pre-releases aren't allowed to win yet (`ALLOW_PRERELEASE`, becomes a setting in Phase 6). Plugins also accept
+  versions made for an older game version, since plugin versions are minimums; search skips the version facet for plugins
+  for the same reason.
+- **Dependencies:** required ones are followed recursively; optional ones are listed (unticked) for the main project
+  only and aren't followed, so ticking an optional one doesn't pull in its own dependencies. Pinned `version_id`s in
+  dependencies are ignored in favour of the best version for the instance (they often point at another loader or game
+  version). "Installed" means a jar already identified as that Modrinth project. A loader fallback shows as the item's
+  note (`Fabric build`) rather than a plan warning.
+- **Installing never replaces a file.** Identical bytes count as done (`skipped`); a different file with the same name,
+  or a `.disabled` copy, fails that item with `CONFLICT`. Updates (Phase 7) will handle replacement. Downloads need at
+  least one platform hash, come only from allowlisted HTTPS hosts, and are cut off when much larger than announced.
+- **Jobs are in memory**, one at a time per request, items installed one by one. Events are kept (and replayed to late
+  or reconnecting clients) for 10 minutes after `done`; progress events are throttled to one per 150 ms per item.
+- **SSE through the contract:** `api.jobs.events` is a normal `defineEndpoint` whose `response` is the schema of one
+  event. `streamRoute()` registers it (so the coverage test still sees it), writes `data: <json>` per event and validates
+  each one in dev/test. The web reads it with `fetch` + a small parser (`stream()` in `lib/api.ts`), because EventSource
+  can't send the token header.
+- **Routing:** react-router in declarative mode; Browse state (`q`, `sort`, `category`, `all`, `page`) lives in the URL,
+  parsed with zod (`lib/browse.ts`). Pagination with Previous/Next rather than infinite scroll: simpler, and the page
+  survives reloads.
+- **Descriptions** render with react-markdown + remark-gfm, raw HTML through rehype-raw and then rehype-sanitize
+  (GitHub's schema plus `<center>`). `@tailwindcss/typography` styles them.
+

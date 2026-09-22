@@ -38,23 +38,32 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   *Update available pill* and *Change version* come with Phase 7.
 - **Link dialog:** possible matches (same mod id, then name search) and a field for a Modrinth URL/slug/id. It can also remove a manual link.
 - **Remove** asks first, then moves the jar to `.mc-mod/trash/`.
-- Empty state: "No mods yet" (a button to Browse comes with Phase 5).
+- Empty state: "No mods yet" with a Browse button.
 
 ### Browse (`/browse`)
-- Provider tabs: Modrinth | CurseForge (disabled with tooltip + link to Settings if no key).
-- Search input (debounced 300ms), sort select, category filter, "Show incompatible" toggle.
-- Result cards: icon, title, author, summary, downloads, updated date, client/server side icons,
-  **Install** button (or "Installed" / "Update" state if already present).
-- Infinite scroll or pagination.
+- Provider tabs: Modrinth | CurseForge (disabled with a tooltip until Phase 6 adds the key setting; then a link to Settings).
+- Search input (debounced 300ms), sort select, category filter, "Show incompatible" toggle. The line under the title says
+  what the server filtered on ("Showing NeoForge mods for 1.21.1"). All of it lives in the URL.
+- Result cards: icon, title (links to the project page), author, summary, downloads, updated date, side chip,
+  **Install** button, or a disabled "Installed" when a jar is identified as that project ("Update" comes with Phase 7).
+- Pagination: 20 per page, Previous/Next with "N results · page X of Y".
 
 ### Project detail (`/project/:provider/:id`)
-- Header with icon/title/links, Install button with version dropdown (recommended preselected).
-- Tabs: Description (render Markdown/HTML sanitized), Versions (table filtered to compatible by default), Gallery.
+- Back to Browse; the Browse nav item stays highlighted.
+- Header with icon/title/summary, downloads, follows, updated, license, side chip, a platform button and the project's
+  links (source, issues, wiki, Discord, donations). On the right: version dropdown of compatible versions (recommended
+  preselected, pre-releases badged) + Install, or "Installed" with the file name.
+- Tabs: Description (Markdown/HTML, sanitized), Versions (table, compatible by default, "Show all versions" switch;
+  Install per row, which warns in the dialog if the version doesn't fit), Gallery (only when there are images).
 
 ### Install confirmation (dialog)
-- List of items: main project + required deps (checked, locked), optional deps (unchecked), already-installed (greyed).
-- Warnings: incompatible relations, loader fallback ("Fabric build on Quilt"), manual-download-required.
-- Progress per item via SSE; toast on completion.
+- List of items: main project + required deps (checked, locked), optional deps (unchecked), already-installed and
+  unavailable ones (greyed, with the reason). Each row: icon, title, role badge, version, note ("Fabric build"),
+  which items need it, side chip. Footer shows the download size.
+- Warnings above the list: incompatible relations, dependencies without a fitting version, a hand-picked version that
+  doesn't fit (manual-download-required comes with CurseForge).
+- Progress per item via SSE (bar while downloading, check or error when done). All done: toast and close. Any
+  failure: toast, and the dialog stays open with the errors and a Close button.
 
 ### Export (`/export`)
 - Target dir (editable), mode (Copy folder / Zip).

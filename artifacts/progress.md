@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 5 — Search & install (Phase 4 installed mods done).
+**Current phase:** 6 — CurseForge (Phase 5 search & install done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -51,11 +51,12 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] Installed view: table, enable/disable, remove (to `.mc-mod/trash/`), side badge, filters, link dialog
 
 ## Phase 5 — Search & install (Modrinth)
+- [x] Search, project, versions and meta endpoints (`services/catalog.ts`)
 - [x] Modrinth provider: search, project, versions, tags (in-memory TTL cache, `lib/ttl-cache.ts`)
 - [x] Best-version selection algorithm (+ tests): `services/versions.ts`
 - [x] Dependency resolution + install plan endpoint (`services/installer.ts`)
 - [x] Download, hash verify, atomic write; SSE job progress (`lib/download.ts`, `services/jobs.ts`, `streamRoute()`)
-- [ ] Browse view, project detail, install dialog
+- [x] Browse view, project detail, install dialog (react-router: `/`, `/browse`, `/project/:provider/:id`)
 
 ## Phase 6 — CurseForge
 - [ ] Settings view + global config + key test
@@ -92,3 +93,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Phase 4 done: sha1/sha512 + CurseForge murmur2 (vectors from the C reference), jar scan with size+mtime cache, Modrinth provider (hash lookup, projects, search; live test behind `MC_MOD_LIVE=1`), launcher metadata, source merge + compatibility + side, `/api/mods` (list/refresh/PATCH/DELETE/suggestions), Installed view. On a copy of the dev instance: 37 of 38 jars identified by hash in 3.6 s, reload from state.json in 3 ms, and the three 1.21.11 jars flagged incompatible. Checked with headless Chrome screenshots; menus and dialogs not clicked through in a browser. |
 | 2026-09-22 | UI polish ahead of Phase 5: theme toggle (next-themes), server status badge, pointer cursor on controls, roomier layout (D18). Checked with headless Chrome screenshots in light and dark; the theme menu wasn't clicked through. |
 | 2026-09-22 | Side is read-only when it comes from Modrinth/CurseForge; overrides only apply to local files or unknown platform sides (D19). |
+| 2026-09-22 | Phase 5 done: Modrinth search/project/versions/tags with a TTL cache, best-version picker (§7.3), install plan with recursive required deps, background install job (download to `.mc-mod/tmp`, sha1+sha512 check, atomic rename, install record) with SSE progress via `streamRoute()`, web routing + Browse + project page + install dialog (D20). Checked on a copy of the dev instance: Create Aeronautics planned Sable as required and Create as installed; installs landed as `install-record`, compatible. The install dialog was clicked through with puppeteer-core (scratch only, not a dependency). |
