@@ -28,9 +28,18 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-64">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Installed {contentLabel}</h1>
+        <p className="text-muted-foreground text-sm">
+          {mods.data
+            ? `${all.length} ${all.length === 1 ? 'file' : 'files'} in the ${contentLabel} folder`
+            : `Everything in the ${contentLabel} folder`}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-72">
           <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             value={text}
@@ -43,7 +52,6 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
         <ToggleGroup
           type="single"
           variant="outline"
-          size="sm"
           value={filter}
           onValueChange={(v) => setFilter(ModFilter.find((f) => f === v) ?? 'all')}
           className="flex-wrap"
@@ -57,7 +65,6 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
         </ToggleGroup>
         <Button
           variant="outline"
-          size="sm"
           className="ml-auto"
           disabled={refresh.isPending || mods.isPending}
           onClick={() =>
@@ -80,13 +87,13 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
       ))}
 
       {mods.isPending ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm">
             Reading and identifying your {contentLabel}…
           </p>
           {Array.from({ length: 6 }, (_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
-            <Skeleton key={i} className="h-12" />
+            <Skeleton key={i} className="h-14 rounded-xl" />
           ))}
         </div>
       ) : mods.isError ? (
@@ -95,7 +102,7 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
           <AlertDescription>{errorMessage(mods.error)}</AlertDescription>
         </Alert>
       ) : all.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-20 text-center">
           <PackageOpenIcon className="text-muted-foreground size-10" />
           <p className="font-medium">No {contentLabel} yet</p>
           <p className="text-muted-foreground text-sm">
@@ -103,9 +110,9 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
           </p>
         </div>
       ) : (
-        <>
-          <Table>
-            <TableHeader>
+        <div className="bg-card overflow-hidden rounded-xl border">
+          <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead />
                 <TableHead>Name</TableHead>
@@ -123,11 +130,11 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
             </TableBody>
           </Table>
           {shown.length === 0 && (
-            <p className="text-muted-foreground py-8 text-center text-sm">
+            <p className="text-muted-foreground py-12 text-center text-sm">
               Nothing matches this filter.
             </p>
           )}
-        </>
+        </div>
       )}
 
       {linkingMod && (

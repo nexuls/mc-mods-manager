@@ -17,7 +17,7 @@ function App() {
   return (
     <div className="flex min-h-svh flex-col">
       <AppHeader onEditInstance={() => setEditing(true)} />
-      <main className="flex flex-1 flex-col p-4">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
         {unauthorized ? (
           <div className="flex flex-1 items-center justify-center">
             <Badge variant="destructive">

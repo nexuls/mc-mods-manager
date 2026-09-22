@@ -1,4 +1,4 @@
-import { SettingsIcon } from 'lucide-react'
+import { BlocksIcon, SettingsIcon } from 'lucide-react'
 import { ServerStatus } from '@/components/server-status'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -10,19 +10,26 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
   const instance = useInstance()
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b px-4">
-      <span className="font-semibold">mc-mod</span>
-      {instance.data ? (
-        <Button variant="outline" size="sm" onClick={onEditInstance}>
-          {describeInstance(instance.data.instance)}
-          <SettingsIcon />
-        </Button>
-      ) : (
-        <Skeleton className="h-8 w-56" />
-      )}
-      <div className="ml-auto flex items-center gap-2">
-        <ServerStatus />
-        <ThemeToggle />
+    <header className="bg-background/85 sticky top-0 z-20 border-b backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-6">
+        <span className="flex items-center gap-2 font-semibold tracking-tight">
+          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
+            <BlocksIcon className="size-4" />
+          </span>
+          mc-mod
+        </span>
+        {instance.data ? (
+          <Button variant="outline" onClick={onEditInstance} className="min-w-0">
+            <span className="truncate">{describeInstance(instance.data.instance)}</span>
+            <SettingsIcon />
+          </Button>
+        ) : (
+          <Skeleton className="h-8 w-56" />
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ServerStatus />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )
