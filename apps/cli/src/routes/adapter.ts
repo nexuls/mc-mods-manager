@@ -117,3 +117,55 @@ function isBodyParserError(err: unknown): err is Error & { status: number } {
     err.status < 500
   )
 }
+
+/**
+ * Registers a contract endpoint that answers with Server-Sent Events. `e.response` is the schema of one
+ * event, each sent as `data: <json>`. The handler runs (and may throw, for a normal JSON error) before
+ * the stream starts; its iterable is stopped when the client disconnects.
+ */
+export function streamRoute<E extends Endpoint>(
+  router: Router,
+  e: E,
+  handler: (input: Input<E>, signal: AbortSignal) => Promise<AsyncIterable<Res<E>>>,
+): void {
+  const info = routerInfo(router)
+  info.endpoints.add(e)
+
+  const method = e.method.toLowerCase() as Lowercase<E['method']>
+  router.route(e.path)[method](async (req, res, next) => {
+    const closed = new AbortController()
+    res.on('close', () => closed.abort())
+    let events: AsyncIterable<Res<E>>
+    try {
+      events = await handler(
+        {
+          params: z.parse<E['params']>(e.params, req.params),
+          query: z.parse<E['query']>(e.query, req.query),
+          body: z.parse<E['body']>(e.body, req.body ?? {}),
+        },
+        closed.signal,
+      )
+    } catch (err) {
+      next(err)
+      return
+    }
+
+    res.status(200).set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-store',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    })
+    res.flushHeaders()
+    try {
+      for await (const event of events) {
+        const out = info.validateResponses ? z.parse(e.response, event) : event
+        res.write(`data: ${JSON.stringify(out)}\n\n`)
+      }
+      res.end()
+    } catch (err) {
+      // Headers are sent, so this can't become a JSON error; express closes the connection.
+      next(err)
+    }
+  })
+}

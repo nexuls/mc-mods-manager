@@ -11,6 +11,7 @@ import { type Auth, checkHost, requireToken } from './security'
 import type { CatalogService } from './services/catalog'
 import type { InstallerService } from './services/installer'
 import type { InstanceService } from './services/instance'
+import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
 
 export interface AppOptions {
@@ -20,6 +21,7 @@ export interface AppOptions {
     library: LibraryService
     catalog: CatalogService
     installer: InstallerService
+    jobs: JobService
   }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string

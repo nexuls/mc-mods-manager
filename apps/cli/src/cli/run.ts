@@ -8,6 +8,7 @@ import { createApp } from '../server'
 import { CatalogService } from '../services/catalog'
 import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
+import { JobService } from '../services/jobs'
 import { LibraryService } from '../services/library'
 import { VERSION } from '../version'
 import { openBrowser } from './browser'
@@ -49,13 +50,22 @@ export async function run(argv: readonly string[]): Promise<void> {
   const modrinth = new ModrinthProvider()
   const library = new LibraryService(instance, modrinth)
   const catalog = new CatalogService(instance, modrinth)
+  const jobs = new JobService()
   const { app } = createApp({
     auth,
     services: {
       instance,
       library,
       catalog,
-      installer: new InstallerService(library, catalog, modrinth),
+      jobs,
+      installer: new InstallerService({
+        instance,
+        library,
+        catalog,
+        modrinth,
+        jobs,
+        onInternalError: terminal.internalError,
+      }),
     },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),

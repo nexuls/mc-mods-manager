@@ -1,5 +1,9 @@
+import { rm, stat } from 'node:fs/promises'
+import path from 'node:path'
 import type {
+  InstallBody,
   InstalledMod,
+  ModSource,
   PlanBody,
   PlanItem,
   PlanResponse,
@@ -8,27 +12,50 @@ import type {
   RankedVersion,
 } from '@mc-mod/shared'
 import { AppError } from '../errors'
-import type { ModrinthProvider } from '../providers/modrinth'
-import type { ProjectInfo } from '../providers/types'
+import { renameInside, resolveInside, safeJarName, stateDir } from '../instance/paths'
+import { updateState } from '../instance/state'
+import { hashBytes } from '../jar/hash'
+import { downloadVerified } from '../lib/download'
+import { type ModrinthProvider, USER_AGENT } from '../providers/modrinth'
+import type { Fetch, ProjectInfo } from '../providers/types'
 import { type CatalogService, requireModrinth } from './catalog'
+import type { InstanceService } from './instance'
+import type { Job, JobService } from './jobs'
 import type { LibraryService } from './library'
 import { rankVersions } from './versions'
 
 type Modrinth = Pick<ModrinthProvider, 'getProject' | 'getProjects' | 'getVersionsByIds'>
+
+/** Progress events per item are sent at most this often. */
+const PROGRESS_INTERVAL_MS = 150
+
+export interface InstallerDeps {
+  instance: InstanceService
+  library: Pick<LibraryService, 'list'>
+  catalog: Pick<CatalogService, 'bestVersion' | 'versionContext' | 'describeTarget'>
+  modrinth: Modrinth
+  jobs: JobService
+  /** Downloads; tests pass a fake. */
+  fetch?: Fetch
+  now?: () => number
+  /** Unexpected errors in a background job, after the item is reported as failed. */
+  onInternalError?: (err: unknown) => void
+}
 
 /** Stops a runaway dependency chain; real mods need a handful at most. */
 const MAX_PLAN_ITEMS = 60
 
 /** Installing: plan (dependencies, what's installed), then download (architecture §7.4, §7.5). */
 export class InstallerService {
-  constructor(
-    private readonly library: Pick<LibraryService, 'list'>,
-    private readonly catalog: Pick<
-      CatalogService,
-      'bestVersion' | 'versionContext' | 'describeTarget'
-    >,
-    private readonly modrinth: Modrinth,
-  ) {}
+  private readonly library: InstallerDeps['library']
+  private readonly catalog: InstallerDeps['catalog']
+  private readonly modrinth: Modrinth
+
+  constructor(private readonly deps: InstallerDeps) {
+    this.library = deps.library
+    this.catalog = deps.catalog
+    this.modrinth = deps.modrinth
+  }
 
   /**
    * Resolves a project and its dependencies without touching disk. Required dependencies are followed
@@ -166,6 +193,148 @@ export class InstallerService {
     return { items, warnings }
   }
 
+  /**
+   * Checks the requested versions, then downloads and installs them one by one in a background job.
+   * Returns the job id right away; progress comes as job events.
+   */
+  async install(body: InstallBody): Promise<{ jobId: string }> {
+    for (const item of body.items) requireModrinth(item.provider)
+    const versions = await this.modrinth.getVersionsByIds(body.items.map((i) => i.versionId))
+    const list = body.items.map((item) => {
+      const version = versions.get(item.versionId)
+      if (!version || version.projectId !== item.projectId) {
+        throw new AppError('NOT_FOUND', `Version ${item.versionId} of ${item.projectId} not found`)
+      }
+      return version
+    })
+    // Titles and icons for the install records; only nice to have.
+    const projects = await this.modrinth
+      .getProjects(list.map((v) => v.projectId))
+      .catch(() => new Map<string, ProjectInfo>())
+
+    const job = this.deps.jobs.create()
+    void this.run(job, list, projects)
+    return { jobId: job.id }
+  }
+
+  private async run(
+    job: Job,
+    versions: readonly ProjectVersion[],
+    projects: ReadonlyMap<string, ProjectInfo>,
+  ): Promise<void> {
+    let installed = 0
+    let failed = 0
+    for (const [index, version] of versions.entries()) {
+      try {
+        const done = await this.installOne(job, index, version, projects.get(version.projectId))
+        job.emit({ type: 'item-done', index, ...done })
+        installed++
+      } catch (err) {
+        failed++
+        if (err instanceof AppError) {
+          job.emit({ type: 'item-failed', index, code: err.code, message: err.message })
+        } else {
+          this.deps.onInternalError?.(err)
+          job.emit({ type: 'item-failed', index, code: 'INTERNAL', message: 'Install failed' })
+        }
+      }
+    }
+    job.emit({ type: 'done', installed, failed })
+    this.deps.jobs.finish(job)
+  }
+
+  /**
+   * Downloads to `.mc-mod/tmp/`, verifies the hashes, then renames into the content dir. Never replaces
+   * a file: the same bytes already there count as installed, anything else is a CONFLICT.
+   */
+  private async installOne(
+    job: Job,
+    index: number,
+    version: ProjectVersion,
+    project: ProjectInfo | undefined,
+  ): Promise<{ fileName: string; skipped: boolean }> {
+    const { root, contentDir } = this.deps.instance.instance
+    const { file } = version
+    if (!file) throw new AppError('NOT_FOUND', `${version.name} has no jar file to install`)
+    const fileName = safeJarName(file.name)
+    const dest = resolveInside(root, path.join(contentDir, fileName))
+
+    if (await exists(`${dest}.disabled`)) {
+      throw new AppError('CONFLICT', `${fileName} is already installed, but disabled`)
+    }
+    if (await exists(dest)) {
+      const { sha1 } = hashBytes(await Bun.file(dest).bytes())
+      if (file.sha1 && sha1 === file.sha1.toLowerCase()) {
+        await this.record(sha1, version, project)
+        return { fileName, skipped: true }
+      }
+      throw new AppError('CONFLICT', `A different ${fileName} is already in the folder`)
+    }
+
+    const tmp = resolveInside(root, path.join(stateDir(root), 'tmp', `${crypto.randomUUID()}.jar`))
+    let last = 0
+    try {
+      const { sha1 } = await downloadVerified(
+        {
+          url: file.url,
+          sha1: file.sha1,
+          sha512: file.sha512,
+          size: file.size,
+          file: tmp,
+          headers: { 'User-Agent': USER_AGENT },
+          onProgress: (received, total) => {
+            const now = Date.now()
+            if (now - last < PROGRESS_INTERVAL_MS && received !== total) return
+            last = now
+            job.emit({ type: 'progress', index, received, total })
+          },
+        },
+        this.deps.fetch ?? ((url, init) => globalThis.fetch(url, init)),
+      )
+      await renameInside(root, tmp, dest)
+      await this.record(sha1, version, project)
+      return { fileName, skipped: false }
+    } finally {
+      await rm(tmp, { force: true })
+    }
+  }
+
+  /** Writes the install record (architecture §7.2 #1), so the file is identified offline. */
+  private async record(
+    sha1: string,
+    version: ProjectVersion,
+    project: ProjectInfo | undefined,
+  ): Promise<void> {
+    const source: ModSource = {
+      provider: version.provider,
+      projectId: version.projectId,
+      versionId: version.id,
+      versionNumber: version.versionNumber,
+      slug: project?.slug,
+      title: project?.title,
+      iconUrl: project?.iconUrl,
+      loaders: version.loaders,
+      gameVersions: version.gameVersions,
+      side: version.side ?? (project?.side === 'unknown' ? undefined : project?.side),
+      method: 'install-record',
+    }
+    const now = (this.deps.now ?? Date.now)()
+    await updateState(this.deps.instance.instance.root, (s) => {
+      const r = s.mods?.[sha1]
+      return {
+        ...s,
+        mods: {
+          ...s.mods,
+          [sha1]: {
+            ...r,
+            sources: [...(r?.sources ?? []).filter((x) => x.provider !== source.provider), source],
+            checkedAt: { ...r?.checkedAt, [source.provider]: now },
+          },
+        },
+      }
+    })
+  }
+
   /** A version's non-embedded dependencies, with the project id looked up for version-only ones. */
   private async resolveDependencyProjects(
     version: ProjectVersion,
@@ -184,4 +353,8 @@ export class InstallerService {
 
 function modName(m: InstalledMod): string {
   return m.sources[0]?.title ?? m.meta?.name ?? m.fileName
+}
+
+async function exists(file: string): Promise<boolean> {
+  return (await stat(file).catch(() => null)) !== null
 }
