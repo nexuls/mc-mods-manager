@@ -34,7 +34,7 @@ The loader list isn't an endpoint: `Loader` and `loaderInfo` in `packages/shared
 | POST | `/api/mods/refresh` | Same response; looks every jar up again |
 | PATCH | `/api/mods/:fileName` | `{ enabled?, sideOverride?: Side \| null, primarySource?: Provider \| null, link?: { provider, projectId } \| null, unlinked?: boolean }` → `InstalledMod`. `enabled` renames to/from `.jar.disabled` (409 `CONFLICT` if the target exists; the response has the new `fileName`). `link` is a manual link (`projectId` is an id or slug; CurseForge needs a key, else `PROVIDER_DISABLED`, and keys that can't search only take numeric ids), `null` removes it. `unlinked: true` is "treat as local". `sideOverride` is stored, but a side from the platform wins over it |
 | GET | `/api/mods/:fileName/suggestions` | `{ suggestions: ModSuggestion[] }`: "possible match" candidates for an unidentified jar (mod id as a slug, then name searches), up to 6 from Modrinth then up to 4 from CurseForge (skipped without a key or when CurseForge fails). Never applied automatically |
-| DELETE | `/api/mods/:fileName` | Moves the jar to `.mc-mod/trash/<epoch ms>-<name>` → `{ fileName, trashPath }` (relative to the instance root) |
+| DELETE | `/api/mods/:fileName` | Moves the jar to `.mc-mod/trash/<epoch ms>-<name>` → `{ fileName, trashPath, trashId }` (`trashPath` relative to the instance root; `trashId` for `/api/trash`) |
 | POST | `/api/mods/check-updates` | `ModsResponse` with `update` set on jars whose primary source has a newer fitting version: the version the project page would recommend (architecture §7.3), one versions request per project, 6 at a time. Never a downgrade; a jar whose installed version doesn't fit the instance gets the one that does; jars without a known version (manual links) get none. Results are kept in memory for this run, so `GET /api/mods` includes them, until the loader, game version or pre-release setting changes. Unreachable platforms and CurseForge jars without a key are warnings. `update.manual` means the file must be downloaded by hand from `update.pageUrl` |
 | POST | `/api/mods/:fileName/update` | `{ versionId? }` → `{ jobId, items: UpdateJobItem[] }`. Replaces the jar with that version of its primary source's project ("Change version", older too), or without `versionId` with the update found by the last check (else the best version now). 409 `CONFLICT` when it's up to date, already that version, or not linked to a project. Follow the job with `/api/jobs/:id/events` |
 | POST | `/api/mods/update-all` | `{ fileNames? }` → `{ jobId, items }`: every jar with a (non-manual) update from the last check, or only the given ones. 409 when there's nothing to update. Each item downloads to `.mc-mod/tmp/`, is verified, lands in the content dir (disabled if the old jar was), and only then is the old jar moved to `.mc-mod/trash/`; its side override and pinned provider carry over |
@@ -69,6 +69,18 @@ Using plan → confirm → execute keeps the UI honest about dependencies before
 | POST | `/api/export/reveal` | `{ mode, dirName? }` → `{ opened, path }`: opens the export folder (copy) or the instance root (zip) in the OS file manager. `opened` is false without a desktop; NOT_FOUND before the first export |
 
 Moving an unknown or local mod between groups for good is a side override (`PATCH /api/mods/:fileName`), not an export option.
+
+## Trash
+
+`.mc-mod/trash/` holds jars that were removed or replaced by an update, as `<epoch ms>-<file name>` (the trash id).
+Other files there are ignored and never deleted.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/trash` | `{ items: { id, fileName, trashedAt, size }[], totalSize }`, newest first |
+| POST | `/api/trash/:id/restore` | Moves it back into the content folder under its old name (disabled stays disabled) → `{ fileName }`. CONFLICT when that jar is there, enabled or disabled |
+| DELETE | `/api/trash/:id` | Deletes it for good → `{ id }` |
+| DELETE | `/api/trash` | Deletes every trashed jar for good → `{ removed, freedBytes }` |
 
 ## Settings
 

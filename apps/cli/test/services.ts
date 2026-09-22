@@ -10,6 +10,7 @@ import { JobService } from '../src/services/jobs'
 import { LibraryService } from '../src/services/library'
 import { ServerExportService } from '../src/services/server-export'
 import { SettingsService } from '../src/services/settings'
+import { TrashService } from '../src/services/trash'
 import { UpdateStore, UpdatesService } from '../src/services/updates'
 import type { FakeCurseForge } from './fake-curseforge'
 import type { FakeModrinth } from './fake-modrinth'
@@ -82,6 +83,7 @@ export function makeServices(o: ServiceOptions) {
     settings,
     updates,
     serverExport,
+    trash: new TrashService({ instance }),
     config,
     curseforge,
   }

@@ -345,6 +345,7 @@ test('DELETE moves the jar to .mc-mod/trash', async () => {
   expect(api.mods.remove.response.parse(await res.json())).toEqual({
     fileName: 'my-mod-1.0.jar',
     trashPath: path.join('.mc-mod', 'trash', '1000-my-mod-1.0.jar'),
+    trashId: '1000-my-mod-1.0.jar',
   })
   expect(await readdir(t.mods)).not.toContain('my-mod-1.0.jar')
   expect(await readdir(path.join(t.dir, '.mc-mod/trash'))).toEqual(['1000-my-mod-1.0.jar'])

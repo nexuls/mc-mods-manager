@@ -308,11 +308,13 @@ export class LibraryService {
     return mod
   }
 
-  async remove(fileName: string): Promise<{ fileName: string; trashPath: string }> {
+  async remove(
+    fileName: string,
+  ): Promise<{ fileName: string; trashPath: string; trashId: string }> {
     const { root, contentDir } = this.instance.instance
     await this.jar(fileName)
     const dest = await moveToTrash(root, path.join(contentDir, fileName), this.now())
-    return { fileName, trashPath: path.relative(root, dest) }
+    return { fileName, trashPath: path.relative(root, dest), trashId: path.basename(dest) }
   }
 
   /**

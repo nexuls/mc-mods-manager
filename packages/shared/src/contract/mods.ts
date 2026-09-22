@@ -4,6 +4,7 @@ import { Side } from '../domain/side'
 import { defineEndpoint } from './define'
 import { JobId } from './jobs'
 import { ProjectId } from './projects'
+import { TrashId } from './trash'
 
 export const ModsResponse = z.strictObject({
   mods: z.array(InstalledMod),
@@ -54,12 +55,12 @@ export const update = defineEndpoint({
   response: InstalledMod,
 })
 
-/** Moves the jar to `.mc-mod/trash/`. */
+/** Moves the jar to `.mc-mod/trash/`; `trashId` restores it (`api.trash.restore`). */
 export const remove = defineEndpoint({
   method: 'DELETE',
   path: '/api/mods/:fileName',
   params: FileParams,
-  response: z.strictObject({ fileName: ModFileName, trashPath: z.string() }),
+  response: z.strictObject({ fileName: ModFileName, trashPath: z.string(), trashId: TrashId }),
 })
 
 /** Low-confidence "possible match" candidates. Never applied without the user. */

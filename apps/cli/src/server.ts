@@ -9,6 +9,7 @@ import { instanceRoutes } from './routes/instance'
 import { modsRoutes } from './routes/mods'
 import { projectsRoutes } from './routes/projects'
 import { settingsRoutes } from './routes/settings'
+import { trashRoutes } from './routes/trash'
 import { type Auth, checkHost, requireToken } from './security'
 import type { CatalogService } from './services/catalog'
 import type { InstallerService } from './services/installer'
@@ -17,6 +18,7 @@ import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
 import type { ServerExportService } from './services/server-export'
 import type { SettingsService } from './services/settings'
+import type { TrashService } from './services/trash'
 import type { UpdatesService } from './services/updates'
 
 /**
@@ -36,6 +38,7 @@ export interface AppOptions {
     settings: SettingsService
     updates: UpdatesService
     serverExport: ServerExportService
+    trash: TrashService
   }
   /** The built web UI. Missing in source/dev runs, where Vite serves the UI. */
   web: WebAssets
@@ -65,6 +68,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   installRoutes(apiRouter, options.services)
   settingsRoutes(apiRouter, options.services)
   exportRoutes(apiRouter, options.services)
+  trashRoutes(apiRouter, options.services)
 
   app.use('/api', express.json())
   app.use(apiRouter)
