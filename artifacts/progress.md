@@ -44,7 +44,7 @@ Update this file at the end of every working session (see AGENTS.md).
 
 ## Phase 4 — Installed mods
 - [x] Jar metadata parsers (fabric, quilt, forge, neoforge, mcmod.info, plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json) — done in Phase 3 for the heuristic
-- [ ] sha1/sha512 + CurseForge murmur2 fingerprint (tested)
+- [x] sha1/sha512 + CurseForge murmur2 fingerprint (tested)
 - [ ] Hash cache in state.json
 - [ ] Identification pipeline (architecture §7.2): install record, Modrinth `/version_files`, launcher metadata (packwiz `.pw.toml`, CF `minecraftinstance.json`, ATLauncher), dual-source merge, compatibility check
 - [ ] "Possible match" suggestions + manual link/unlink
