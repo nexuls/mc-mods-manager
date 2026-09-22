@@ -12,10 +12,11 @@ import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
 import { JobService } from '../services/jobs'
 import { LibraryService } from '../services/library'
+import { ServerExportService } from '../services/server-export'
 import { SettingsService } from '../services/settings'
 import { UpdateStore, UpdatesService } from '../services/updates'
 import { VERSION } from '../version'
-import { openBrowser } from './browser'
+import { openBrowser, openFolder } from './browser'
 import { watchIdle } from './idle'
 import { HOST, listen, PortInUseError } from './listen'
 import { createProgram, DEFAULT_PORT, parseOptions } from './options'
@@ -79,6 +80,7 @@ export async function run(argv: readonly string[]): Promise<void> {
       settings: new SettingsService(config, curseforge),
       installer,
       updates: new UpdatesService({ library, catalog, installer, curseforge, store }),
+      serverExport: new ServerExportService({ instance, library, config, openFolder }),
     },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),

@@ -1,3 +1,4 @@
+import * as serverExport from './export'
 import * as health from './health'
 import * as install from './install'
 import * as instance from './instance'
@@ -9,6 +10,13 @@ import * as settings from './settings'
 
 export * from './define'
 export * from './errors'
+export {
+  ExportBody,
+  ExportMode,
+  ExportPreview,
+  ExportResult,
+  RevealBody,
+} from './export'
 export {
   InstallBody,
   PlanBody,
@@ -39,4 +47,14 @@ export * from './session'
 export { KeySource, Settings, SettingsBody, TestKeyResponse } from './settings'
 
 /** The whole `/api` contract. Backend routes and frontend calls both go through it. */
-export const api = { health, install, instance, jobs, meta, mods, projects, settings }
+export const api = {
+  export: serverExport,
+  health,
+  install,
+  instance,
+  jobs,
+  meta,
+  mods,
+  projects,
+  settings,
+}

@@ -8,6 +8,7 @@ import { InstallerService } from '../src/services/installer'
 import type { InstanceService } from '../src/services/instance'
 import { JobService } from '../src/services/jobs'
 import { LibraryService } from '../src/services/library'
+import { ServerExportService } from '../src/services/server-export'
 import { SettingsService } from '../src/services/settings'
 import { UpdateStore, UpdatesService } from '../src/services/updates'
 import type { FakeCurseForge } from './fake-curseforge'
@@ -22,6 +23,8 @@ export interface ServiceOptions {
   /** Defaults to an unsaved default config in a temp path (written only when a test saves settings). */
   config?: ConfigService
   curseforge?: FakeCurseForge
+  /** "Opens" folders for the export's reveal; records nothing and reports success by default. */
+  openFolder?: (dir: string) => Promise<boolean>
 }
 
 /** Every service `createApp` needs, backed by fakes. */
@@ -63,5 +66,23 @@ export function makeServices(o: ServiceOptions) {
   })
   const settings = new SettingsService(config, curseforge)
   const updates = new UpdatesService({ library, catalog, installer, curseforge, store })
-  return { instance, library, catalog, jobs, installer, settings, updates, config, curseforge }
+  const serverExport = new ServerExportService({
+    instance,
+    library,
+    config,
+    openFolder: o.openFolder ?? (async () => true),
+    now,
+  })
+  return {
+    instance,
+    library,
+    catalog,
+    jobs,
+    installer,
+    settings,
+    updates,
+    serverExport,
+    config,
+    curseforge,
+  }
 }

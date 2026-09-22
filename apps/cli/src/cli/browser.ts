@@ -41,6 +41,17 @@ export async function openBrowser(url: string, mode: BrowserMode): Promise<Opene
   }
 }
 
+/** Opens a folder in the OS file manager. False when there's no display or nothing could open it. */
+export async function openFolder(dir: string): Promise<boolean> {
+  if (!hasDisplay()) return false
+  try {
+    await open(dir)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** On Linux, opening a browser over plain SSH can't work, so don't try. */
 function hasDisplay(): boolean {
   if (process.platform !== 'linux') return true

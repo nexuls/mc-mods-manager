@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import express, { type Express } from 'express'
 import { apiNotFound, createApiRouter, errorHandler } from './routes/adapter'
+import { exportRoutes } from './routes/export'
 import { healthRoutes } from './routes/health'
 import { installRoutes } from './routes/install'
 import { instanceRoutes } from './routes/instance'
@@ -14,6 +15,7 @@ import type { InstallerService } from './services/installer'
 import type { InstanceService } from './services/instance'
 import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
+import type { ServerExportService } from './services/server-export'
 import type { SettingsService } from './services/settings'
 import type { UpdatesService } from './services/updates'
 
@@ -27,6 +29,7 @@ export interface AppOptions {
     jobs: JobService
     settings: SettingsService
     updates: UpdatesService
+    serverExport: ServerExportService
   }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string
@@ -55,6 +58,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   projectsRoutes(apiRouter, options.services)
   installRoutes(apiRouter, options.services)
   settingsRoutes(apiRouter, options.services)
+  exportRoutes(apiRouter, options.services)
 
   app.use('/api', express.json())
   app.use(apiRouter)
