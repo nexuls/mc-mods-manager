@@ -32,7 +32,7 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - **Wide screens (≥ `xl`, 1280px):** both routes show Installed and Browse side by side (unless turned off with the
   columns toggle next to the search bar, remembered in this browser; off, each route shows its own list as below), each with its own scrolling list
   below its title and filters (pagination stays pinned under the results); both nav items are highlighted. Installed
-  gets the larger share (3 : 2), Browse at least 26rem. The page is up to 1920px wide. Narrower: each route shows its own
+  gets the larger share (5 : 4), Browse at least 26rem. The page is up to 1920px wide. Narrower: each route shows its own
   list, with the same search bar.
 - Both lists adapt to their own width (container queries): Installed moves the version into the file-name line below
   768px and drops the Side column below 672px; Browse cards use a smaller icon and title and hide follows below 576px, and the author and
