@@ -1,4 +1,4 @@
-import { BlocksIcon, SettingsIcon } from 'lucide-react'
+import { BlocksIcon, PencilIcon } from 'lucide-react'
 import { ServerStatus } from '@/components/server-status'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,7 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
         {instance.data ? (
           <Button variant="outline" onClick={onEditInstance} className="min-w-0">
             <span className="truncate">{describeInstance(instance.data.instance)}</span>
-            <SettingsIcon />
+            <PencilIcon />
           </Button>
         ) : (
           <Skeleton className="h-8 w-56" />

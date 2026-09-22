@@ -1,4 +1,4 @@
-import { CompassIcon, type LucideIcon, PackageIcon } from 'lucide-react'
+import { CompassIcon, type LucideIcon, PackageIcon, SettingsIcon } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router'
 import { cn } from '@/lib/utils'
 
@@ -6,6 +6,7 @@ const links: { to: string; label: string; Icon: LucideIcon; end?: boolean; also?
   { to: '/', label: 'Installed', Icon: PackageIcon, end: true },
   // Project pages are reached from Browse.
   { to: '/browse', label: 'Browse', Icon: CompassIcon, also: '/project/' },
+  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
 /** Main navigation: a sidebar on wide screens, a row of tabs above the content on narrow ones. */
