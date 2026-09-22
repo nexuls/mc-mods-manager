@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppHeader } from '@/components/app-header'
 import { AppNav } from '@/components/app-nav'
+import { ExportView } from '@/components/export-view'
 import { InstanceDialog } from '@/components/instance-dialog'
 import { LibraryView } from '@/components/library-view'
 import { ScrollPanel } from '@/components/scroll-panel'
@@ -39,7 +40,7 @@ function App() {
               </div>
             ) : ready ? (
               <>
-                <AppNav />
+                <AppNav contentKind={ready.contentKind} />
                 <main className="flex min-w-0 flex-1 flex-col">
                   <Routes>
                     {/* One LibraryView for all three, so moving between them keeps its state. */}
@@ -48,6 +49,10 @@ function App() {
                       <Route path="browse" element={null} />
                       <Route path="project/:provider/:id" element={null} />
                     </Route>
+                    <Route
+                      path="export"
+                      element={<ExportView plugins={ready.contentKind === 'plugin'} />}
+                    />
                     <Route path="settings" element={<SettingsView />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
