@@ -1,7 +1,7 @@
 // Builds standalone `mc-mod` executables (Bun runtime + CLI + web UI in one file) with `bun build --compile`.
 // Run `bun run build` first: the web UI is read from apps/cli/dist/web.
 //
-//   bun run compile                        this machine's platform only
+//   bun run compile                        this machine only, with the Bun that runs this script
 //   bun run compile --all                  every release target
 //   bun run compile --target linux-x64     one target (repeatable)
 //
@@ -32,6 +32,9 @@ const outDir = path.join(root, 'dist/release')
 const { values } = parseArgs({
   options: { all: { type: 'boolean', default: false }, target: { type: 'string', multiple: true } },
 })
+// Without --all or --target, reuse the running Bun instead of downloading one (on Windows runners,
+// Bun can't extract the runtime it downloads). Release builds pass --all.
+const host = !values.all && !values.target?.length
 const targets: Target[] = values.all
   ? TargetName.options
   : values.target?.length
@@ -79,7 +82,8 @@ for (const target of targets) {
   const result = await Bun.build({
     entrypoints: [entry],
     compile: {
-      target: TARGETS[target],
+      // Left out (not undefined) for the running Bun: Bun rejects an undefined target.
+      ...(host ? {} : { target: TARGETS[target] }),
       outfile,
       // Like the npm bin's `bun --no-env-file`: never load .env or bunfig.toml from the user's directory.
       autoloadDotenv: false,

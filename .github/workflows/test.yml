@@ -39,6 +39,8 @@ jobs:
 
       - run: bun test
 
+      # `compile` without flags builds this OS's binary with the runner's own Bun (no download). Release
+      # binaries are cross-compiled on Linux from Bun's baseline builds; the code in them is the same.
       - name: Build
         run: |
           bun run build
