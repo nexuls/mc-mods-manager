@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   GameVersion,
+  type InstanceField,
   type InstanceOverrides,
   type InstanceResponse,
   Loader,
@@ -60,6 +61,14 @@ function relativeTo(root: string, p: string): string {
   return prefix ? p.slice(prefix.length) : p
 }
 
+const fieldLabel: Record<InstanceField, string> = {
+  kind: 'instance type',
+  gameVersion: 'game version',
+  loader: 'loader',
+  loaderVersion: 'loader version',
+  contentDir: 'content folder',
+}
+
 const confidenceVariant = { high: 'default', medium: 'secondary', low: 'outline' } as const
 
 export function InstanceDialog({
@@ -96,7 +105,8 @@ export function InstanceDialog({
   return (
     <Dialog open={open || blocking} onOpenChange={(o) => !blocking && onOpenChange(o)}>
       <DialogContent
-        className="sm:max-w-lg"
+        // min-w-0 on every section: long paths must wrap, not widen the grid past the panel.
+        className="*:min-w-0 sm:max-w-lg"
         showCloseButton={!blocking}
         onEscapeKeyDown={(e) => blocking && e.preventDefault()}
         onInteractOutside={(e) => blocking && e.preventDefault()}
@@ -105,6 +115,11 @@ export function InstanceDialog({
           <DialogTitle>{blocking ? 'Set up this instance' : 'Instance'}</DialogTitle>
           <DialogDescription className="break-all">{instance.root}</DialogDescription>
         </DialogHeader>
+
+        <p className="text-muted-foreground text-sm">
+          mc-mod uses these to pick compatible mods, versions and updates. They don't change the
+          game or its loader: do that in your launcher, then match it here.
+        </p>
 
         {instance.warnings.map((w) => (
           <Alert key={w}>
@@ -233,9 +248,13 @@ export function InstanceDialog({
                   </Badge>
                   <span className="min-w-0">
                     <span className="block">{d.source}</span>
-                    <span className="text-muted-foreground block truncate text-xs">
+                    {d.fields.length > 0 && (
+                      <span className="text-muted-foreground block text-xs">
+                        Provided the {d.fields.map((f) => fieldLabel[f]).join(', ')}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground block text-xs break-all">
                       {d.detail}
-                      {d.fields.length > 0 && ` · ${d.fields.join(', ')}`}
                     </span>
                   </span>
                 </li>
