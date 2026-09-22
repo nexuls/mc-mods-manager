@@ -1,4 +1,7 @@
-# mc-mods-manager
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
+  <img alt="mc-mod: mods and plugins for any Minecraft instance, managed from a local web UI" src="docs/images/banner-light.svg" width="100%">
+</picture>
 
 `mc-mod` is a command-line tool for managing the mods and plugins of a Minecraft instance or server.
 Run it in the instance's folder and it opens a local web UI. The UI shows what's installed, searches
@@ -7,6 +10,11 @@ with its required dependencies.
 
 > **Status: work in progress, not yet published.** Listing, search and install work. Update checks
 > and server export are next. See [Roadmap](#roadmap).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/ui-dark.png">
+  <img alt="The mc-mod web UI: installed mods on the left, Modrinth search results for the instance on the right" src="docs/images/ui-light.png" width="100%">
+</picture>
 
 ## Features
 
@@ -22,6 +30,15 @@ with its required dependencies.
   go to `.mc-mod/trash/` and aren't deleted.
 - **Runs on your machine only.** The server listens on `127.0.0.1` and needs a per-run session
   token. See [Security](#security).
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/install-dark.png">
+    <img alt="Install dialog for Create Aeronautics: Sable is added as a required dependency, and Create is skipped because it's already installed" src="docs/images/install-light.png" width="600">
+  </picture>
+  <br>
+  <sub>Installing a mod shows its plan first: required dependencies are added, and ones you already have are skipped.</sub>
+</p>
 
 ### Supported instances
 
@@ -70,6 +87,11 @@ mc-mod
 ```
 
 It prints what it detected and opens the UI. Press Ctrl+C to stop it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/terminal-dark.svg">
+  <img alt="Terminal output: mc-mod detects NeoForge 21.1.250 on Minecraft 1.21.1, prints the instance and the local URL, and opens the UI in Chrome" src="docs/images/terminal-light.svg" width="760">
+</picture>
 
 You can also point it at a folder, or start it from inside `mods/` or `plugins/`:
 
@@ -129,6 +151,18 @@ Some CurseForge authors don't allow third-party downloads. For those files, the 
 | `~/.config/mc-mod/config.json` | Global settings and the CurseForge key, readable only by you (`%APPDATA%\mc-mod\Config\` on Windows, `~/Library/Preferences/mc-mod/` on macOS) |
 
 It changes nothing else in the instance except the jars in `mods/` or `plugins/`.
+
+## How it works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/how-it-works-dark.svg">
+  <img alt="Diagram: mc-mod reads and writes the instance folder, serves the web UI over a token-protected API on 127.0.0.1, and talks to Modrinth and CurseForge over HTTPS" src="docs/images/how-it-works-light.svg" width="100%">
+</picture>
+
+`mc-mod` is both the command and the server. It works out the instance's game version and loader,
+then serves the web UI and a JSON API on `127.0.0.1`. The API is what reads your jars, talks to
+Modrinth and CurseForge, and writes files. The browser only talks to that local server. The design
+is in [artifacts/architecture.md](artifacts/architecture.md).
 
 ## Security
 
