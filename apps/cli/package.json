@@ -2,6 +2,12 @@
   "name": "mc-mod",
   "version": "0.0.0",
   "description": "Manage Minecraft mods and plugins from a local web UI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nexuls/mc-mods-manager.git",
+    "directory": "apps/cli"
+  },
   "type": "module",
   "bin": {
     "mc-mod": "./dist/bin.js"
