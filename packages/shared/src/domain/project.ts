@@ -87,7 +87,11 @@ export type VersionDependency = z.infer<typeof VersionDependency>
 /** The file a version installs. */
 export const VersionFile = z.strictObject({
   name: z.string(),
-  url: z.string(),
+  /**
+   * null when the author only allows downloads from the platform's own site (CurseForge's
+   * "third-party distribution" setting): the user has to download it from `ProjectVersion.pageUrl`.
+   */
+  url: z.string().nullable(),
   size: z.number().int().nonnegative(),
   sha1: z.string().optional(),
   sha512: z.string().optional(),
@@ -111,6 +115,8 @@ export const ProjectVersion = z.strictObject({
   /** The primary file; null when the version has no jar we can install. */
   file: VersionFile.nullable(),
   dependencies: z.array(VersionDependency),
+  /** The version's page on the platform, for downloading by hand. */
+  pageUrl: z.string().optional(),
 })
 export type ProjectVersion = z.infer<typeof ProjectVersion>
 
@@ -125,6 +131,6 @@ export const RankedVersion = ProjectVersion.extend({
 })
 export type RankedVersion = z.infer<typeof RankedVersion>
 
-/** A Modrinth category (or CurseForge one later) for the Browse filter. */
+/** A platform category for the Browse filter. `name` is its slug. */
 export const Category = z.strictObject({ name: z.string(), label: z.string() })
 export type Category = z.infer<typeof Category>

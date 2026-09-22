@@ -257,6 +257,14 @@ export class InstallerService {
     const { file } = version
     if (!file) throw new AppError('NOT_FOUND', `${version.name} has no jar file to install`)
     const fileName = safeJarName(file.name)
+    const url = file.url
+    if (!url) {
+      throw new AppError(
+        'MANUAL_DOWNLOAD_REQUIRED',
+        `The author only allows downloading ${fileName} from the platform's website`,
+        { pageUrl: version.pageUrl },
+      )
+    }
     const dest = resolveInside(root, path.join(contentDir, fileName))
 
     if (await exists(`${dest}.disabled`)) {
@@ -276,7 +284,7 @@ export class InstallerService {
     try {
       const { sha1 } = await downloadVerified(
         {
-          url: file.url,
+          url,
           sha1: file.sha1,
           sha512: file.sha512,
           size: file.size,
