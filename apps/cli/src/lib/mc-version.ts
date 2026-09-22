@@ -1,6 +1,10 @@
 // Minecraft version comparison and the two range syntaxes found in jar metadata:
 // Maven ranges (Forge/NeoForge `mods.toml`) and Fabric/Quilt version predicates.
 
+import type { VersionInterval as Interval, VersionRange } from '@mc-mod/shared'
+
+export type { VersionRange }
+
 interface Parsed {
   nums: number[]
   /** A pre-release/snapshot suffix (`1.21-pre1`, `1.21-alpha.24.10.a`) sorts before the release. */
@@ -32,19 +36,6 @@ export function compareVersions(a: string, b: string): number {
 /** A release like `1.21.1` or `26.2` (no snapshot/pre-release suffix). */
 export function isReleaseVersion(v: string): boolean {
   return /^\d+(\.\d+)+$/.test(v)
-}
-
-type Bound = { v: string; inclusive: boolean }
-/** One interval; a range is a union (OR) of intervals. */
-interface Interval {
-  min?: Bound
-  max?: Bound
-}
-
-export interface VersionRange {
-  intervals: Interval[]
-  /** Versions named in the range that could be "the" game version (inclusive bounds, exact pins). */
-  candidates: string[]
 }
 
 function contains(i: Interval, v: string): boolean {
