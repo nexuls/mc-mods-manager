@@ -132,3 +132,10 @@ Accepted.
   the retries. Polling keeps going while disconnected, so the badge recovers by itself.
 - **Pointer cursor** comes from one unlayered rule in `index.css` (enabled buttons, menu items, options, tabs), since
   Tailwind v4 dropped it and shadcn items use `cursor-default` utilities. `components/ui/*` stays untouched.
+
+### D19 — The platform's side wins over a side override
+- Side precedence is platform (primary source first) > user override > jar metadata > unknown. A Modrinth/CurseForge
+  side is maintained by the author, so the Installed table shows it read-only, and only local files (or files whose
+  platform doesn't know the side) get the side menu.
+- `PATCH sideOverride` is still accepted and stored for any file, but it's ignored while the platform has a side. So an
+  older override on a now-identified file does nothing, and it comes back if the file is later treated as local.

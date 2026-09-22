@@ -186,19 +186,22 @@ export function checkCompatibility(
   return { compatibility: 'ok' }
 }
 
-/** Side: user override > platform (primary source first) > jar metadata > unknown. */
+/**
+ * Side: platform (primary source first) > user override > jar metadata > unknown. The platform's answer
+ * wins, so an override only counts for local files or when the platform doesn't know the side.
+ */
 export function resolveSide(
   override: Side | undefined,
   sources: readonly ModSource[],
   primary: Provider | undefined,
   jarSide: Side | undefined,
 ): { side: Side; sideSource: SideSource } {
-  if (override) return { side: override, sideSource: 'override' }
   const ordered = [...sources].sort(
     (a, b) => Number(b.provider === primary) - Number(a.provider === primary),
   )
   const platform = ordered.find((s) => s.side && s.side !== 'unknown')?.side
   if (platform) return { side: platform, sideSource: 'platform' }
+  if (override) return { side: override, sideSource: 'override' }
   if (jarSide && jarSide !== 'unknown') return { side: jarSide, sideSource: 'jar' }
   return { side: 'unknown', sideSource: 'unknown' }
 }

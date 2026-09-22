@@ -197,8 +197,18 @@ describe('resolveSide', () => {
   const mr = src({ provider: 'modrinth', method: 'hash', side: 'client' })
   const cf = src({ provider: 'curseforge', method: 'hash', side: 'both' })
 
-  test('override > platform (primary first) > jar > unknown', () => {
+  test('platform (primary first) > override > jar > unknown', () => {
     expect(resolveSide('server', [mr], 'modrinth', 'both')).toEqual({
+      side: 'client',
+      sideSource: 'platform',
+    })
+    expect(
+      resolveSide('server', [src({ provider: 'modrinth', method: 'hash' })], 'modrinth', 'both'),
+    ).toEqual({
+      side: 'server',
+      sideSource: 'override',
+    })
+    expect(resolveSide('server', [], undefined, 'both')).toEqual({
       side: 'server',
       sideSource: 'override',
     })
