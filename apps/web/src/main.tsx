@@ -7,11 +7,20 @@ import './index.css'
 import App from './App.tsx'
 import { Toaster } from './components/ui/sonner'
 import { TooltipProvider } from './components/ui/tooltip'
+import { ApiClientError } from './lib/api'
 import { captureToken } from './lib/storage'
 
 captureToken()
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // The server already answered, so retrying rarely helps (a rejected key, a missing project);
+      // one retry covers a platform hiccup. Network errors (server restarting) keep the default 3.
+      retry: (failures, err) => failures < (err instanceof ApiClientError ? 1 : 3),
+    },
+  },
+})
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')
