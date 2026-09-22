@@ -27,6 +27,7 @@ export function Markdown({ children, className }: { children: string; className?
           a: ({ node: _, ...props }) => <a {...props} target="_blank" rel="noreferrer noopener" />,
           img: ({ node: _, ...props }) => <img {...props} alt={props.alt ?? ''} loading="lazy" />,
           center: ({ children }) => <div className="text-center">{children}</div>,
+          hr: ({ node: _, ...props }) => <hr {...props} className="my-5! border-t" />,
         }}
       >
         {children}
