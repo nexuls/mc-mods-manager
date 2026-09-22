@@ -51,7 +51,7 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] Installed view: table, enable/disable, remove (to `.mc-mod/trash/`), side badge, filters, link dialog
 
 ## Phase 5 — Search & install (Modrinth)
-- [ ] Modrinth provider: search, project, versions, tags
+- [x] Modrinth provider: search, project, versions, tags (in-memory TTL cache, `lib/ttl-cache.ts`)
 - [ ] Best-version selection algorithm (+ tests)
 - [ ] Dependency resolution + install plan endpoint
 - [ ] Download, hash verify, atomic write; SSE job progress

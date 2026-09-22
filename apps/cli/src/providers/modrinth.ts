@@ -1,15 +1,30 @@
-import type { ContentKind, Loader, Side } from '@mc-mod/shared'
+import type {
+  Category,
+  ContentKind,
+  Loader,
+  Project,
+  ProjectHit,
+  ProjectLink,
+  ProjectVersion,
+  SearchSort,
+  Side,
+} from '@mc-mod/shared'
 import { z } from 'zod'
 import { AppError } from '../errors'
+import { TtlCache } from '../lib/ttl-cache'
 import { VERSION } from '../version'
 import {
   type Environment,
+  MrCategoryTags,
+  MrGameVersionTags,
   MrHashVersionMap,
   type MrProject,
   MrProject as MrProjectSchema,
   MrProjects,
+  type MrSearchHit,
   MrSearchResult,
   type MrVersion,
+  MrVersions,
 } from './modrinth.schemas'
 import type { Fetch, HashMatch, ProjectInfo } from './types'
 
@@ -25,6 +40,9 @@ const HASH_BATCH = 500
 const PROJECT_BATCH = 100
 /** Wait for a rate-limit reset once if it's this close; otherwise report the 429. */
 const MAX_RETRY_WAIT_S = 5
+
+/** How long GET responses are reused (external-apis.md, Caching). */
+const TTL = { search: 2 * 60_000, project: 10 * 60_000, versions: 5 * 60_000, tags: 24 * 3600_000 }
 
 /** Modrinth's environment → our side. "Optional" on the other side still means it runs there. */
 const ENVIRONMENT_SIDE: Record<Environment, Side> = {
@@ -46,7 +64,9 @@ export function environmentSide(env: Environment | undefined): Side | undefined 
 }
 
 /** Project side: the newer `environment` list if it agrees on one side, else `client_side`/`server_side`. */
-export function projectSide(p: MrProject): Side {
+export function projectSide(
+  p: Pick<MrProject, 'environment' | 'client_side' | 'server_side'>,
+): Side {
   const sides = new Set((p.environment ?? []).map((e) => ENVIRONMENT_SIDE[e]))
   sides.delete('unknown')
   const [only] = sides
@@ -71,6 +91,112 @@ function toProject(p: MrProject): ProjectInfo {
   }
 }
 
+const nonEmpty = (s: string | null | undefined) => (s ? s : undefined)
+
+function projectLinks(p: MrProject): ProjectLink[] {
+  const links: ProjectLink[] = []
+  const add = (label: string, url: string | null | undefined) => {
+    if (url) links.push({ label, url })
+  }
+  add('Source', p.source_url)
+  add('Issues', p.issues_url)
+  add('Wiki', p.wiki_url)
+  add('Discord', p.discord_url)
+  for (const d of p.donation_urls ?? []) add(d.platform, d.url)
+  return links
+}
+
+function toProjectPage(p: MrProject): Project {
+  return {
+    provider: 'modrinth',
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    description: p.description ?? '',
+    body: p.body ?? '',
+    iconUrl: p.icon_url ?? undefined,
+    downloads: p.downloads ?? 0,
+    follows: p.followers,
+    updatedAt: p.updated,
+    categories: p.categories ?? [],
+    loaders: p.loaders ?? [],
+    gameVersions: p.game_versions ?? [],
+    side: projectSide(p),
+    license: nonEmpty(p.license?.name) ?? nonEmpty(p.license?.id),
+    pageUrl: `https://modrinth.com/project/${p.slug}`,
+    links: projectLinks(p),
+    gallery: [...(p.gallery ?? [])]
+      .sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0))
+      .map((g) => ({
+        url: g.url,
+        rawUrl: g.raw_url,
+        title: nonEmpty(g.title),
+        description: nonEmpty(g.description),
+      })),
+  }
+}
+
+function toHit(h: MrSearchHit): ProjectHit {
+  return {
+    provider: 'modrinth',
+    id: h.project_id,
+    slug: h.slug,
+    title: h.title,
+    description: h.description ?? '',
+    iconUrl: h.icon_url ?? undefined,
+    author: h.author,
+    downloads: h.downloads ?? 0,
+    follows: h.follows,
+    updatedAt: h.date_modified,
+    categories: h.display_categories ?? [],
+    side: projectSide(h),
+  }
+}
+
+export function toVersion(v: MrVersion): ProjectVersion {
+  const jars = v.files.filter((f) => f.filename.toLowerCase().endsWith('.jar'))
+  const file = jars.find((f) => f.primary) ?? jars[0]
+  return {
+    provider: 'modrinth',
+    id: v.id,
+    projectId: v.project_id,
+    name: v.name,
+    versionNumber: v.version_number,
+    type: v.version_type,
+    publishedAt: v.date_published,
+    downloads: v.downloads,
+    loaders: v.loaders,
+    gameVersions: v.game_versions,
+    side: environmentSide(v.environment),
+    file: file
+      ? {
+          name: file.filename,
+          url: file.url,
+          size: file.size,
+          sha1: file.hashes.sha1,
+          sha512: file.hashes.sha512,
+        }
+      : null,
+    dependencies: v.dependencies.map((d) => ({
+      projectId: d.project_id ?? undefined,
+      versionId: d.version_id ?? undefined,
+      type: d.dependency_type,
+    })),
+  }
+}
+
+/** What Browse asks for. `loaders` are OR'ed; an empty list or no game version means no filter. */
+export interface BrowseQuery {
+  text: string
+  kind: ContentKind
+  loaders: readonly Loader[]
+  gameVersion?: string | null
+  category?: string
+  sort: SearchSort
+  offset: number
+  limit: number
+}
+
 function toMatch(v: MrVersion): HashMatch {
   return {
     projectId: v.project_id,
@@ -89,6 +215,8 @@ function chunks<T>(list: readonly T[], size: number): T[][] {
 }
 
 export class ModrinthProvider {
+  private readonly cache = new TtlCache()
+
   // globalThis: a bare `fetch` in the default would refer to this parameter itself.
   constructor(private readonly fetch: Fetch = (url, init) => globalThis.fetch(url, init)) {}
 
@@ -119,46 +247,137 @@ export class ModrinthProvider {
 
   /** A project by id or slug, or null if Modrinth doesn't have it. */
   async getProject(idOrSlug: string): Promise<ProjectInfo | null> {
-    const p = await this.request(
-      `/project/${encodeURIComponent(idOrSlug)}`,
-      MrProjectSchema.nullable(),
-      {},
-      { notFound: null },
-    )
+    const p = await this.fetchProject(idOrSlug)
     return p ? toProject(p) : null
   }
 
+  /** The full project for its page (body, links, gallery), or null if Modrinth doesn't have it. */
+  async getProjectPage(idOrSlug: string): Promise<Project | null> {
+    const p = await this.fetchProject(idOrSlug)
+    return p ? toProjectPage(p) : null
+  }
+
+  private fetchProject(idOrSlug: string): Promise<MrProject | null> {
+    return this.request(
+      `/project/${encodeURIComponent(idOrSlug)}`,
+      MrProjectSchema.nullable(),
+      {},
+      { notFound: null, ttlMs: TTL.project },
+    )
+  }
+
+  /** A project's versions, newest first. Filters are sent to Modrinth; empty ones are left out. */
+  async getVersions(
+    idOrSlug: string,
+    filter: { loaders?: readonly string[]; gameVersions?: readonly string[] } = {},
+  ): Promise<ProjectVersion[] | null> {
+    const params = new URLSearchParams({ include_changelog: 'false' })
+    if (filter.loaders?.length) params.set('loaders', JSON.stringify(filter.loaders))
+    if (filter.gameVersions?.length) {
+      params.set('game_versions', JSON.stringify(filter.gameVersions))
+    }
+    const list = await this.request(
+      `/project/${encodeURIComponent(idOrSlug)}/version?${params}`,
+      MrVersions.nullable(),
+      {},
+      { notFound: null, ttlMs: TTL.versions },
+    )
+    return list ? list.map(toVersion) : null
+  }
+
+  /** Versions by id; ids Modrinth doesn't know are missing from the map. */
+  async getVersionsByIds(ids: readonly string[]): Promise<Map<string, ProjectVersion>> {
+    const out = new Map<string, ProjectVersion>()
+    for (const batch of chunks([...new Set(ids)], PROJECT_BATCH)) {
+      const list = await this.request(
+        `/versions?ids=${encodeURIComponent(JSON.stringify(batch))}&include_changelog=false`,
+        MrVersions,
+      )
+      for (const v of list) out.set(v.id, toVersion(v))
+    }
+    return out
+  }
+
+  /** Project search for Browse. */
+  async browse(q: BrowseQuery): Promise<{ hits: ProjectHit[]; total: number }> {
+    const facets = [[`project_type:${q.kind}`]]
+    const loaders = q.loaders.filter((l) => l !== 'vanilla')
+    if (loaders.length > 0) facets.push(loaders.map((l) => `categories:${l}`))
+    if (q.gameVersion) facets.push([`versions:${q.gameVersion}`])
+    if (q.category) facets.push([`categories:${q.category}`])
+    const params = new URLSearchParams({
+      query: q.text,
+      facets: JSON.stringify(facets),
+      index: q.sort,
+      offset: String(q.offset),
+      limit: String(q.limit),
+    })
+    const res = await this.request(`/search?${params}`, MrSearchResult, {}, { ttlMs: TTL.search })
+    return { hits: res.hits.map(toHit), total: res.total_hits }
+  }
+
+  /** Name search for "possible match" suggestions. */
   async search(q: {
     text: string
     kind: ContentKind
     loader?: Loader | null
     limit: number
   }): Promise<ProjectInfo[]> {
-    const facets = [[`project_type:${q.kind}`]]
-    if (q.loader && q.loader !== 'vanilla') facets.push([`categories:${q.loader}`])
-    const params = new URLSearchParams({
-      query: q.text,
-      facets: JSON.stringify(facets),
-      limit: String(q.limit),
+    const { hits } = await this.browse({
+      text: q.text,
+      kind: q.kind,
+      loaders: q.loader ? [q.loader] : [],
+      sort: 'relevance',
+      offset: 0,
+      limit: q.limit,
     })
-    const { hits } = await this.request(`/search?${params}`, MrSearchResult)
     return hits.map((h) => ({
-      id: h.project_id,
+      id: h.id,
       slug: h.slug,
       title: h.title,
-      description: h.description ?? '',
-      iconUrl: h.icon_url ?? undefined,
+      description: h.description,
+      iconUrl: h.iconUrl,
       author: h.author,
       downloads: h.downloads,
-      side: 'unknown',
+      side: h.side,
     }))
   }
 
-  private async request<S extends z.ZodType>(
+  /** Minecraft versions, newest first. Snapshots only when asked for. */
+  async gameVersions(includeSnapshots: boolean): Promise<string[]> {
+    const tags = await this.request('/tag/game_version', MrGameVersionTags, {}, { ttlMs: TTL.tags })
+    return tags
+      .filter((t) => includeSnapshots || t.version_type === 'release')
+      .map((t) => t.version)
+  }
+
+  /** Browse categories for a content kind (loaders are left out; they're a separate filter). */
+  async categories(kind: ContentKind): Promise<Category[]> {
+    const tags = await this.request('/tag/category', MrCategoryTags, {}, { ttlMs: TTL.tags })
+    return tags
+      .filter((t) => t.project_type === kind && t.header === 'categories')
+      .map((t) => ({ name: t.name, label: categoryLabel(t.name) }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }
+
+  private request<S extends z.ZodType>(
     pathAndQuery: string,
     schema: S,
     init: RequestInit = {},
-    options: { notFound?: z.output<S> } = {},
+    options: { notFound?: z.output<S>; ttlMs?: number } = {},
+  ): Promise<z.output<S>> {
+    const { ttlMs } = options
+    if (ttlMs === undefined || (init.method ?? 'GET') !== 'GET') {
+      return this.send(pathAndQuery, schema, init, options)
+    }
+    return this.cache.get(pathAndQuery, ttlMs, () => this.send(pathAndQuery, schema, init, options))
+  }
+
+  private async send<S extends z.ZodType>(
+    pathAndQuery: string,
+    schema: S,
+    init: RequestInit,
+    options: { notFound?: z.output<S> },
   ): Promise<z.output<S>> {
     const url = `${MODRINTH_API}${pathAndQuery}`
     const headers = { 'User-Agent': USER_AGENT, 'Content-Type': 'application/json' }
@@ -194,4 +413,10 @@ export class ModrinthProvider {
     }
     return parsed.data
   }
+}
+
+/** `worldgen` → `Worldgen`, `game-mechanics` → `Game mechanics`. */
+function categoryLabel(name: string): string {
+  const words = name.replaceAll('-', ' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }

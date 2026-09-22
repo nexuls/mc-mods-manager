@@ -25,11 +25,24 @@ function fakeFetch(routes: Record<string, (call: Call) => Response>) {
 const version = (overrides: object = {}) => ({
   id: 'VER1',
   project_id: 'PROJ1',
+  name: 'Version 1',
   version_number: '1.0.0',
+  version_type: 'release',
+  date_published: '2026-01-01T00:00:00Z',
+  downloads: 5,
   loaders: ['fabric'],
   game_versions: ['1.21.1'],
   environment: 'client_only',
-  files: [{ filename: 'a.jar', primary: true, hashes: { sha1: 'aa', sha512: 'bb' } }],
+  files: [
+    {
+      filename: 'a.jar',
+      url: 'https://cdn.modrinth.com/a.jar',
+      size: 10,
+      primary: true,
+      hashes: { sha1: 'aa', sha512: 'bb' },
+    },
+  ],
+  dependencies: [{ project_id: 'DEP', version_id: null, dependency_type: 'required' }],
   extra: 'ignored',
   ...overrides,
 })
@@ -104,6 +117,163 @@ describe('projects', () => {
   })
 })
 
+describe('browse', () => {
+  const hit = {
+    project_id: 'P',
+    slug: 'p',
+    title: 'P',
+    downloads: 3,
+    display_categories: ['fabric', 'optimization'],
+    environment: ['client_only'],
+  }
+
+  test('sends loaders OR-ed, version and category as facets', async () => {
+    const f = fakeFetch({
+      '/search': () => Response.json({ hits: [hit], offset: 20, limit: 20, total_hits: 41 }),
+    })
+    const res = await new ModrinthProvider(f.fetch).browse({
+      text: 'x',
+      kind: 'mod',
+      loaders: ['quilt', 'fabric'],
+      gameVersion: '1.21.1',
+      category: 'optimization',
+      sort: 'downloads',
+      offset: 20,
+      limit: 20,
+    })
+    expect(res).toEqual({
+      total: 41,
+      hits: [
+        {
+          provider: 'modrinth',
+          id: 'P',
+          slug: 'p',
+          title: 'P',
+          description: '',
+          downloads: 3,
+          categories: ['fabric', 'optimization'],
+          side: 'client',
+          iconUrl: undefined,
+          author: undefined,
+          follows: undefined,
+          updatedAt: undefined,
+        },
+      ],
+    })
+    const params = new URL(f.calls[0]?.url ?? '').searchParams
+    expect(JSON.parse(params.get('facets') ?? '')).toEqual([
+      ['project_type:mod'],
+      ['categories:quilt', 'categories:fabric'],
+      ['versions:1.21.1'],
+      ['categories:optimization'],
+    ])
+    expect(params.get('index')).toBe('downloads')
+    expect(params.get('offset')).toBe('20')
+  })
+
+  test('reuses a cached search', async () => {
+    const f = fakeFetch({
+      '/search': () => Response.json({ hits: [], offset: 0, limit: 5, total_hits: 0 }),
+    })
+    const p = new ModrinthProvider(f.fetch)
+    const q = {
+      text: 'a',
+      kind: 'mod',
+      loaders: [],
+      sort: 'relevance',
+      offset: 0,
+      limit: 5,
+    } as const
+    await p.browse(q)
+    await p.browse(q)
+    expect(f.calls).toHaveLength(1)
+  })
+})
+
+describe('versions', () => {
+  test('getVersions filters and normalizes', async () => {
+    const f = fakeFetch({ '/project/sodium/version': () => Response.json([version()]) })
+    const list = await new ModrinthProvider(f.fetch).getVersions('sodium', {
+      loaders: ['fabric', 'quilt'],
+      gameVersions: ['1.21.1'],
+    })
+    expect(list).toEqual([
+      {
+        provider: 'modrinth',
+        id: 'VER1',
+        projectId: 'PROJ1',
+        name: 'Version 1',
+        versionNumber: '1.0.0',
+        type: 'release',
+        publishedAt: '2026-01-01T00:00:00Z',
+        downloads: 5,
+        loaders: ['fabric'],
+        gameVersions: ['1.21.1'],
+        side: 'client',
+        file: {
+          name: 'a.jar',
+          url: 'https://cdn.modrinth.com/a.jar',
+          size: 10,
+          sha1: 'aa',
+          sha512: 'bb',
+        },
+        dependencies: [{ projectId: 'DEP', versionId: undefined, type: 'required' }],
+      },
+    ])
+    const params = new URL(f.calls[0]?.url ?? '').searchParams
+    expect(params.get('loaders')).toBe('["fabric","quilt"]')
+    expect(params.get('game_versions')).toBe('["1.21.1"]')
+  })
+
+  test('a version without a jar has no file', async () => {
+    const f = fakeFetch({
+      '/project/x/version': () =>
+        Response.json([
+          version({
+            files: [{ filename: 'a.zip', url: 'u', size: 1, primary: true, hashes: {} }],
+          }),
+        ]),
+    })
+    expect((await new ModrinthProvider(f.fetch).getVersions('x'))?.[0]?.file).toBeNull()
+  })
+
+  test('getVersions of an unknown project is null', async () => {
+    expect(await new ModrinthProvider(fakeFetch({}).fetch).getVersions('nope')).toBeNull()
+  })
+})
+
+describe('tags', () => {
+  test('gameVersions leaves snapshots out unless asked', async () => {
+    const f = fakeFetch({
+      '/tag/game_version': () =>
+        Response.json([
+          { version: '1.21.2', version_type: 'release', date: 'd' },
+          { version: '24w14a', version_type: 'snapshot', date: 'd' },
+        ]),
+    })
+    const p = new ModrinthProvider(f.fetch)
+    expect(await p.gameVersions(false)).toEqual(['1.21.2'])
+    expect(await p.gameVersions(true)).toEqual(['1.21.2', '24w14a'])
+    expect(f.calls).toHaveLength(1)
+  })
+
+  test('categories of one kind, labelled and sorted', async () => {
+    const f = fakeFetch({
+      '/tag/category': () =>
+        Response.json([
+          { name: 'worldgen', project_type: 'mod', header: 'categories' },
+          { name: 'game-mechanics', project_type: 'mod', header: 'categories' },
+          { name: '16x', project_type: 'resourcepack', header: 'resolutions' },
+          { name: 'economy', project_type: 'plugin', header: 'categories' },
+        ]),
+    })
+    expect(await new ModrinthProvider(f.fetch).categories('mod')).toEqual([
+      { name: 'game-mechanics', label: 'Game mechanics' },
+      { name: 'worldgen', label: 'Worldgen' },
+    ])
+  })
+})
+
 describe('projectSide', () => {
   const p = (x: object) =>
     MrProject.parse({ id: 'a', slug: 'a', title: 'A', project_type: 'mod', ...x })
@@ -131,4 +301,10 @@ test.if(process.env.MC_MOD_LIVE === '1')('live: identifies a known Sodium jar', 
   expect(
     (await p.search({ text: 'sodium', kind: 'mod', loader: 'fabric', limit: 3 }))[0]?.slug,
   ).toBe('sodium')
+  const page = await p.getProjectPage('sodium')
+  expect(page?.body.length).toBeGreaterThan(0)
+  const versions = await p.getVersions('sodium', { loaders: ['fabric'], gameVersions: ['1.21.1'] })
+  expect(versions?.[0]?.file?.url).toStartWith('https://cdn.modrinth.com/')
+  expect(await p.gameVersions(false)).toContain('1.21.1')
+  expect((await p.categories('mod')).map((c) => c.name)).toContain('optimization')
 })

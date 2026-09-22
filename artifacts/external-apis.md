@@ -36,6 +36,11 @@ Notes:
   We prefer the version's `environment`, then the project's list, then the legacy `client_side`/`server_side`.
   "Optional on the other side" maps to `both`, so server exports keep it. Mapping: `environmentSide()` in `providers/modrinth.ts`.
 - `POST /version_files` returns a map keyed by the requested hash; hashes Modrinth doesn't know are left out.
+- Search (verified 2026-09-22): `index` is `relevance | downloads | follows | newest | updated`; the response has
+  `hits`, `offset`, `limit`, `total_hits`. Hits of `project_type:plugin` searches can report `project_type: "mod"`
+  (plugins are mods with plugin loaders), so don't filter on the hit's type. `display_categories` holds loaders + categories.
+- Versions: `GET /project/{id}/version?include_changelog=false` keeps the list small. `GET /versions?ids=[…]` for
+  bulk. `version_type` is `release | beta | alpha`; files have `url`, `size`, `hashes`.
 - Loader names match ours: `fabric, quilt, forge, neoforge, paper, spigot, bukkit, purpur, folia, velocity, bungeecord, waterfall`.
 
 ## CurseForge — https://docs.curseforge.com/rest-api/
