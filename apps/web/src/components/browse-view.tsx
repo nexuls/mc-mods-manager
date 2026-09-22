@@ -1,5 +1,6 @@
 import {
   type ContentKind,
+  Loader,
   loaderInfo,
   type ProjectHit,
   type SearchResponse,
@@ -12,13 +13,15 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
+  HeartIcon,
+  HistoryIcon,
   SearchIcon,
   SearchXIcon,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
-import { ProviderLogo, SideChip } from '@/components/mod-chips'
+import { ProviderLogo, sideIcon } from '@/components/mod-chips'
 import { ProjectIcon } from '@/components/project-icon'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -39,7 +42,8 @@ import { useCategories, useSearch } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
 import { type BrowseState, parseBrowseParams, toBrowseParams, toSearchQuery } from '@/lib/browse'
-import { compactNumber, timeAgo } from '@/lib/format'
+import { compactNumber, shortDate, timeAgo } from '@/lib/format'
+import { sideLabel } from '@/lib/mods'
 import { cn } from '@/lib/utils'
 
 const ALL_CATEGORIES = '_all'
@@ -74,6 +78,10 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
 
   const search = useSearch(toSearchQuery(state))
   const categories = useCategories(contentKind)
+  const categoryLabels = useMemo(
+    () => new Map(categories.data?.categories.map((c) => [c.name, c.label])),
+    [categories.data],
+  )
   const installed = useInstalledProjects()
   const [target, setTarget] = useState<InstallTarget | null>(null)
 
@@ -196,6 +204,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
               <ProjectCard
                 key={hit.id}
                 hit={hit}
+                categoryLabels={categoryLabels}
                 installed={installed.has(projectKey(hit.provider, hit.id))}
                 onInstall={() =>
                   setTarget({ provider: hit.provider, projectId: hit.id, title: hit.title })
@@ -251,24 +260,39 @@ function describeFilters(filters: SearchResponse['filters'] | undefined, noun: s
   return `Showing ${parts.filter(Boolean).join(' ')}`
 }
 
+/** Categories shown on a card before the rest collapse into `+N`. */
+const VISIBLE_TAGS = 2
+
 function ProjectCard({
   hit,
   installed,
   onInstall,
+  categoryLabels,
 }: {
   hit: ProjectHit
   installed: boolean
   onInstall: () => void
+  categoryLabels: ReadonlyMap<string, string>
 }) {
   const href = `/project/${hit.provider}/${hit.slug || hit.id}`
+  // Real categories first; loaders (also in the list) only count toward "+N".
+  const labels = hit.categories.map((c) => ({
+    label: categoryLabels.get(c) ?? loaderLabel(c) ?? c,
+    loader: loaderLabel(c) !== undefined,
+  }))
+  const ordered = [...labels.filter((l) => !l.loader), ...labels.filter((l) => l.loader)]
+  const shown = ordered.slice(0, VISIBLE_TAGS).filter((l) => !l.loader)
+  const rest = ordered.slice(shown.length)
+  const SideIcon = sideIcon(hit.side)
+
   return (
-    <li className="bg-card hover:border-foreground/20 relative flex gap-4 rounded-xl border p-4 transition-colors">
-      <ProjectIcon url={hit.iconUrl} className="size-16" />
+    <li className="bg-card hover:border-foreground/20 h-38 relative flex items-stretch gap-4 rounded-xl border p-4 transition-colors">
+      <ProjectIcon url={hit.iconUrl} className="h-full size-auto rounded-2xl" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
             to={href}
-            className="truncate font-semibold hover:underline after:absolute after:inset-0"
+            className="truncate text-xl font-semibold hover:underline after:absolute after:inset-0"
           >
             {hit.title}
           </Link>
@@ -276,30 +300,78 @@ function ProjectCard({
             <span className="text-muted-foreground shrink-0 text-sm">by {hit.author}</span>
           )}
         </div>
-        <p className="text-muted-foreground line-clamp-2 text-sm">{hit.description}</p>
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span className="flex items-center gap-1">
-            <DownloadIcon className="size-3.5" />
-            {compactNumber(hit.downloads)}
-          </span>
-          {hit.updatedAt && <span>Updated {timeAgo(hit.updatedAt)}</span>}
-          <SideChip side={hit.side} />
+        <p className="text-muted-foreground line-clamp-2">{hit.description}</p>
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+          {hit.side !== 'unknown' && (
+            <Tag>
+              <SideIcon />
+              {sideLabel[hit.side]}
+            </Tag>
+          )}
+          {shown.map((t) => (
+            <Tag key={t.label}>{t.label}</Tag>
+          ))}
+          {rest.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* Above the card-wide link, so the tooltip gets the hover. */}
+                <span className="relative z-10">
+                  <Tag>+{rest.length}</Tag>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{rest.map((t) => t.label).join(', ')}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
-      {/* Above the card-wide link. */}
-      <div className="relative z-10 flex shrink-0 items-start">
-        {installed ? (
-          <Button variant="secondary" disabled>
-            <CheckIcon />
-            Installed
-          </Button>
-        ) : (
-          <Button onClick={onInstall}>
-            <DownloadIcon />
-            Install
-          </Button>
+      <div className="h-full text-muted-foreground flex shrink-0 flex-col items-end justify-between gap-2">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5" title={`${hit.downloads} downloads`}>
+            <DownloadIcon className="size-4" />
+            {compactNumber(hit.downloads, true)}
+          </span>
+          {hit.follows !== undefined && (
+            <span className="flex items-center gap-1.5" title={`${hit.follows} followers`}>
+              <HeartIcon className="size-4" />
+              {compactNumber(hit.follows)}
+            </span>
+          )}
+        </div>
+        {hit.updatedAt && (
+          <span className="flex items-center gap-1.5" title={`Updated ${shortDate(hit.updatedAt)}`}>
+            <HistoryIcon className="size-4" />
+            {timeAgo(hit.updatedAt, Date.now(), true)}
+          </span>
         )}
+        {/* Above the card-wide link. */}
+        <div className="relative z-10 mt-auto">
+          {installed ? (
+            <Button variant="secondary" disabled>
+              <CheckIcon />
+              Installed
+            </Button>
+          ) : (
+            <Button onClick={onInstall}>
+              <DownloadIcon />
+              Install
+            </Button>
+          )}
+        </div>
       </div>
     </li>
   )
+}
+
+/** Neutral pill for side and categories. */
+function Tag({ children }: { children: ReactNode }) {
+  return (
+    <span className="bg-muted text-muted-foreground inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs font-medium whitespace-nowrap [&_svg]:size-3.5">
+      {children}
+    </span>
+  )
+}
+
+function loaderLabel(name: string): string | undefined {
+  const l = Loader.safeParse(name)
+  return l.success ? loaderInfo[l.data].label : undefined
 }

@@ -1,8 +1,10 @@
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
-/** `1234567` → `1.2M`. */
-export function compactNumber(n: number): string {
-  return compact.format(n)
+const compact2 = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 2 })
+
+/** `1234567` → `1.2M` (`1.23M` with `precise`). */
+export function compactNumber(n: number, precise = false): string {
+  return (precise ? compact2 : compact).format(n)
 }
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
@@ -15,8 +17,13 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['minute', 60],
 ]
 
-/** An ISO date as `3 days ago`. */
-export function timeAgo(iso: string, now = Date.now()): string {
+/** An ISO date as `3 days ago` (`Yesterday` with `capitalize`). */
+export function timeAgo(iso: string, now = Date.now(), capitalize = false): string {
+  const text = relativeText(iso, now)
+  return capitalize ? text.charAt(0).toUpperCase() + text.slice(1) : text
+}
+
+function relativeText(iso: string, now: number): string {
   const seconds = (Date.parse(iso) - now) / 1000
   if (Number.isNaN(seconds)) return ''
   for (const [unit, size] of UNITS) {

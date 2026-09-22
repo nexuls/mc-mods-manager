@@ -80,6 +80,11 @@ const sideStyle: Record<Side, { Icon: LucideIcon; color: string }> = {
   unknown: { Icon: CircleHelpIcon, color: 'var(--color-amber-500)' },
 }
 
+/** The icon used for a side in chips and tags. */
+export function sideIcon(side: Side): LucideIcon {
+  return sideStyle[side].Icon
+}
+
 /** Read-only side pill, for sides that come from the platform. */
 export function SideChip({ side, className, ...props }: ComponentProps<'span'> & { side: Side }) {
   const { Icon, color } = sideStyle[side]

@@ -44,8 +44,11 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - Provider tabs: Modrinth | CurseForge (disabled with a tooltip until Phase 6 adds the key setting; then a link to Settings).
 - Search input (debounced 300ms), sort select, category filter, "Show incompatible" toggle. The line under the title says
   what the server filtered on ("Showing NeoForge mods for 1.21.1"). All of it lives in the URL.
-- Result cards: icon, title (links to the project page), author, summary, downloads, updated date, side chip,
-  **Install** button, or a disabled "Installed" when a jar is identified as that project ("Update" comes with Phase 7).
+- Result cards (Modrinth-app style): large icon; title (links to the project page) + "by author"; two-line summary;
+  a row of neutral tags: side (with its icon, left out when unknown), up to two categories, then `+N` for the rest
+  (loaders included, listed in a tooltip). On the right: downloads and follows, "updated" time (`Yesterday`), and at
+  the bottom the **Install** button, or a disabled "Installed" when a jar is identified as that project ("Update" comes
+  with Phase 7).
 - Pagination: 20 per page, Previous/Next with "N results · page X of Y".
 
 ### Project detail (`/project/:provider/:id`)
