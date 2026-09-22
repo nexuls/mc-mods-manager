@@ -42,6 +42,7 @@ import { Switch } from '@/components/ui/switch'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRemoveMod, useUpdateMod } from '@/hooks/use-mods'
+import { useRestoreTrash } from '@/hooks/use-trash'
 import { errorMessage } from '@/lib/api'
 import { displayName, displayVersion, methodLabel, primary, projectUrl } from '@/lib/mods'
 import { cn } from '@/lib/utils'
@@ -62,6 +63,7 @@ export function ModRow({
 }) {
   const update = useUpdateMod()
   const remove = useRemoveMod()
+  const restore = useRestoreTrash()
   const [confirmRemove, setConfirmRemove] = useState(false)
   const main = primary(mod)
   const other = mod.sources.find((s) => s !== main)
@@ -281,8 +283,8 @@ export function ModRow({
             <AlertDialogHeader>
               <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
               <AlertDialogDescription className="break-all">
-                {mod.fileName} is moved to .mc-mod/trash in the instance folder, so you can still
-                get it back from there.
+                {mod.fileName} is moved to the trash (.mc-mod/trash in the instance folder). You can
+                restore it from Trash on this page.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -291,7 +293,16 @@ export function ModRow({
                 variant="destructive"
                 onClick={() =>
                   remove.mutate(mod.fileName, {
-                    onSuccess: (r) => toast.success(`Moved ${r.fileName} to ${r.trashPath}`),
+                    onSuccess: (r) =>
+                      toast.success(`Moved ${name} to the trash`, {
+                        action: {
+                          label: 'Undo',
+                          onClick: () =>
+                            restore.mutate(r.trashId, {
+                              onError: (err) => toast.error(errorMessage(err)),
+                            }),
+                        },
+                      }),
                     onError: (err) => toast.error(errorMessage(err)),
                   })
                 }

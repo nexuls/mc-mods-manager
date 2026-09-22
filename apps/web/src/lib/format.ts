@@ -51,3 +51,6 @@ export function fileSize(bytes: number): string {
   }
   return `${n.toFixed(n < 10 ? 1 : 0)} ${units[i]}`
 }
+
+/** `plural(2, 'mod')` → `2 mods`. */
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`

@@ -84,7 +84,11 @@ export function useJob() {
         setRun(last)
       }
       // Waited for, so a dialog that closes on success closes onto the new list.
-      await client.invalidateQueries({ queryKey: ['mods'] })
+      // Updates move the old jars to the trash.
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['mods'] }),
+        client.invalidateQueries({ queryKey: ['trash'] }),
+      ])
       return last
     },
     [client],

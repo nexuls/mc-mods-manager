@@ -51,6 +51,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useExportPreview, useRevealExport, useRunExport } from '@/hooks/use-export'
 import { useSettings } from '@/hooks/use-settings'
 import { errorMessage } from '@/lib/api'
+import { plural } from '@/lib/format'
 import { displayName, displayVersion, primary } from '@/lib/mods'
 import { cn } from '@/lib/utils'
 
@@ -477,8 +478,6 @@ function ExportRow({
     </li>
   )
 }
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** The folder that holds `dir`, for "In /path/to/instance". Works for / and \ separators. */
 function parentOf(dir: string): string {

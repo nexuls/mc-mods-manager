@@ -6,6 +6,7 @@ import {
   PackageOpenIcon,
   RefreshCwIcon,
   SearchCheckIcon,
+  Trash2Icon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -16,6 +17,7 @@ import { ModRow } from '@/components/mod-row'
 import { PageMessage } from '@/components/page-message'
 import { ScrollPanel } from '@/components/scroll-panel'
 import { SortableHead } from '@/components/sortable-head'
+import { TrashDialog } from '@/components/trash-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,6 +26,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { UpdateDialog } from '@/components/update-dialog'
 import { useCheckUpdates, useMods, useRefreshMods } from '@/hooks/use-mods'
 import { useSplitView } from '@/hooks/use-split-view'
+import { useTrash } from '@/hooks/use-trash'
 import { errorMessage } from '@/lib/api'
 import {
   countByFilter,
@@ -50,6 +53,8 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
   // A snapshot, so the dialog's rows stay while the list refreshes under it.
   const [updating, setUpdating] = useState<InstalledMod[] | null>(null)
   const [changing, setChanging] = useState<string | null>(null)
+  const [trashOpen, setTrashOpen] = useState(false)
+  const trashCount = useTrash().data?.items.length ?? 0
 
   const all = mods.data?.mods ?? []
   const shown = filterMods(all, filter, text, sort)
@@ -118,6 +123,13 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setTrashOpen(true)}>
+            <Trash2Icon />
+            Trash
+            {trashCount > 0 && (
+              <span className="text-muted-foreground tabular-nums">{trashCount}</span>
+            )}
+          </Button>
           <Button
             variant="outline"
             disabled={refresh.isPending || mods.isPending}
@@ -245,6 +257,7 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
         <ChangeVersionDialog mod={changingMod} onOpenChange={(o) => !o && setChanging(null)} />
       )}
       <UpdateDialog mods={updating} onOpenChange={(o) => !o && setUpdating(null)} />
+      <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} contentLabel={contentLabel} />
     </div>
   )
 }

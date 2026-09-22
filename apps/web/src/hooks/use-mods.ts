@@ -40,7 +40,11 @@ export function useRemoveMod() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (fileName: string) => call(api.mods.remove, { params: { fileName } }),
-    onSettled: () => client.invalidateQueries({ queryKey: key }),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: key }),
+        client.invalidateQueries({ queryKey: ['trash'] }),
+      ]),
   })
 }
 
