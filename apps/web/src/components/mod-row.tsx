@@ -161,7 +161,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
         )}
       </TableCell>
 
-      <TableCell className="@max-xl:hidden">
+      <TableCell className="@max-2xl:hidden">
         {mod.sideSource === 'platform' && main ? (
           <Tooltip>
             <TooltipTrigger asChild>

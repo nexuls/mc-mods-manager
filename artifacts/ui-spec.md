@@ -34,7 +34,7 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   gets the larger share (3 : 2), Browse at least 26rem. The page is up to 1920px wide. Narrower: each route shows its own
   list, with the same search bar.
 - Both lists adapt to their own width (container queries): Installed moves the version into the file-name line below
-  768px and drops the Side column below 576px; Browse cards use a smaller icon and title and hide follows below 576px, and the author and
+  768px and drops the Side column below 672px; Browse cards use a smaller icon and title and hide follows below 576px, and the author and
   updated time below 512px.
 
 ### Installed (`/`)

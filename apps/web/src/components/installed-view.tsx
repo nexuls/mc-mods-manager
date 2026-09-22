@@ -135,7 +135,7 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
                 <SortableHead column="source" sort={sort} onSort={onSort}>
                   Source
                 </SortableHead>
-                <SortableHead column="side" sort={sort} onSort={onSort} className="@max-xl:hidden">
+                <SortableHead column="side" sort={sort} onSort={onSort} className="@max-2xl:hidden">
                   Side
                 </SortableHead>
                 <SortableHead column="enabled" sort={sort} onSort={onSort}>
