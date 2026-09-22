@@ -19,8 +19,8 @@ Error codes and their HTTP status (`errorStatus` in `contract/errors.ts`): `BAD_
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/health` | `{ ok, version }` — UI polls every 10s to detect a dead server; doubles as the `--exit-on-close` heartbeat |
-| GET | `/api/instance` | Detected `Instance` + `needsSetup: boolean` |
-| PUT | `/api/instance` | Override `{ gameVersion?, loader?, loaderVersion?, contentDir? }` → saved to state |
+| GET | `/api/instance` | `{ instance: Instance, needsSetup }` (detected at startup; `needsSetup` when game version or loader is unknown) |
+| PUT | `/api/instance` | Body `{ gameVersion?, loader?, loaderVersion?, contentDir? }` replaces the saved overrides (omitted = detect). Validated by re-detecting first (`contentDir` must stay inside the instance), then saved to `state.json`. Same response as GET |
 | GET | `/api/meta/game-versions` | Release list (from Modrinth tags), with `includeSnapshots` query |
 | GET | `/api/meta/loaders` | Supported loaders + whether each is mod/plugin |
 

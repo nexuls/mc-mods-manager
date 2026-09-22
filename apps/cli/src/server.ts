@@ -3,10 +3,13 @@ import path from 'node:path'
 import express, { type Express } from 'express'
 import { apiNotFound, createApiRouter, errorHandler } from './routes/adapter'
 import { healthRoutes } from './routes/health'
+import { instanceRoutes } from './routes/instance'
 import { type Auth, checkHost, requireToken } from './security'
+import type { InstanceService } from './services/instance'
 
 export interface AppOptions {
   auth: Auth
+  services: { instance: InstanceService }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string
   /** Validate responses against the contract (dev and tests). */
@@ -29,6 +32,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
 
   const apiRouter = createApiRouter({ validateResponses: options.validateResponses })
   healthRoutes(apiRouter, { onHeartbeat: options.onHeartbeat ?? (() => {}) })
+  instanceRoutes(apiRouter, options.services)
 
   app.use('/api', express.json())
   app.use(apiRouter)

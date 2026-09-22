@@ -3,15 +3,21 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { ApiErrorSchema, api, listEndpoints, TOKEN_HEADER } from '@mc-mod/shared'
+import { copyFixture } from '../test/fixtures'
 import { listen } from '../test/http'
 import { registeredEndpoints } from './routes/adapter'
 import { createSessionToken } from './security'
 import { createApp } from './server'
+import { InstanceService } from './services/instance'
 import { VERSION } from './version'
 
 let webDir: string
+let fixture: Awaited<ReturnType<typeof copyFixture>>
+let services: { instance: InstanceService }
 
 beforeAll(async () => {
+  fixture = await copyFixture('empty')
+  services = { instance: await InstanceService.load(fixture.dir) }
   webDir = await mkdtemp(path.join(tmpdir(), 'mc-mod-web-'))
   await Bun.write(path.join(webDir, 'index.html'), '<!doctype html><title>mc-mod</title>')
   await Bun.write(path.join(webDir, 'assets/app-abc123.js'), 'console.log(1)')
@@ -19,13 +25,15 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(webDir, { recursive: true, force: true })
+  await fixture[Symbol.asyncDispose]()
 })
 
 const token = createSessionToken()
 const auth = { mode: 'token', token } as const
 const headers = { [TOKEN_HEADER]: token }
 
-const make = () => createApp({ auth, webDir, validateResponses: true, onInternalError: () => {} })
+const make = () =>
+  createApp({ auth, services, webDir, validateResponses: true, onInternalError: () => {} })
 
 test('every contract endpoint is registered', () => {
   const registered = registeredEndpoints(make().apiRouter)
@@ -37,7 +45,13 @@ test('every contract endpoint is registered', () => {
 describe('api', () => {
   test('GET /api/health', async () => {
     let beats = 0
-    const { app } = createApp({ auth, webDir, validateResponses: true, onHeartbeat: () => beats++ })
+    const { app } = createApp({
+      auth,
+      services,
+      webDir,
+      validateResponses: true,
+      onHeartbeat: () => beats++,
+    })
     await using s = await listen(app)
     const res = await fetch(`${s.url}/api/health`, { headers })
     expect(res.status).toBe(200)
@@ -81,6 +95,7 @@ describe('web', () => {
   test('explains a missing web build', async () => {
     const { app } = createApp({
       auth,
+      services,
       webDir: path.join(webDir, 'missing'),
       validateResponses: true,
     })
@@ -120,7 +135,7 @@ describe('security', () => {
   })
 
   test('dev mode skips the checks', async () => {
-    const { app } = createApp({ auth: { mode: 'dev' }, webDir, validateResponses: true })
+    const { app } = createApp({ auth: { mode: 'dev' }, services, webDir, validateResponses: true })
     await using s = await listen(app)
     const res = await fetch(`${s.url}/api/health`, { headers: { host: 'localhost:5173' } })
     expect(res.status).toBe(200)

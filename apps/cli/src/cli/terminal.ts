@@ -1,6 +1,9 @@
 import { homedir } from 'node:os'
-import { intro, log, note, outro } from '@clack/prompts'
+import path from 'node:path'
+import { intro, log, note, outro, spinner } from '@clack/prompts'
+import { type Instance, type InstanceResponse, loaderInfo } from '@mc-mod/shared'
 import pc from 'picocolors'
+import { isInside } from '../instance/paths'
 import type { Opened } from './browser'
 
 // All human-facing terminal output goes through here, so the CLI looks consistent.
@@ -16,9 +19,40 @@ export function devWarning(): void {
   )
 }
 
-export function ready(info: { dir: string; url: string; portFallback?: number }): void {
+export function detecting() {
+  const s = spinner()
+  s.start('Detecting the instance…')
+  return s
+}
+
+/** `NeoForge 21.1.250 · Minecraft 1.21.1 · client` */
+export function describeInstance(i: Instance): string {
+  const loader = i.loader
+    ? `${loaderInfo[i.loader].label}${i.loaderVersion ? ` ${i.loaderVersion}` : ''}`
+    : pc.yellow('unknown loader')
+  const game = i.gameVersion ? `Minecraft ${i.gameVersion}` : pc.yellow('unknown version')
+  return [loader, game, i.kind].join(pc.dim(' · '))
+}
+
+export function detected(s: ReturnType<typeof spinner>, r: InstanceResponse): void {
+  s.stop(pc.bold(describeInstance(r.instance)))
+  const [best] = r.instance.detection.filter((d) => d.fields.length > 0)
+  if (best) log.message(pc.dim(`from ${best.source}, ${best.confidence} confidence`))
+  for (const w of r.instance.warnings) log.warn(w)
+  if (!r.needsSetup) return
+  const n = r.instance.suggestions.length
+  const hint = n > 0 ? ` ${n} installed version${n === 1 ? '' : 's'} can be picked from.` : ''
+  log.warn(`Could not tell the game version or loader. Pick them in the UI.${hint}`)
+}
+
+export function ready(info: { instance: Instance; url: string; portFallback?: number }): void {
+  const { root, contentDir } = info.instance
   const rows: [string, string][] = [
-    ['Directory', tildify(info.dir)],
+    ['Instance', tildify(root)],
+    [
+      'Content',
+      isInside(root, contentDir) ? `${path.relative(root, contentDir)}/` : tildify(contentDir),
+    ],
     ['URL', pc.cyan(pc.underline(info.url))],
   ]
   const width = Math.max(...rows.map(([k]) => k.length))

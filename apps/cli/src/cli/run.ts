@@ -4,6 +4,7 @@ import { TOKEN_PARAM } from '@mc-mod/shared'
 import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
 import { type Auth, createSessionToken } from '../security'
 import { createApp } from '../server'
+import { InstanceService } from '../services/instance'
 import { VERSION } from '../version'
 import { openBrowser } from './browser'
 import { watchIdle } from './idle'
@@ -26,6 +27,16 @@ export async function run(argv: readonly string[]): Promise<void> {
     process.exit(1)
   }
 
+  const spin = terminal.detecting()
+  let instance: InstanceService
+  try {
+    instance = await InstanceService.load(dir)
+  } catch (err) {
+    spin.error('Could not read the instance')
+    throw err
+  }
+  terminal.detected(spin, instance.response())
+
   const auth: Auth = dev ? { mode: 'dev' } : { mode: 'token', token: createSessionToken() }
   const idle = options.exitOnClose
     ? watchIdle({ onIdle: () => void shutdown('UI closed, server stopped.') })
@@ -33,6 +44,7 @@ export async function run(argv: readonly string[]): Promise<void> {
 
   const { app } = createApp({
     auth,
+    services: { instance },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),
     validateResponses: dev || process.env.NODE_ENV === 'test',
@@ -59,7 +71,7 @@ export async function run(argv: readonly string[]): Promise<void> {
   const url = new URL(`http://${HOST}:${port}/`)
   if (auth.mode === 'token') url.searchParams.set(TOKEN_PARAM, auth.token)
   terminal.ready({
-    dir,
+    instance: instance.instance,
     url: url.href,
     portFallback: port !== wanted && wanted !== 0 ? wanted : undefined,
   })
