@@ -1,6 +1,6 @@
 {
   "name": "mc-mod",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Manage Minecraft mods and plugins from a local web UI",
   "keywords": [
     "minecraft",
