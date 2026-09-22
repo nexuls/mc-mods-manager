@@ -86,7 +86,7 @@ function ProjectPage({ provider, id }: { provider: Provider; id: string }) {
       ) : (
         <>
           <ProjectHeader project={project.data} onInstall={(v) => install(project.data, v)} />
-          <Tabs defaultValue="description" className='bg-card rounded-xl border p-4'>
+          <Tabs defaultValue="description" className="bg-card rounded-xl border p-4">
             <TabsList>
               <TabsTrigger value="description">Description</TabsTrigger>
               <TabsTrigger value="versions">Versions</TabsTrigger>
