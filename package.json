@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "bun scripts/dev.ts",
     "build": "bun run --filter @mc-mod/web build && bun run --filter mc-mod build && bun scripts/copy-web.ts",
+    "compile": "bun scripts/compile.ts",
     "check": "biome check .",
     "fix": "biome check --write .",
     "typecheck": "bun run --filter '*' typecheck",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@types/bun": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   }
 }
