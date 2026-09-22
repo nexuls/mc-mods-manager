@@ -57,6 +57,13 @@ describe('filterMods', () => {
     expect(filterMods(all, 'all', 'SOD')).toEqual([sodium])
   })
 
+  test('sorts by display name', () => {
+    expect(filterMods([local, sodium], 'all', '').map(displayName)).toEqual([
+      'mine.jar.disabled',
+      'Sodium',
+    ])
+  })
+
   test('counts', () => {
     expect(countByFilter(all)).toEqual({
       all: 2,

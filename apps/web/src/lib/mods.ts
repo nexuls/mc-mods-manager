@@ -49,14 +49,20 @@ export function filterMods(
   text: string,
 ): InstalledMod[] {
   const q = text.trim().toLowerCase()
-  return mods.filter(
-    (m) =>
-      matchesFilter[filter](m) &&
-      (!q ||
-        [displayName(m), m.fileName, m.meta?.id ?? '', ...m.sources.map((s) => s.slug ?? '')].some(
-          (x) => x.toLowerCase().includes(q),
-        )),
-  )
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true })
+  return mods
+    .filter(
+      (m) =>
+        matchesFilter[filter](m) &&
+        (!q ||
+          [
+            displayName(m),
+            m.fileName,
+            m.meta?.id ?? '',
+            ...m.sources.map((s) => s.slug ?? ''),
+          ].some((x) => x.toLowerCase().includes(q))),
+    )
+    .sort((a, b) => collator.compare(displayName(a), displayName(b)))
 }
 
 export function countByFilter(mods: readonly InstalledMod[]): Record<ModFilter, number> {

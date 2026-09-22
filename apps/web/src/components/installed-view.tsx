@@ -1,0 +1,138 @@
+import type { InstalledMod } from '@mc-mod/shared'
+import { AlertTriangleIcon, PackageOpenIcon, RefreshCwIcon, SearchIcon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { LinkDialog } from '@/components/link-dialog'
+import { ModRow } from '@/components/mod-row'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useMods, useRefreshMods } from '@/hooks/use-mods'
+import { errorMessage } from '@/lib/api'
+import { countByFilter, filterLabel, filterMods, ModFilter } from '@/lib/mods'
+
+export function InstalledView({ contentLabel }: { contentLabel: string }) {
+  const mods = useMods()
+  const refresh = useRefreshMods()
+  const [filter, setFilter] = useState<ModFilter>('all')
+  const [text, setText] = useState('')
+  // The mod whose link dialog is open, by file name (the row may re-render with new data).
+  const [linking, setLinking] = useState<string | null>(null)
+
+  const all = mods.data?.mods ?? []
+  const shown = filterMods(all, filter, text)
+  const counts = countByFilter(all)
+  const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-64">
+          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={`Filter ${contentLabel}`}
+            className="pl-8"
+            aria-label={`Filter ${contentLabel}`}
+          />
+        </div>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={filter}
+          onValueChange={(v) => setFilter(ModFilter.find((f) => f === v) ?? 'all')}
+          className="flex-wrap"
+        >
+          {ModFilter.map((f) => (
+            <ToggleGroupItem key={f} value={f} disabled={f !== 'all' && counts[f] === 0}>
+              {filterLabel[f]}
+              <span className="text-muted-foreground tabular-nums">{counts[f]}</span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          disabled={refresh.isPending || mods.isPending}
+          onClick={() =>
+            refresh.mutate(undefined, {
+              onSuccess: (r) => toast.success(`Checked ${r.mods.length} files`),
+              onError: (err) => toast.error(errorMessage(err)),
+            })
+          }
+        >
+          <RefreshCwIcon className={refresh.isPending ? 'animate-spin' : undefined} />
+          Refresh
+        </Button>
+      </div>
+
+      {mods.data?.warnings.map((w) => (
+        <Alert key={w}>
+          <AlertTriangleIcon />
+          <AlertDescription>{w}</AlertDescription>
+        </Alert>
+      ))}
+
+      {mods.isPending ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground text-sm">
+            Reading and identifying your {contentLabel}…
+          </p>
+          {Array.from({ length: 6 }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
+            <Skeleton key={i} className="h-12" />
+          ))}
+        </div>
+      ) : mods.isError ? (
+        <Alert variant="destructive">
+          <AlertTriangleIcon />
+          <AlertDescription>{errorMessage(mods.error)}</AlertDescription>
+        </Alert>
+      ) : all.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-16 text-center">
+          <PackageOpenIcon className="text-muted-foreground size-10" />
+          <p className="font-medium">No {contentLabel} yet</p>
+          <p className="text-muted-foreground text-sm">
+            Jars you add to the folder show up here. Browsing and installing come next.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead />
+                <TableHead>Name</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Side</TableHead>
+                <TableHead>Enabled</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map((m) => (
+                <ModRow key={m.fileName} mod={m} onLink={() => setLinking(m.fileName)} />
+              ))}
+            </TableBody>
+          </Table>
+          {shown.length === 0 && (
+            <p className="text-muted-foreground py-8 text-center text-sm">
+              Nothing matches this filter.
+            </p>
+          )}
+        </>
+      )}
+
+      {linkingMod && (
+        <LinkDialog mod={linkingMod} open onOpenChange={(o) => !o && setLinking(null)} />
+      )}
+    </div>
+  )
+}

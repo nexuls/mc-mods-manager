@@ -1,5 +1,7 @@
+import { contentDirName } from '@mc-mod/shared'
 import { useState } from 'react'
 import { AppHeader } from '@/components/app-header'
+import { InstalledView } from '@/components/installed-view'
 import { InstanceDialog } from '@/components/instance-dialog'
 import { Badge } from '@/components/ui/badge'
 import { useInstance } from '@/hooks/use-instance'
@@ -15,15 +17,15 @@ function App() {
   return (
     <div className="flex min-h-svh flex-col">
       <AppHeader onEditInstance={() => setEditing(true)} />
-      <main className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
+      <main className="flex flex-1 flex-col p-4">
         {unauthorized ? (
-          <Badge variant="destructive">
-            Not authorized. Open the link printed in the terminal.
-          </Badge>
-        ) : instance.data ? (
-          <p className="text-muted-foreground text-sm break-all">
-            {instance.data.instance.contentDir}
-          </p>
+          <div className="flex flex-1 items-center justify-center">
+            <Badge variant="destructive">
+              Not authorized. Open the link printed in the terminal.
+            </Badge>
+          </div>
+        ) : instance.data && !instance.data.needsSetup ? (
+          <InstalledView contentLabel={contentDirName[instance.data.instance.contentKind]} />
         ) : null}
       </main>
       {instance.data && (

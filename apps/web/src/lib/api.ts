@@ -55,3 +55,10 @@ export async function call<E extends Endpoint>(e: E, req: Partial<Req<E>> = {}):
   }
   return z.parse<E['response']>(e.response, json)
 }
+
+/** A message for a toast or inline error: the API's message, or a generic one. */
+export function errorMessage(err: unknown): string {
+  if (err instanceof ApiClientError) return err.message
+  if (err instanceof TypeError) return "Can't reach mc-mod. Is it still running in the terminal?"
+  return 'Something went wrong'
+}
