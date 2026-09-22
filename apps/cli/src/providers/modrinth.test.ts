@@ -242,6 +242,50 @@ describe('versions', () => {
   })
 })
 
+describe('getProjectPage', () => {
+  const page = (license: object | null) =>
+    fakeFetch({
+      '/project/p': () =>
+        Response.json({
+          id: 'P',
+          slug: 'p',
+          title: 'P',
+          project_type: 'mod',
+          license,
+          source_url: 'https://github.com/x/p',
+          issues_url: null,
+          gallery: [
+            { url: 'b', ordering: 2, title: '' },
+            { url: 'a', ordering: 1, title: 'First' },
+          ],
+        }),
+    })
+
+  test('links, gallery order and license', async () => {
+    const p = await new ModrinthProvider(
+      page({ id: 'MIT', name: 'MIT License' }).fetch,
+    ).getProjectPage('p')
+    expect(p).toMatchObject({
+      license: 'MIT License',
+      pageUrl: 'https://modrinth.com/project/p',
+      links: [{ label: 'Source', url: 'https://github.com/x/p' }],
+      gallery: [
+        { url: 'a', title: 'First' },
+        { url: 'b', title: undefined },
+      ],
+    })
+  })
+
+  test.each([
+    [{ id: 'LicenseRef-Custom', name: '' }, 'Custom license'],
+    [{ id: 'Apache-2.0', name: '' }, 'Apache-2.0'],
+    [null, undefined],
+  ])('license %j → %p', async (license, label) => {
+    const p = await new ModrinthProvider(page(license).fetch).getProjectPage('p')
+    expect(p?.license).toBe(label)
+  })
+})
+
 describe('tags', () => {
   test('gameVersions leaves snapshots out unless asked', async () => {
     const f = fakeFetch({

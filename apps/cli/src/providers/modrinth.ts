@@ -106,6 +106,13 @@ function projectLinks(p: MrProject): ProjectLink[] {
   return links
 }
 
+/** SPDX id or name; `LicenseRef-…` ids without a name are custom licenses. */
+function licenseLabel(l: MrProject['license']): string | undefined {
+  const name = nonEmpty(l?.name)
+  if (name || !l) return name
+  return l.id.startsWith('LicenseRef-') ? 'Custom license' : nonEmpty(l.id)
+}
+
 function toProjectPage(p: MrProject): Project {
   return {
     provider: 'modrinth',
@@ -122,7 +129,7 @@ function toProjectPage(p: MrProject): Project {
     loaders: p.loaders ?? [],
     gameVersions: p.game_versions ?? [],
     side: projectSide(p),
-    license: nonEmpty(p.license?.name) ?? nonEmpty(p.license?.id),
+    license: licenseLabel(p.license),
     pageUrl: `https://modrinth.com/project/${p.slug}`,
     links: projectLinks(p),
     gallery: [...(p.gallery ?? [])]
