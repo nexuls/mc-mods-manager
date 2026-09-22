@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { ChangeVersionDialog } from '@/components/change-version-dialog'
 import { LinkDialog } from '@/components/link-dialog'
 import { ModRow } from '@/components/mod-row'
+import { PageMessage } from '@/components/page-message'
 import { ScrollPanel } from '@/components/scroll-panel'
 import { SortableHead } from '@/components/sortable-head'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -194,24 +195,38 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
           ))}
         </div>
       ) : mods.isError ? (
-        <Alert variant="destructive">
-          <AlertTriangleIcon />
-          <AlertDescription>{errorMessage(mods.error)}</AlertDescription>
-        </Alert>
+        <PageMessage
+          icon={AlertTriangleIcon}
+          title={`Couldn't read your ${contentLabel}`}
+          destructive
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void mods.refetch()}
+              disabled={mods.isFetching}
+            >
+              <RefreshCwIcon className={mods.isFetching ? 'animate-spin' : undefined} />
+              Try again
+            </Button>
+          }
+        >
+          {errorMessage(mods.error)}
+        </PageMessage>
       ) : all.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-20 text-center">
-          <PackageOpenIcon className="text-muted-foreground size-10" />
-          <p className="font-medium">No {contentLabel} yet</p>
-          <p className="text-muted-foreground text-sm">
-            Find some on Modrinth, or add jars to the folder and they show up here.
-          </p>
-          <Button asChild className="mt-2">
-            <Link to="/browse">
-              <CompassIcon />
-              Browse
-            </Link>
-          </Button>
-        </div>
+        <PageMessage
+          icon={PackageOpenIcon}
+          title={`No ${contentLabel} yet`}
+          action={
+            <Button asChild>
+              <Link to="/browse">
+                <CompassIcon />
+                Browse
+              </Link>
+            </Button>
+          }
+        >
+          Find some on Modrinth, or add jars to the folder and they show up here.
+        </PageMessage>
       ) : // The table's own wrapper is `overflow-clip`, not hidden/auto, so the header can stick: to the page, or to
       // this card where it scrolls on its own (split view). Below the split the card mustn't scroll or clip
       // either, or the header would stick to it instead of the page.

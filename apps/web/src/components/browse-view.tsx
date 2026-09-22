@@ -27,6 +27,7 @@ import { type ReactNode, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { ProviderLogo, sideIcon } from '@/components/mod-chips'
+import { PageMessage } from '@/components/page-message'
 import { ProjectIcon } from '@/components/project-icon'
 import { ScrollPanel } from '@/components/scroll-panel'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -203,17 +204,18 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
       )}
 
       {needsKey ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center">
-          <KeyRoundIcon className="text-muted-foreground size-10" />
-          <p className="font-medium">CurseForge needs an API key</p>
-          <p className="text-muted-foreground max-w-md text-sm">
-            CurseForge only lets apps search it with a key. You can create one for free and add it
-            in Settings; it stays on this computer.
-          </p>
-          <Button asChild>
-            <Link to="/settings">Add a key in Settings</Link>
-          </Button>
-        </div>
+        <PageMessage
+          icon={KeyRoundIcon}
+          title="CurseForge needs an API key"
+          action={
+            <Button asChild>
+              <Link to="/settings">Add a key in Settings</Link>
+            </Button>
+          }
+        >
+          CurseForge only lets apps search it with a key. You can create one for free and add it in
+          Settings; it stays on this computer.
+        </PageMessage>
       ) : search.isPending ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }, (_, i) => (
@@ -227,13 +229,9 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
           <AlertDescription>{errorMessage(search.error)}</AlertDescription>
         </Alert>
       ) : search.data.hits.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-20 text-center">
-          <SearchXIcon className="text-muted-foreground size-10" />
-          <p className="font-medium">No {noun} found</p>
-          <p className="text-muted-foreground text-sm">
-            {state.all ? 'Try other words.' : 'Try other words, or show incompatible ones too.'}
-          </p>
-        </div>
+        <PageMessage icon={SearchXIcon} title={`No ${noun} found`}>
+          {state.all ? 'Try other words.' : 'Try other words, or show incompatible ones too.'}
+        </PageMessage>
       ) : (
         <>
           {split ? (
