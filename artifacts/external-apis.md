@@ -8,7 +8,9 @@ Verify endpoints against the live docs before implementing each one — APIs dri
 ## Modrinth — https://docs.modrinth.com/api/
 
 - Base: `https://api.modrinth.com/v2`. No key required for read.
-- **Required** header: `User-Agent: mc-mod/<version> (github.com/<owner>/mc-mods-manager)`. Generic UAs may be blocked.
+- **Required** header: `User-Agent` (`USER_AGENT` in `providers/modrinth.ts`, currently
+  `mc-mod/<version> (mc-mods-manager; local Minecraft mod manager)`). Generic UAs may be blocked. Add the repo URL
+  once it is public (open-questions.md #11).
 - Rate limit: 300 req/min per IP. Read `X-Ratelimit-Remaining` / `X-Ratelimit-Reset`; back off on 429.
 
 | Use | Endpoint |
@@ -28,6 +30,12 @@ Notes:
 - `facets` is a JSON-encoded array of arrays: inner arrays are OR, outer array is AND.
 - Version `files[]` has `primary: true` on the file to download; `hashes.sha1/sha512` for verification.
 - `dependencies[].dependency_type`: `required | optional | incompatible | embedded`.
+- **Side info:** versions have an `environment` field and projects an `environment[]` list (verified 2026-09-22):
+  `client_and_server`, `client_only`, `client_only_server_optional`, `singleplayer_only`, `server_only`,
+  `server_only_client_optional`, `dedicated_server_only`, `client_or_server`, `client_or_server_prefers_both`, `unknown`.
+  We prefer the version's `environment`, then the project's list, then the legacy `client_side`/`server_side`.
+  "Optional on the other side" maps to `both`, so server exports keep it. Mapping: `environmentSide()` in `providers/modrinth.ts`.
+- `POST /version_files` returns a map keyed by the requested hash; hashes Modrinth doesn't know are left out.
 - Loader names match ours: `fabric, quilt, forge, neoforge, paper, spigot, bukkit, purpur, folia, velocity, bungeecord, waterfall`.
 
 ## CurseForge — https://docs.curseforge.com/rest-api/

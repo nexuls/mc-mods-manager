@@ -17,3 +17,6 @@ Defaults below are what the plan assumes. Change them here before Phase 1 if you
 9. ~~Package manager.~~ Decided: Bun only (see D11).
 10. **Standalone binaries.** `bun build --compile` could ship `mc-mod` without needing Bun installed.
     Default: v1 ships on npm and needs Bun (`bun add -g mc-mod`); compiled binaries are optional in Phase 9.
+11. **Modrinth User-Agent contact.** Modrinth asks for a UA that identifies the app, ideally with contact info. There's
+    no public repo URL yet, so `USER_AGENT` names the project only. Default: add `github.com/<owner>/mc-mods-manager`
+    once the repo is published.
