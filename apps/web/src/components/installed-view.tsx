@@ -1,11 +1,5 @@
 import type { InstalledMod } from '@mc-mod/shared'
-import {
-  AlertTriangleIcon,
-  CompassIcon,
-  PackageOpenIcon,
-  RefreshCwIcon,
-  SearchIcon,
-} from 'lucide-react'
+import { AlertTriangleIcon, CompassIcon, PackageOpenIcon, RefreshCwIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -14,7 +8,6 @@ import { ModRow } from '@/components/mod-row'
 import { SortableHead } from '@/components/sortable-head'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -31,11 +24,11 @@ import {
   toggleSort,
 } from '@/lib/mods'
 
-export function InstalledView({ contentLabel }: { contentLabel: string }) {
+/** The installed list; `text` comes from the shared search bar. */
+export function InstalledView({ contentLabel, text }: { contentLabel: string; text: string }) {
   const mods = useMods()
   const refresh = useRefreshMods()
   const [filter, setFilter] = useState<ModFilter>('all')
-  const [text, setText] = useState('')
   const [sort, setSort] = useState<ModSort>(defaultSort)
   const onSort = (key: SortKey) => setSort((s) => toggleSort(s, key))
   // The mod whose link dialog is open, by file name (the row may re-render with new data).
@@ -58,16 +51,6 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-72">
-          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={`Filter ${contentLabel}`}
-            className="pl-8"
-            aria-label={`Filter ${contentLabel}`}
-          />
-        </div>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -164,7 +147,9 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
           </Table>
           {shown.length === 0 && (
             <p className="text-muted-foreground py-12 text-center text-sm">
-              Nothing matches this filter.
+              {text.trim()
+                ? `No installed ${contentLabel} match “${text.trim()}”.`
+                : 'Nothing matches this filter.'}
             </p>
           )}
         </div>

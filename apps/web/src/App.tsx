@@ -1,11 +1,9 @@
-import { contentDirName } from '@mc-mod/shared'
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppHeader } from '@/components/app-header'
 import { AppNav } from '@/components/app-nav'
-import { BrowseView } from '@/components/browse-view'
-import { InstalledView } from '@/components/installed-view'
 import { InstanceDialog } from '@/components/instance-dialog'
+import { LibraryView } from '@/components/library-view'
 import { ProjectView } from '@/components/project-view'
 import { SettingsView } from '@/components/settings-view'
 import { Badge } from '@/components/ui/badge'
@@ -37,9 +35,12 @@ function App() {
               <Routes>
                 <Route
                   index
-                  element={<InstalledView contentLabel={contentDirName[ready.contentKind]} />}
+                  element={<LibraryView contentKind={ready.contentKind} pane="installed" />}
                 />
-                <Route path="browse" element={<BrowseView contentKind={ready.contentKind} />} />
+                <Route
+                  path="browse"
+                  element={<LibraryView contentKind={ready.contentKind} pane="browse" />}
+                />
                 <Route path="project/:provider/:id" element={<ProjectView />} />
                 <Route path="settings" element={<SettingsView />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

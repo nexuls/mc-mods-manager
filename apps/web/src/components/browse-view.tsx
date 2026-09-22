@@ -19,17 +19,15 @@ import {
   HeartIcon,
   HistoryIcon,
   KeyRoundIcon,
-  SearchIcon,
   SearchXIcon,
 } from 'lucide-react'
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { ProviderLogo, sideIcon } from '@/components/mod-chips'
 import { ProjectIcon } from '@/components/project-icon'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -52,34 +50,13 @@ import { parseCurseForgeRef, sideLabel } from '@/lib/mods'
 import { cn } from '@/lib/utils'
 
 const ALL_CATEGORIES = '_all'
-const SEARCH_DEBOUNCE_MS = 300
 
+/** Catalog search; the text comes from the shared search bar through the URL. */
 export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   const [params, setParams] = useSearchParams()
   const state = parseBrowseParams(params)
   const update = (patch: Partial<BrowseState>, options: { replace?: boolean } = {}) =>
     setParams(toBrowseParams({ ...state, page: 0, ...patch }), options)
-
-  // The input updates right away; the URL (and the search) follows after a pause in typing.
-  const [text, setText] = useState(state.q)
-  const pushed = useRef(state.q)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only the typed text should trigger this
-  useEffect(() => {
-    const q = text.trim()
-    if (q === state.q) return
-    const t = setTimeout(() => {
-      pushed.current = q
-      update({ q }, { replace: true })
-    }, SEARCH_DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [text])
-  // Back/forward changes the URL without typing; follow it, but not our own debounced updates.
-  useEffect(() => {
-    if (state.q !== pushed.current) {
-      pushed.current = state.q
-      setText(state.q)
-    }
-  }, [state.q])
 
   const settings = useSettings()
   // CurseForge without a key: explain instead of showing an error.
@@ -131,17 +108,6 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-80">
-          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={`Search ${noun} on ${providerLabel[state.provider]}`}
-            className="pl-8"
-            aria-label={`Search ${noun}`}
-            autoFocus
-          />
-        </div>
         <Select value={state.sort} onValueChange={(v) => update({ sort: toSort(v) })}>
           <SelectTrigger className="w-44" aria-label="Sort by">
             <SelectValue />
