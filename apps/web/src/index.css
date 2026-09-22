@@ -128,3 +128,20 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Pointer cursor on anything clickable. Tailwind v4 dropped it from buttons, and shadcn menu items set
+ * `cursor-default`, so this stays unlayered (unlayered CSS beats the utilities layer). Disabled
+ * controls are excluded and keep their own `cursor-not-allowed`/default.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([data-disabled]),
+[role="menuitemradio"]:not([data-disabled]),
+[role="menuitemcheckbox"]:not([data-disabled]),
+[role="option"]:not([data-disabled]),
+[role="tab"]:not([data-disabled]),
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
