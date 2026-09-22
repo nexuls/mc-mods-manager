@@ -85,13 +85,13 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
 
   return (
     <TableRow className={cn(!mod.enabled && 'text-muted-foreground')}>
-      <TableCell className="w-10">
+      <TableCell className="w-16 p-2!">
         {main?.iconUrl ? (
           <img
             src={main.iconUrl}
             alt=""
             loading="lazy"
-            className={cn('size-8 rounded-md', !mod.enabled && 'opacity-50 grayscale')}
+            className={cn('size-12 rounded-md', !mod.enabled && 'opacity-50 grayscale')}
           />
         ) : (
           <div className="bg-muted flex size-8 items-center justify-center rounded-md">
@@ -204,7 +204,7 @@ export function ModRow({ mod, onLink }: { mod: InstalledMod; onLink: () => void 
               <MoreHorizontalIcon />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent className="w-48" align="end">
             {mod.sources.map((s) => (
               <DropdownMenuItem key={s.provider} asChild>
                 <a href={projectUrl(s)} target="_blank" rel="noreferrer">
