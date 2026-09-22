@@ -4,7 +4,6 @@ import { AppHeader } from '@/components/app-header'
 import { AppNav } from '@/components/app-nav'
 import { InstanceDialog } from '@/components/instance-dialog'
 import { LibraryView } from '@/components/library-view'
-import { ProjectView } from '@/components/project-view'
 import { SettingsView } from '@/components/settings-view'
 import { Badge } from '@/components/ui/badge'
 import { useInstance } from '@/hooks/use-instance'
@@ -33,15 +32,12 @@ function App() {
             <AppNav />
             <main className="flex min-w-0 flex-1 flex-col">
               <Routes>
-                <Route
-                  index
-                  element={<LibraryView contentKind={ready.contentKind} pane="installed" />}
-                />
-                <Route
-                  path="browse"
-                  element={<LibraryView contentKind={ready.contentKind} pane="browse" />}
-                />
-                <Route path="project/:provider/:id" element={<ProjectView />} />
+                {/* One LibraryView for all three, so moving between them keeps its state. */}
+                <Route element={<LibraryView contentKind={ready.contentKind} />}>
+                  <Route index element={null} />
+                  <Route path="browse" element={null} />
+                  <Route path="project/:provider/:id" element={null} />
+                </Route>
                 <Route path="settings" element={<SettingsView />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

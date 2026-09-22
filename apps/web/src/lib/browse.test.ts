@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { parseBrowseParams, toBrowseParams } from './browse'
+import { parseBrowseParams, projectLink, projectOrigin, toBrowseParams } from './browse'
 
 test('bad or missing params fall back to defaults', () => {
   expect(
@@ -37,4 +37,20 @@ test('round-trips and leaves defaults out', () => {
       page: 0,
     }).toString(),
   ).toBe('')
+})
+
+test('project links keep the list params and remember which list opened them', () => {
+  expect(projectLink('/project/modrinth/sodium', { pathname: '/', search: '?q=sod' })).toEqual({
+    to: { pathname: '/project/modrinth/sodium', search: '?q=sod' },
+    state: { from: '/' },
+  })
+  expect(projectLink('/project/curseforge/1', { pathname: '/browse', search: '' }).state).toEqual({
+    from: '/browse',
+  })
+})
+
+test('the project origin falls back to /browse for missing or foreign history state', () => {
+  expect(projectOrigin({ from: '/' })).toBe('/')
+  expect(projectOrigin(null)).toBe('/browse')
+  expect(projectOrigin({ from: '/settings' })).toBe('/browse')
 })

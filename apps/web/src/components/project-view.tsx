@@ -1,10 +1,4 @@
-import {
-  type Project,
-  type Provider,
-  Provider as ProviderSchema,
-  providerLabel,
-  type RankedVersion,
-} from '@mc-mod/shared'
+import { type Project, type Provider, providerLabel, type RankedVersion } from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -15,7 +9,7 @@ import {
   ScaleIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router'
+import { Link, type To } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { Markdown } from '@/components/markdown'
 import { ProviderLogo, SideChip } from '@/components/mod-chips'
@@ -46,19 +40,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useProject, useVersions } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
-import { browseHref } from '@/lib/browse'
 import { compactNumber, shortDate, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-/** `/project/:provider/:id`: description, versions and gallery, with an install button. */
-export function ProjectView() {
-  const params = useParams()
-  const provider = ProviderSchema.safeParse(params.provider)
-  if (!provider.success || !params.id) return <Navigate to="/browse" replace />
-  return <ProjectPage provider={provider.data} id={params.id} />
-}
-
-function ProjectPage({ provider, id }: { provider: Provider; id: string }) {
+/**
+ * `/project/:provider/:id`, shown over the Browse list: description, versions and gallery, with an install
+ * button. `back` returns to the list.
+ */
+export function ProjectView({ provider, id, back }: { provider: Provider; id: string; back: To }) {
   const project = useProject(provider, id)
   const [target, setTarget] = useState<InstallTarget | null>(null)
   const install = (p: Project, versionId?: string) =>
@@ -67,9 +56,9 @@ function ProjectPage({ provider, id }: { provider: Provider; id: string }) {
   return (
     <div className="flex flex-col gap-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
-        <Link to={browseHref(provider)}>
+        <Link to={back}>
           <ArrowLeftIcon />
-          Browse
+          Back to results
         </Link>
       </Button>
 
@@ -131,7 +120,8 @@ function ProjectHeader({
   const selected = picked ?? recommended?.id
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border p-5 lg:flex-row lg:items-start">
+    // Side by side when the pane is wide enough, not the window: in the split view it's a column.
+    <div className="flex flex-col gap-5 rounded-xl border p-5 @3xl:flex-row @3xl:items-start">
       <div className="flex min-w-0 flex-1 gap-4">
         <ProjectIcon url={p.iconUrl} className="size-20 rounded-xl" />
         <div className="flex min-w-0 flex-col gap-2">
@@ -178,7 +168,7 @@ function ProjectHeader({
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 lg:w-72">
+      <div className="flex shrink-0 flex-col gap-2 @3xl:w-72">
         {installed ? (
           <>
             <Button variant="secondary" disabled>
@@ -344,7 +334,7 @@ function VersionRow({ version: v, onInstall }: { version: RankedVersion; onInsta
 
 function Gallery({ project }: { project: Project }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 @lg:grid-cols-2 @4xl:grid-cols-3">
       {project.gallery.map((g) => (
         <a
           key={g.url}

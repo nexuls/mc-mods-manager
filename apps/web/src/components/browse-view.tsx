@@ -22,7 +22,7 @@ import {
   SearchXIcon,
 } from 'lucide-react'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { ProviderLogo, sideIcon } from '@/components/mod-chips'
 import { ProjectIcon } from '@/components/project-icon'
@@ -44,7 +44,13 @@ import { useCategories, useSearch } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { useSettings } from '@/hooks/use-settings'
 import { errorMessage } from '@/lib/api'
-import { type BrowseState, parseBrowseParams, toBrowseParams, toSearchQuery } from '@/lib/browse'
+import {
+  type BrowseState,
+  parseBrowseParams,
+  projectLink,
+  toBrowseParams,
+  toSearchQuery,
+} from '@/lib/browse'
 import { compactNumber, shortDate, timeAgo } from '@/lib/format'
 import { parseCurseForgeRef, sideLabel } from '@/lib/mods'
 import { cn } from '@/lib/utils'
@@ -54,6 +60,7 @@ const ALL_CATEGORIES = '_all'
 /** Catalog search; the text comes from the shared search bar through the URL. */
 export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   const [params, setParams] = useSearchParams()
+  const location = useLocation()
   const state = parseBrowseParams(params)
   const update = (patch: Partial<BrowseState>, options: { replace?: boolean } = {}) =>
     setParams(toBrowseParams({ ...state, page: 0, ...patch }), options)
@@ -151,7 +158,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
 
       {cfRef && (
         <Link
-          to={`/project/curseforge/${cfRef}`}
+          {...projectLink(`/project/curseforge/${cfRef}`, location)}
           className="bg-card hover:border-foreground/20 flex items-center gap-3 rounded-xl border p-4 transition-colors"
         >
           <ProviderLogo provider="curseforge" className="size-5 text-[#F16436]" />
@@ -208,6 +215,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
                 key={hit.id}
                 hit={hit}
                 categoryLabels={categoryLabels}
+                location={location}
                 installed={installed.has(projectKey(hit.provider, hit.id))}
                 onInstall={() =>
                   setTarget({ provider: hit.provider, projectId: hit.id, title: hit.title })
@@ -268,17 +276,19 @@ const VISIBLE_TAGS = 2
 
 function ProjectCard({
   hit,
+  location,
   installed,
   onInstall,
   categoryLabels,
 }: {
   hit: ProjectHit
+  location: { pathname: string; search: string }
   installed: boolean
   onInstall: () => void
   categoryLabels: ReadonlyMap<string, string>
 }) {
   // CurseForge slugs need an extra lookup (they're only unique per class), so link by id there.
-  const href = `/project/${hit.provider}/${hit.provider === 'modrinth' ? hit.slug || hit.id : hit.id}`
+  const path = `/project/${hit.provider}/${hit.provider === 'modrinth' ? hit.slug || hit.id : hit.id}`
   // Real categories first; loaders (also in the list) only count toward "+N".
   const labels = hit.categories.map((c) => ({
     label: categoryLabels.get(c) ?? loaderLabel(c) ?? c,
@@ -299,7 +309,7 @@ function ProjectCard({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
-            to={href}
+            {...projectLink(path, location)}
             className="truncate text-lg font-semibold hover:underline after:absolute after:inset-0 @max-xl:text-base"
           >
             {hit.title}

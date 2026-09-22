@@ -20,7 +20,8 @@ const links: {
 export function AppNav() {
   const { pathname, search } = useLocation()
   // Installed and Browse share the search bar, so moving between them keeps the query.
-  const inLibrary = links.some((l) => l.library && l.to === pathname)
+  const inLibrary =
+    pathname.startsWith('/project/') || links.some((l) => l.library && l.to === pathname)
   return (
     <nav
       aria-label="Main"

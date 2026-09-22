@@ -69,9 +69,12 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - Pagination: 20 per page, Previous/Next with "N results · page X of Y".
 
 ### Project detail (`/project/:provider/:id`)
-- Back to Browse (the same provider tab); the Browse nav item stays highlighted.
+- Opens **over the Browse list only**: in the split view it covers the Browse pane (Installed and the search bar stay as
+  they are); below it, it replaces the list. The list stays mounted underneath, and project links carry the list's URL
+  params, so **Back to results** returns to the same provider, query, page and scroll position (and to `/` or `/browse`,
+  whichever it was opened from). Typing in the search bar goes back to the results. The Browse nav item stays highlighted.
 - Header with icon/title/summary, downloads, follows, updated, license, side chip, a platform button and the project's
-  links (source, issues, wiki, Discord, donations). CurseForge has no side data, so its side chip is left out. On the right: version dropdown of compatible versions (recommended
+  links (source, issues, wiki, Discord, donations). CurseForge has no side data, so its side chip is left out. On the right when the pane is wide enough (below it otherwise): version dropdown of compatible versions (recommended
   preselected, pre-releases badged) + Install, or "Installed" with the file name.
 - Tabs: Description (Markdown/HTML, sanitized), Versions (table, compatible by default, "Show all versions" switch;
   Install per row, which warns in the dialog if the version doesn't fit; "Manual download" badge on files the author only

@@ -210,3 +210,15 @@ Accepted.
 - The page may be up to 1920px wide (D22 had 1536px), and the split is `3fr : 2fr` in Installed's favour, since the table
   has more columns to show than a result card. Browse keeps at least 26rem, so at 1280px its cards drop the author and
   updated time instead of cutting titles short. At 1920px Installed is wide enough for all its columns.
+
+### D24 — Project pages open over the Browse list
+- `/`, `/browse` and `/project/:provider/:id` are children of one layout route whose element is `LibraryView`, so moving
+  between them never remounts it: the search text, Installed's filter and sort, and the Browse list all survive. The
+  child routes render nothing; `LibraryView` reads the route with `useMatch`.
+- The project covers the Browse list rather than replacing it: in the split the list is `invisible` under an absolutely
+  placed project (so its own scroll is kept); below the split it's `hidden`, and the window scroll is saved and put back.
+- The project URL keeps the list's params (`/project/modrinth/sodium?q=sod&page=2`), so a reload or shared link still
+  has them. The list it came from (`/` or `/browse`) is in history state (zod-parsed, `/browse` when missing), which
+  replaces the old `browseHref(provider)`.
+- Typing in the search bar while a project is open navigates (push, not replace) back to the results, so browser Back
+  reopens the project. The project header and gallery use container queries, since the pane is narrower than the window.

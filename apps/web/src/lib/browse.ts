@@ -57,7 +57,18 @@ export function toSearchQuery(s: BrowseState): SearchQuery {
   }
 }
 
-/** The Browse page for a provider, e.g. to go back from a project page. */
-export function browseHref(provider: Provider): string {
-  return provider === 'modrinth' ? '/browse' : `/browse?provider=${provider}`
+// A project opens over the Browse list and keeps the list's params in its URL. Where it was opened from (`/` in the
+// split view, or `/browse`) rides in the history entry's state, so Back returns there. Missing after a reload.
+const ProjectOrigin = z.object({ from: z.enum(['/', '/browse']) })
+export type ProjectOrigin = z.infer<typeof ProjectOrigin>
+
+export function projectOrigin(state: unknown): ProjectOrigin['from'] {
+  const parsed = ProjectOrigin.safeParse(state)
+  return parsed.success ? parsed.data.from : '/browse'
+}
+
+/** Link props for a project page opened from the list at `location`. */
+export function projectLink(path: string, location: { pathname: string; search: string }) {
+  const state: ProjectOrigin = { from: location.pathname === '/' ? '/' : '/browse' }
+  return { to: { pathname: path, search: location.search }, state }
 }
