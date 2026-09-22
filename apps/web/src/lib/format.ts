@@ -1,0 +1,46 @@
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
+
+/** `1234567` → `1.2M`. */
+export function compactNumber(n: number): string {
+  return compact.format(n)
+}
+
+const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+]
+
+/** An ISO date as `3 days ago`. */
+export function timeAgo(iso: string, now = Date.now()): string {
+  const seconds = (Date.parse(iso) - now) / 1000
+  if (Number.isNaN(seconds)) return ''
+  for (const [unit, size] of UNITS) {
+    if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit)
+  }
+  return relative.format(0, 'minute')
+}
+
+const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+
+export function shortDate(iso: string): string {
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? '' : date.format(t)
+}
+
+/** `2452735` → `2.3 MB`. */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB']
+  let n = bytes / 1024
+  let i = 0
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i++
+  }
+  return `${n.toFixed(n < 10 ? 1 : 0)} ${units[i]}`
+}

@@ -1,5 +1,6 @@
-import { api, type UpdateModBody } from '@mc-mod/shared'
+import { api, type InstalledMod, type Provider, type UpdateModBody } from '@mc-mod/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { call } from '@/lib/api'
 
 const key = ['mods'] as const
@@ -43,3 +44,17 @@ export function useModSuggestions(fileName: string, enabled: boolean) {
     staleTime: 5 * 60_000,
   })
 }
+
+/** Installed jars by `provider:projectId`, so Browse and project pages can show "Installed". */
+export function useInstalledProjects(): ReadonlyMap<string, InstalledMod> {
+  const { data } = useMods()
+  return useMemo(() => {
+    const out = new Map<string, InstalledMod>()
+    for (const m of data?.mods ?? []) {
+      for (const s of m.sources) out.set(projectKey(s.provider, s.projectId), m)
+    }
+    return out
+  }, [data])
+}
+
+export const projectKey = (provider: Provider, projectId: string) => `${provider}:${projectId}`

@@ -1,6 +1,13 @@
 import type { InstalledMod } from '@mc-mod/shared'
-import { AlertTriangleIcon, PackageOpenIcon, RefreshCwIcon, SearchIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  CompassIcon,
+  PackageOpenIcon,
+  RefreshCwIcon,
+  SearchIcon,
+} from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { LinkDialog } from '@/components/link-dialog'
 import { ModRow } from '@/components/mod-row'
@@ -118,8 +125,14 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
           <PackageOpenIcon className="text-muted-foreground size-10" />
           <p className="font-medium">No {contentLabel} yet</p>
           <p className="text-muted-foreground text-sm">
-            Jars you add to the folder show up here. Browsing and installing come next.
+            Find some on Modrinth, or add jars to the folder and they show up here.
           </p>
+          <Button asChild className="mt-2">
+            <Link to="/browse">
+              <CompassIcon />
+              Browse
+            </Link>
+          </Button>
         </div>
       ) : (
         <div className="bg-card overflow-hidden rounded-xl border">
