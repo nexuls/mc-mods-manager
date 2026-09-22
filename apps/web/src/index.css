@@ -5,6 +5,8 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+/* Installed and Browse side by side (LibraryView sets data-split): each list scrolls on its own. */
+@custom-variant split (&:where([data-split], [data-split] *));
 
 @theme inline {
   --font-heading: var(--font-sans);

@@ -1,5 +1,6 @@
 import { CompassIcon, type LucideIcon, PackageIcon, SettingsIcon } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router'
+import { useSplitView } from '@/hooks/use-split-view'
 import { cn } from '@/lib/utils'
 
 const links: {
@@ -19,6 +20,7 @@ const links: {
 /** Main navigation: a sidebar on wide screens, a row of tabs above the content on narrow ones. */
 export function AppNav() {
   const { pathname, search } = useLocation()
+  const { split } = useSplitView()
   // Installed and Browse share the search bar, so moving between them keeps the query.
   const inLibrary =
     pathname.startsWith('/project/') || links.some((l) => l.library && l.to === pathname)
@@ -36,8 +38,8 @@ export function AppNav() {
             cn(
               'text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4',
               (isActive || (also && pathname.startsWith(also))) && 'bg-muted text-foreground',
-              // Wide screens show Installed and Browse together.
-              library && inLibrary && 'xl:bg-muted xl:text-foreground',
+              // The split view shows Installed and Browse together.
+              library && inLibrary && split && 'bg-muted text-foreground',
             )
           }
         >

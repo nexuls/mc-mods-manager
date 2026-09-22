@@ -1,25 +1,24 @@
 import { type ContentKind, contentDirName, Provider, providerLabel } from '@mc-mod/shared'
 import { useIsFetching } from '@tanstack/react-query'
+import { Columns2Icon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useMatch, useNavigate, useSearchParams } from 'react-router'
 import { BrowseView } from '@/components/browse-view'
 import { InstalledView } from '@/components/installed-view'
 import { ProjectView } from '@/components/project-view'
 import { SearchBar } from '@/components/search-bar'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import { Toggle } from '@/components/ui/toggle'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useSplitView } from '@/hooks/use-split-view'
 import { parseBrowseParams, projectOrigin, toBrowseParams } from '@/lib/browse'
 import { cn } from '@/lib/utils'
 
 const SEARCH_DEBOUNCE_MS = 300
-/**
- * Tailwind's `xl`. From here up both lists show side by side, and the `xl:` classes in InstalledView and
- * BrowseView give each its own scrolling list.
- */
-const SPLIT_QUERY = '(min-width: 80rem)'
 
 /**
  * Layout route for `/`, `/browse` and `/project/:provider/:id`, so it stays mounted between them: Installed and
- * Browse behind one search bar, side by side on wide screens (the route picks one otherwise). A project opens
+ * Browse behind one search bar, side by side on wide screens unless turned off (the route picks one otherwise).
+ * In the split, `data-split` turns on the `split:` classes here and in the views (own scrolling lists). A project opens
  * over the Browse list, which stays mounted underneath, so its page and scroll position survive.
  * The text filters the installed list as you type and searches the catalog after a pause; it lives in
  * the URL (`?q=`), so it carries over between the routes.
@@ -68,7 +67,7 @@ export function LibraryView({ contentKind }: { contentKind: ContentKind }) {
 
   const searching = useIsFetching({ queryKey: ['search'] }) > 0
   const waiting = text.trim() !== state.q
-  const split = useMediaQuery(SPLIT_QUERY)
+  const { split, available, wanted, setWanted } = useSplitView()
   const browsing = split || pane === 'browse'
   const provider = providerLabel[state.provider]
   const [placeholder, label] = split
@@ -95,12 +94,12 @@ export function LibraryView({ contentKind }: { contentKind: ContentKind }) {
   const installed = <InstalledView contentLabel={contentLabel} text={text} />
   const browse = (
     // The project covers the list in the split (the list keeps its own scroll) and replaces it below.
-    <div className="relative xl:h-full">
-      <div className={cn('xl:h-full', project && 'max-xl:hidden xl:invisible')}>
+    <div className="split:h-full relative">
+      <div className={cn('split:h-full', project && 'hidden split:block split:invisible')}>
         <BrowseView contentKind={contentKind} />
       </div>
       {project && (
-        <div className="bg-background xl:absolute xl:inset-0 xl:overflow-y-auto">
+        <div className="bg-background split:absolute split:inset-0 split:overflow-y-auto">
           <ProjectView
             key={project.path}
             provider={project.provider}
@@ -114,16 +113,39 @@ export function LibraryView({ contentKind }: { contentKind: ContentKind }) {
 
   return (
     // Split: fill the viewport below the header (4rem) and the page padding (2 × 2rem).
-    <div className="flex flex-col gap-6 xl:h-[calc(100svh-8.2rem)]">
-      <SearchBar
-        value={text}
-        onChange={setText}
-        onSubmit={() => text.trim() !== state.q && push(text.trim())}
-        placeholder={placeholder}
-        label={label}
-        busy={browsing && (searching || waiting)}
-        autoFocus={onBrowse}
-      />
+    <div
+      data-split={split || undefined}
+      className="split:h-[calc(100svh-8.2rem)] flex flex-col gap-6"
+    >
+      <div className="flex gap-3">
+        <SearchBar
+          value={text}
+          onChange={setText}
+          onSubmit={() => text.trim() !== state.q && push(text.trim())}
+          placeholder={placeholder}
+          label={label}
+          busy={browsing && (searching || waiting)}
+          autoFocus={onBrowse}
+        />
+        {available && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                variant="outline"
+                pressed={wanted}
+                onPressedChange={setWanted}
+                aria-label="Show Installed and Browse side by side"
+                className="bg-card size-12 shrink-0 rounded-xl [&_svg:not([class*='size-'])]:size-5"
+              >
+                <Columns2Icon />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent>
+              {wanted ? 'Show one list at a time' : 'Show side by side'}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
       {split ? (
         // Installed gets more room; Browse keeps enough for its cards.
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,5fr)_minmax(26rem,4fr)] gap-8">

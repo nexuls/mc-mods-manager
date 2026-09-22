@@ -222,3 +222,11 @@ Accepted.
   replaces the old `browseHref(provider)`.
 - Typing in the search bar while a project is open navigates (push, not replace) back to the results, so browser Back
   reopens the project. The project header and gallery use container queries, since the pane is narrower than the window.
+
+### D25 — The split view can be turned off
+- A columns toggle next to the search bar, shown only from `xl` up; below that nothing changes. The choice is a
+  per-browser convenience in localStorage (`mc-mod.split`, `on`/`off`, zod-parsed, on by default), shared through a small
+  external store so the nav's double highlight follows it too (`hooks/use-split-view.ts`).
+- The split layout's classes no longer hang off the `xl` breakpoint: `LibraryView` sets `data-split` when both lists
+  show, and a `split:` custom variant in `index.css` applies them. With the split off on a wide screen, the page scrolls
+  as it does on a narrow one.

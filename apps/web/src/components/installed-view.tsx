@@ -40,8 +40,8 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
 
   return (
-    // Split view (xl): the table scrolls on its own below the title and filters.
-    <div className="flex flex-col gap-6 xl:h-full xl:min-h-0">
+    // Split view: the table scrolls on its own below the title and filters.
+    <div className="split:h-full split:min-h-0 flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Installed {contentLabel}</h1>
@@ -121,11 +121,11 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
         </div>
       ) : (
         // `overflow-clip`, not hidden/auto (here and on the table's wrapper), so the header can stick: to the
-        // page below the app header, or to this card where it scrolls on its own (xl).
-        <div className="bg-card overflow-clip rounded-xl border xl:min-h-0 xl:overflow-y-auto *:data-[slot=table-container]:overflow-x-clip">
+        // page below the app header, or to this card where it scrolls on its own (split view).
+        <div className="bg-card overflow-clip rounded-xl border split:min-h-0 split:overflow-y-auto *:data-[slot=table-container]:overflow-x-clip">
           <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
             {/* Opaque cells (muted/40 over the card) and a shadow for the line: a collapsed border stays behind. */}
-            <TableHeader className="sticky top-16 z-10 xl:top-0 [&_th]:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0">
+            <TableHeader className="split:top-0 sticky top-16 z-10 [&_th]:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0">
               <TableRow>
                 <TableHead />
                 <SortableHead column="name" sort={sort} onSort={onSort}>

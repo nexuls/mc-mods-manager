@@ -83,7 +83,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   const data = search.data
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1
   const noun = contentKind === 'plugin' ? 'plugins' : 'mods'
-  // The results scroll on their own in the split view (xl), and with the page otherwise.
+  // The results scroll on their own in the split view, and with the page otherwise.
   const results = useRef<HTMLUListElement>(null)
   const goToPage = (page: number) => {
     update({ page })
@@ -92,7 +92,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   }
 
   return (
-    <div className="flex flex-col gap-6 xl:h-full xl:min-h-0">
+    <div className="split:h-full split:min-h-0 flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Browse {noun}</h1>
@@ -206,7 +206,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
           <ul
             ref={results}
             className={cn(
-              'flex flex-col gap-3 transition-opacity xl:min-h-0 xl:overflow-y-auto',
+              'flex flex-col gap-3 transition-opacity split:min-h-0 split:overflow-y-auto',
               search.isPlaceholderData && 'opacity-60',
             )}
           >
