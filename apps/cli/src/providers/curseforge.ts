@@ -8,6 +8,7 @@ import {
   type ProjectLink,
   type ProjectVersion,
   type SearchSort,
+  type Side,
   type VersionType,
 } from '@mc-mod/shared'
 import { z } from 'zod'
@@ -106,6 +107,19 @@ export function splitGameVersions(list: readonly string[]): {
   return { loaders, gameVersions }
 }
 
+/**
+ * A file's side from its "Client"/"Server" environment tags (verified 2026-09-22: Sodium is "Client",
+ * JEI and Fabric API both). Older files often have neither, which stays undefined.
+ */
+export function fileSide(list: readonly string[]): Side | undefined {
+  const client = list.includes('Client')
+  const server = list.includes('Server')
+  if (client && server) return 'both'
+  if (client) return 'client'
+  if (server) return 'server'
+  return undefined
+}
+
 function pageUrl(mod: Pick<CfMod, 'id' | 'slug' | 'classId' | 'links'>): string {
   const site = mod.links?.websiteUrl
   if (site) return site.replace(/\/$/, '')
@@ -126,7 +140,7 @@ function toProject(m: CfMod): ProjectInfo {
     iconUrl: iconOf(m),
     author: m.authors[0]?.name,
     downloads: m.downloadCount,
-    // CurseForge has no reliable side information.
+    // Only files say where they run (see `fileSide`).
     side: 'unknown',
   }
 }
@@ -218,6 +232,7 @@ export function toVersion(f: CfFile, mod?: Pick<CfMod, 'id' | 'slug' | 'classId'
     downloads: f.downloadCount,
     loaders,
     gameVersions,
+    side: fileSide(f.gameVersions),
     file: f.fileName.toLowerCase().endsWith('.jar')
       ? { name: f.fileName, url: f.downloadUrl ?? null, size: f.fileLength, sha1 }
       : null,
@@ -237,6 +252,7 @@ function toMatch(f: CfFile): HashMatch {
     versionId: String(f.id),
     versionNumber: f.displayName,
     ...splitGameVersions(f.gameVersions),
+    side: fileSide(f.gameVersions),
   }
 }
 

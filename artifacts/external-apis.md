@@ -68,8 +68,9 @@ Notes:
 Notes:
 - `downloadUrl` may be `null` when the author disabled third-party distribution → the plan shows the item as `manual`
   with a Download link to the file's page. We never build a forgecdn URL by hand for such files.
-- File `gameVersions[]` mixes MC versions, loader names ("Fabric", "NeoForge") and sometimes "Client"/"Server"
-  — parse it, but don't treat "Server" as reliable side info.
+- File `gameVersions[]` mixes MC versions, loader names ("Fabric", "NeoForge") and the environment tags
+  "Client"/"Server" (`sortableGameVersions[].gameVersionTypeId` 75208). Both → `both`, one → that side, neither
+  (common on older files) → unknown. Mapping: `fileSide()` in `providers/curseforge.ts` (D27).
 - `dependencies[].relationType`: 1 Embedded, 2 Optional, 3 Required, 4 Tool, 5 Incompatible, 6 Include.
 - File `hashes[]`: `algo` 1 = sha1, 2 = md5.
 - Plugins on CurseForge (Bukkit class) have poor loader metadata; version matching falls back to `gameVersions`.

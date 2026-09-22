@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { AppError } from '../errors'
-import { CurseForgeProvider, CurseForgeSearchForbiddenError, splitGameVersions } from './curseforge'
+import {
+  CurseForgeProvider,
+  CurseForgeSearchForbiddenError,
+  fileSide,
+  splitGameVersions,
+} from './curseforge'
 import type { Fetch } from './types'
 
 interface Call {
@@ -89,6 +94,15 @@ describe('splitGameVersions', () => {
   })
 })
 
+describe('fileSide', () => {
+  test('maps the Client/Server tags', () => {
+    expect(fileSide(['Client', '1.21.1', 'NeoForge', 'Server'])).toBe('both')
+    expect(fileSide(['Client', 'Fabric', '1.21.11'])).toBe('client')
+    expect(fileSide(['Server', '1.21.1'])).toBe('server')
+    expect(fileSide(['NeoForge', '26.2'])).toBeUndefined()
+  })
+})
+
 describe('requests', () => {
   test('send the key, and fail with PROVIDER_DISABLED without one', async () => {
     const f = fakeFetch({ 'GET /mods/238222': () => Response.json({ data: mod() }) })
@@ -159,6 +173,7 @@ describe('identify', () => {
       versionNumber: 'jei-1.21.1-neoforge-19.21.0.247.jar',
       loaders: ['neoforge'],
       gameVersions: ['1.21.1'],
+      side: 'both',
     })
     expect(matches.has(99)).toBe(false)
     expect(JSON.parse(String(f.calls[0]?.init?.body))).toEqual({ fingerprints: [123456, 99] })
@@ -239,6 +254,7 @@ describe('versions', () => {
       downloads: 10,
       loaders: ['neoforge'],
       gameVersions: ['1.21.1'],
+      side: 'both',
       file: {
         name: 'jei-1.21.1-neoforge-19.21.0.247.jar',
         url: 'https://edge.forgecdn.net/files/5/1/jei.jar',

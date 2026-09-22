@@ -26,7 +26,7 @@ export const CfFile = z.looseObject({
   downloadCount: z.number().catch(0),
   /** null when the author disabled third-party distribution. */
   downloadUrl: z.string().nullable().optional(),
-  /** Mixes game versions, loader names ("NeoForge") and sometimes "Client"/"Server". */
+  /** Mixes game versions, loader names ("NeoForge") and the environment tags "Client"/"Server". */
   gameVersions: z.array(z.string()).catch([]),
   dependencies: z.array(z.looseObject({ modId: Id, relationType: RelationType })).catch([]),
   hashes: z.array(z.looseObject({ value: z.string(), algo: z.number() })).catch([]),

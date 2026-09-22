@@ -250,3 +250,11 @@ Accepted.
   leaves out files that must be downloaded by hand; the dialog links to them.
 - **New dependencies aren't followed** on update yet: a new version that needs another mod installs without it
   (follow-up in progress.md).
+
+### D27 — CurseForge file tags give a side
+- Replaces the side note in D21. CurseForge files now carry "Client"/"Server" environment tags, and they match
+  reality (checked 2026-09-22: Sodium is "Client"; JEI, Fabric API and Create: Frogport Reworked have both). Both tags
+  → `both`, one → that side, neither → unknown as before.
+- The side comes from the file only (hash matches and versions). Projects, Browse hits and project pages stay
+  `unknown`, because the mod endpoints don't give a project-wide side.
+- Jars looked up before this keep their cached sources until the next Refresh.
