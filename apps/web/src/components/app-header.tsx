@@ -1,4 +1,5 @@
 import { SettingsIcon } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -21,8 +22,9 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
       ) : (
         <Skeleton className="h-8 w-56" />
       )}
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
         {health.isError && <Badge variant="destructive">Server disconnected</Badge>}
+        <ThemeToggle />
       </div>
     </header>
   )
