@@ -1,6 +1,7 @@
 import path from 'node:path'
 import type { Loader, Suggestion } from '@mc-mod/shared'
 import { z } from 'zod'
+import { samePath } from '../paths'
 import { list, readJson } from './fs'
 import type { Finding, Layout } from './types'
 
@@ -162,7 +163,7 @@ async function fromProfiles(
   data: z.infer<typeof LauncherProfiles>,
 ): Promise<Finding[]> {
   const matching = Object.values(data.profiles)
-    .filter((p) => path.resolve(mcRoot, p.gameDir ?? '.') === root)
+    .filter((p) => samePath(path.resolve(mcRoot, p.gameDir ?? '.'), root))
     .filter((p) => p.lastVersionId && !SPECIAL_VERSION_IDS.has(p.lastVersionId))
     .sort((a, b) => (b.lastUsed ?? '').localeCompare(a.lastUsed ?? ''))
 
@@ -176,7 +177,7 @@ async function fromProfiles(
     if (v) versions.push(v)
   }
 
-  const isMcRoot = root === mcRoot
+  const isMcRoot = samePath(root, mcRoot)
   const suggestions = isMcRoot ? await moddedVersions(mcRoot) : versions
   const [latest] = versions
   if (!latest) {

@@ -10,6 +10,7 @@ import {
   renameInside,
   resolveInside,
   safeJarName,
+  samePath,
   writeFileAtomic,
 } from './paths'
 
@@ -83,6 +84,14 @@ describe('copyFileAtomic / removeInside', () => {
     expect(await readdir(path.join(dir, 'out'))).toEqual([])
     await expect(removeInside(dir, '../x')).rejects.toThrow('outside')
   })
+})
+
+test('samePath ignores case where the filesystem does', () => {
+  const [a, b] = [path.resolve('/Games/Minecraft'), path.resolve('/games/minecraft/')]
+  expect(samePath(a, b, 'linux')).toBe(false)
+  expect(samePath(a, b, 'win32')).toBe(true)
+  expect(samePath(a, b, 'darwin')).toBe(true)
+  expect(samePath(a, path.join(a, 'x', '..'), 'linux')).toBe(true)
 })
 
 test('safeJarName', () => {

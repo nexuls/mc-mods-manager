@@ -12,6 +12,21 @@ export function isInside(base: string, target: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))
 }
 
+/**
+ * True if `a` and `b` are the same path. Windows and macOS compare without case, as their default
+ * filesystems do, so a launcher's `C:\Users\Me` matches a `c:\users\me` typed in a terminal.
+ */
+export function samePath(
+  a: string,
+  b: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const [x, y] = [path.resolve(a), path.resolve(b)]
+  return platform === 'win32' || platform === 'darwin'
+    ? x.toLowerCase() === y.toLowerCase()
+    : x === y
+}
+
 /** Resolves `target` (relative to `base`, or absolute) and throws if it escapes `base`. */
 export function resolveInside(base: string, target: string): string {
   const resolved = path.resolve(base, target)
