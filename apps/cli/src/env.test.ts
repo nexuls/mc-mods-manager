@@ -12,6 +12,11 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ MC_MOD_DEV: 'yes' })).toThrow()
   })
 
+  test('a blank CURSEFORGE_API_KEY counts as unset', () => {
+    expect(parseEnv({ CURSEFORGE_API_KEY: ' ' }).CURSEFORGE_API_KEY).toBeUndefined()
+    expect(parseEnv({ CURSEFORGE_API_KEY: ' k ' }).CURSEFORGE_API_KEY).toBe('k')
+  })
+
   test('rejects blank MC_MOD_DIR', () => {
     expect(() => parseEnv({ MC_MOD_DIR: '  ' })).toThrow()
   })

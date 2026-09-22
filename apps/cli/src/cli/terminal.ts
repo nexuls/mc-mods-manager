@@ -45,6 +45,11 @@ export function detected(s: ReturnType<typeof spinner>, r: InstanceResponse): vo
   log.warn(`Could not tell the game version or loader. Pick them in the UI.${hint}`)
 }
 
+/** A non-fatal problem, e.g. an unreadable config file. */
+export function warning(message: string): void {
+  log.warn(message)
+}
+
 export function ready(info: { instance: Instance; url: string; portFallback?: number }): void {
   const { root, contentDir } = info.instance
   const rows: [string, string][] = [

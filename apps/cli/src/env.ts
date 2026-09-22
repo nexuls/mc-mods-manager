@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { CurseForgeKey } from '@mc-mod/shared'
 import { z } from 'zod'
 
 const Env = z.object({
@@ -9,6 +10,13 @@ const Env = z.object({
     .transform((v) => v === '1' || v === 'true'),
   /** Instance directory to manage instead of the current working directory. */
   MC_MOD_DIR: z.string().trim().min(1).optional(),
+  /** CurseForge API key; wins over the one saved in Settings. Blank counts as unset. */
+  CURSEFORGE_API_KEY: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || undefined)
+    .pipe(CurseForgeKey.optional()),
 })
 
 export type Env = z.infer<typeof Env>

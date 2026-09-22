@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises'
+import { chmod, copyFile, mkdir, rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { AppError } from '../errors'
 
@@ -28,12 +28,13 @@ export function stateDir(root: string): string {
 
 /**
  * Writes via a temp file in the same directory and renames it into place, so readers never see a
- * half-written file.
+ * half-written file. `mode` (e.g. 0o600 for files holding secrets) is set before the rename.
  */
 export async function writeFileAtomic(
   base: string,
   target: string,
   data: string | Uint8Array,
+  options: { mode?: number } = {},
 ): Promise<void> {
   const file = resolveInside(base, target)
   await mkdir(path.dirname(file), { recursive: true })
@@ -43,6 +44,7 @@ export async function writeFileAtomic(
   )
   try {
     await Bun.write(tmp, data)
+    if (options.mode !== undefined) await chmod(tmp, options.mode)
     await rename(tmp, file)
   } catch (err) {
     await rm(tmp, { force: true })

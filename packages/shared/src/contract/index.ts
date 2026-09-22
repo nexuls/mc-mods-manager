@@ -5,6 +5,7 @@ import * as jobs from './jobs'
 import * as meta from './meta'
 import * as mods from './mods'
 import * as projects from './projects'
+import * as settings from './settings'
 
 export * from './define'
 export * from './errors'
@@ -28,6 +29,7 @@ export {
 } from './projects'
 export * from './query'
 export * from './session'
+export { KeySource, Settings, SettingsBody, TestKeyResponse } from './settings'
 
 /** The whole `/api` contract. Backend routes and frontend calls both go through it. */
-export const api = { health, install, instance, jobs, meta, mods, projects }
+export const api = { health, install, instance, jobs, meta, mods, projects, settings }

@@ -1,7 +1,9 @@
 import { statSync } from 'node:fs'
 import path from 'node:path'
 import { TOKEN_PARAM } from '@mc-mod/shared'
+import { ConfigService, defaultConfigFile } from '../config'
 import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
+import { CurseForgeProvider } from '../providers/curseforge'
 import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
 import { createApp } from '../server'
@@ -10,6 +12,7 @@ import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
 import { JobService } from '../services/jobs'
 import { LibraryService } from '../services/library'
+import { SettingsService } from '../services/settings'
 import { VERSION } from '../version'
 import { openBrowser } from './browser'
 import { watchIdle } from './idle'
@@ -47,9 +50,13 @@ export async function run(argv: readonly string[]): Promise<void> {
     ? watchIdle({ onIdle: () => void shutdown('UI closed, server stopped.') })
     : undefined
 
+  const config = await ConfigService.load(defaultConfigFile(), env.CURSEFORGE_API_KEY)
+  if (config.warning) terminal.warning(config.warning)
+
   const modrinth = new ModrinthProvider()
+  const curseforge = new CurseForgeProvider(() => config.curseforgeKey())
   const library = new LibraryService(instance, modrinth)
-  const catalog = new CatalogService(instance, modrinth)
+  const catalog = new CatalogService(instance, modrinth, config)
   const jobs = new JobService()
   const { app } = createApp({
     auth,
@@ -58,6 +65,7 @@ export async function run(argv: readonly string[]): Promise<void> {
       library,
       catalog,
       jobs,
+      settings: new SettingsService(config, curseforge),
       installer: new InstallerService({
         instance,
         library,

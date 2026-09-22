@@ -10,6 +10,7 @@ import {
   SEARCH_PAGE_SIZE,
   type SearchResponse,
 } from '@mc-mod/shared'
+import type { ConfigService } from '../config'
 import { AppError } from '../errors'
 import type { ModrinthProvider } from '../providers/modrinth'
 import type { InstanceService } from './instance'
@@ -21,9 +22,6 @@ type Modrinth = Pick<
 >
 
 type SearchInput = Input<typeof api.projects.search>['query']
-
-/** Until settings exist (Phase 6), pre-releases only win when there's no release. */
-const ALLOW_PRERELEASE = false
 
 /** CurseForge needs an API key and comes with Phase 6. */
 export function requireModrinth(provider: Provider): void {
@@ -40,12 +38,13 @@ export class CatalogService {
   constructor(
     private readonly instance: InstanceService,
     private readonly modrinth: Modrinth,
+    private readonly config: Pick<ConfigService, 'config'>,
   ) {}
 
   /** The instance's loader, game version and content kind, as version picking needs them. */
   versionContext(): VersionContext {
     const { loader, gameVersion, contentKind } = this.instance.instance
-    return { loader, gameVersion, contentKind, allowPrerelease: ALLOW_PRERELEASE }
+    return { loader, gameVersion, contentKind, allowPrerelease: this.config.config.allowPrerelease }
   }
 
   async search(q: SearchInput): Promise<SearchResponse> {

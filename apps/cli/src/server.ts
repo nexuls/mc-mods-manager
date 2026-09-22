@@ -7,12 +7,14 @@ import { installRoutes } from './routes/install'
 import { instanceRoutes } from './routes/instance'
 import { modsRoutes } from './routes/mods'
 import { projectsRoutes } from './routes/projects'
+import { settingsRoutes } from './routes/settings'
 import { type Auth, checkHost, requireToken } from './security'
 import type { CatalogService } from './services/catalog'
 import type { InstallerService } from './services/installer'
 import type { InstanceService } from './services/instance'
 import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
+import type { SettingsService } from './services/settings'
 
 export interface AppOptions {
   auth: Auth
@@ -22,6 +24,7 @@ export interface AppOptions {
     catalog: CatalogService
     installer: InstallerService
     jobs: JobService
+    settings: SettingsService
   }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string
@@ -49,6 +52,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   modsRoutes(apiRouter, options.services)
   projectsRoutes(apiRouter, options.services)
   installRoutes(apiRouter, options.services)
+  settingsRoutes(apiRouter, options.services)
 
   app.use('/api', express.json())
   app.use(apiRouter)
