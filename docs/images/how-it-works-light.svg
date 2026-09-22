@@ -1,40 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="520" viewBox="0 0 1320 520" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
 <title>How mc-mod works</title>
-<rect width="1200" height="520" rx="16" fill="#f6f8fa"/>
-<rect x=".5" y=".5" width="1199" height="519" rx="15.5" fill="none" stroke="#d1d9e0"/>
+<rect width="1320" height="520" rx="16" fill="#f6f8fa"/>
+<rect x=".5" y=".5" width="1319" height="519" rx="15.5" fill="none" stroke="#d1d9e0"/>
 <g><rect x="40" y="40" width="300" height="190" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
     <rect x="64" y="64" width="40" height="40" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/><g transform="translate(72 72)" fill="none" stroke="#1f2328" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" transform="scale(1)"/></g>
     <text x="64" y="126" font-size="20" font-weight="600" fill="#1f2328">Your instance</text>
     <text x="64" y="154" font-size="14.5" fill="#59636e">Prism, CurseForge app, Modrinth App,</text><text x="64" y="176" font-size="14.5" fill="#59636e">vanilla launcher, or a server folder</text><text x="64" y="198" font-size="14.5" fill="#59636e">mods/  ·  plugins/  ·  .mc-mod/</text></g>
-<g><rect x="450" y="40" width="300" height="190" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
-    <rect x="474" y="64" width="40" height="40" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/><g transform="translate(482 72)" fill="none" stroke="#1f2328" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></g>
-    <text x="474" y="126" font-size="20" font-weight="600" fill="#1f2328">mc-mod</text>
-    <text x="474" y="154" font-size="14.5" fill="#59636e">CLI + local server on 127.0.0.1</text><text x="474" y="176" font-size="14.5" fill="#59636e">detects version and loader</text><text x="474" y="198" font-size="14.5" fill="#59636e">identifies jars by hash</text></g>
-<g><rect x="860" y="40" width="300" height="190" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
-    <rect x="884" y="64" width="40" height="40" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/><g transform="translate(892 72)" fill="none" stroke="#1f2328" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M2 8h20"/><path d="M6 4v4"/></g>
-    <text x="884" y="126" font-size="20" font-weight="600" fill="#1f2328">Web UI</text>
-    <text x="884" y="154" font-size="14.5" fill="#59636e">opens in your browser</text><text x="884" y="176" font-size="14.5" fill="#59636e">or a Chromium app window</text><text x="884" y="198" font-size="14.5" fill="#59636e">every request carries a session token</text></g>
-<rect x="626" y="64" width="100" height="26" rx="13" fill="none" stroke="#1a7f37"/>
-<text x="676" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="#1a7f37">loopback only</text>
-<line x1="346" y1="135" x2="444" y2="135" stroke="#818b98" stroke-width="2"/><path d="M434.9955289764732 139.3496553411123 L444 135 L434.9955289764732 130.6503446588877" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M355.0044710235268 130.6503446588877 L346 135 L355.0044710235268 139.3496553411123" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="395" y="103" text-anchor="middle" font-size="13.5" fill="#59636e">reads metadata,</text><text x="395" y="122" text-anchor="middle" font-size="13.5" fill="#59636e">writes verified jars</text>
-<line x1="756" y1="135" x2="854" y2="135" stroke="#818b98" stroke-width="2"/><path d="M844.9955289764732 139.3496553411123 L854 135 L844.9955289764732 130.6503446588877" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M765.0044710235268 130.6503446588877 L756 135 L765.0044710235268 139.3496553411123" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="805" y="103" text-anchor="middle" font-size="13.5" fill="#59636e">HTTP API</text><text x="805" y="122" text-anchor="middle" font-size="13.5" fill="#59636e">+ token</text>
-<rect x="300" y="330" width="220" height="120" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
-    <circle cx="332" cy="366" r="8" fill="#1bd96a"/>
-    <text x="350" y="372" font-size="18" font-weight="600" fill="#1f2328">Modrinth</text>
-    <text x="324" y="406" font-size="14" fill="#59636e">no key needed</text>
-    <text x="324" y="427" font-size="14" fill="#59636e">search, hashes, downloads</text>
-<rect x="680" y="330" width="220" height="120" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
-    <circle cx="712" cy="366" r="8" fill="#f16436"/>
-    <text x="730" y="372" font-size="18" font-weight="600" fill="#1f2328">CurseForge</text>
-    <text x="704" y="406" font-size="14" fill="#59636e">your API key, server-side</text>
-    <text x="704" y="427" font-size="14" fill="#59636e">search, hashes, downloads</text>
-<line x1="540" y1="236" x2="410" y2="324" stroke="#818b98" stroke-width="2"/><path d="M415.0184170585549 315.35040519871563 L410 324 L419.89495843375727 322.5543867757192" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M534.9815829414451 244.64959480128437 L540 236 L530.1050415662427 237.4456132242808" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<g><rect x="510" y="40" width="300" height="190" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
+    <rect x="534" y="64" width="40" height="40" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/><g transform="translate(542 72)" fill="none" stroke="#1f2328" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></g>
+    <text x="534" y="126" font-size="20" font-weight="600" fill="#1f2328">mc-mod</text>
+    <text x="534" y="154" font-size="14.5" fill="#59636e">CLI + local server on 127.0.0.1</text><text x="534" y="176" font-size="14.5" fill="#59636e">detects version and loader</text><text x="534" y="198" font-size="14.5" fill="#59636e">identifies jars by hash</text></g>
+<g><rect x="980" y="40" width="300" height="190" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
+    <rect x="1004" y="64" width="40" height="40" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/><g transform="translate(1012 72)" fill="none" stroke="#1f2328" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M2 8h20"/><path d="M6 4v4"/></g>
+    <text x="1004" y="126" font-size="20" font-weight="600" fill="#1f2328">Web UI</text>
+    <text x="1004" y="154" font-size="14.5" fill="#59636e">opens in your browser</text><text x="1004" y="176" font-size="14.5" fill="#59636e">or a Chromium app window</text><text x="1004" y="198" font-size="14.5" fill="#59636e">every request carries a session token</text></g>
+<rect x="686" y="64" width="100" height="26" rx="13" fill="none" stroke="#1a7f37"/>
+<text x="736" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="#1a7f37">loopback only</text>
+<line x1="346" y1="135" x2="504" y2="135" stroke="#818b98" stroke-width="2"/><path d="M494.9955289764732 139.3496553411123 L504 135 L494.9955289764732 130.6503446588877" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M355.0044710235268 130.6503446588877 L346 135 L355.0044710235268 139.3496553411123" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="425" y="103" text-anchor="middle" font-size="13.5" fill="#59636e">reads metadata,</text><text x="425" y="122" text-anchor="middle" font-size="13.5" fill="#59636e">writes verified jars</text>
+<line x1="816" y1="135" x2="974" y2="135" stroke="#818b98" stroke-width="2"/><path d="M964.9955289764732 139.3496553411123 L974 135 L964.9955289764732 130.6503446588877" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M825.0044710235268 130.6503446588877 L816 135 L825.0044710235268 139.3496553411123" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="895" y="103" text-anchor="middle" font-size="13.5" fill="#59636e">HTTP API</text><text x="895" y="122" text-anchor="middle" font-size="13.5" fill="#59636e">+ token</text>
+<rect x="360" y="330" width="220" height="120" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
+    <circle cx="392" cy="366" r="8" fill="#1bd96a"/>
+    <text x="410" y="372" font-size="18" font-weight="600" fill="#1f2328">Modrinth</text>
+    <text x="384" y="406" font-size="14" fill="#59636e">no key needed</text>
+    <text x="384" y="427" font-size="14" fill="#59636e">search, hashes, downloads</text>
+<rect x="740" y="330" width="220" height="120" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1.5"/>
+    <circle cx="772" cy="366" r="8" fill="#f16436"/>
+    <text x="790" y="372" font-size="18" font-weight="600" fill="#1f2328">CurseForge</text>
+    <text x="764" y="406" font-size="14" fill="#59636e">your API key, server-side</text>
+    <text x="764" y="427" font-size="14" fill="#59636e">search, hashes, downloads</text>
+<line x1="600" y1="236" x2="470" y2="324" stroke="#818b98" stroke-width="2"/><path d="M475.0184170585549 315.35040519871563 L470 324 L479.89495843375727 322.5543867757192" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M594.9815829414451 244.64959480128437 L600 236 L590.1050415662427 237.4456132242808" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     
-<line x1="660" y1="236" x2="790" y2="324" stroke="#818b98" stroke-width="2"/><path d="M780.1050415662427 322.5543867757192 L790 324 L784.9815829414451 315.35040519871563" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M669.8949584337573 237.4456132242808 L660 236 L665.0184170585549 244.64959480128434" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="720" y1="236" x2="850" y2="324" stroke="#818b98" stroke-width="2"/><path d="M840.1050415662427 322.5543867757192 L850 324 L844.9815829414451 315.35040519871563" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M729.8949584337573 237.4456132242808 L720 236 L725.0184170585549 244.64959480128434" fill="none" stroke="#818b98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     
-<g transform="translate(588 264)" fill="none" stroke="#59636e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></g>
-<text x="600" y="314" text-anchor="middle" font-size="13.5" fill="#59636e">HTTPS</text>
-<text x="1160" y="492" text-anchor="end" font-size="13" fill="#59636e">Downloads land in .mc-mod/tmp/, are checked against the platform's hash, then moved into place.</text>
+<g transform="translate(648 264)" fill="none" stroke="#59636e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></g>
+<text x="660" y="314" text-anchor="middle" font-size="13.5" fill="#59636e">HTTPS</text>
+<text x="1280" y="492" text-anchor="end" font-size="13" fill="#59636e">Downloads land in .mc-mod/tmp/, are checked against the platform's hash, then moved into place.</text>
 </svg>
