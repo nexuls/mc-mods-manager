@@ -40,9 +40,13 @@ const proc = Bun.spawn([...cmd, '--dir', dir, '--no-open', '--port', String(port
   stderr: 'pipe',
   env: { ...process.env, NO_COLOR: '1' },
 })
+// Both pipes are read until the server exits. Stopping early closes the pipe, and the server's next
+// write to it (SIGPIPE) kills it mid-request.
+const output = { stdout: '', stderr: '' }
+const drained = Promise.all([drain(proc.stdout, 'stdout'), drain(proc.stderr, 'stderr')])
 
 try {
-  const url = await waitForUrl(proc.stdout, 20_000)
+  const url = await waitForUrl(20_000)
   const token = url.searchParams.get('t') ?? fail('The printed URL has no token')
 
   const page = await fetch(url)
@@ -66,23 +70,25 @@ try {
 } finally {
   proc.kill()
   await proc.exited
+  await drained
+  if (process.exitCode === 1) {
+    console.error(`--- stdout ---\n${output.stdout}\n--- stderr ---\n${output.stderr}`)
+  }
   await rm(dir, { recursive: true, force: true })
 }
 
-/** Reads stdout until the session link shows up. */
-async function waitForUrl(stream: ReadableStream<Uint8Array>, ms: number): Promise<URL> {
-  const timer = setTimeout(() => proc.kill(), ms)
-  let out = ''
-  const decoder = new TextDecoder()
-  for await (const chunk of stream) {
-    out += decoder.decode(chunk, { stream: true })
-    const match = /http:\/\/127\.0\.0\.1:\d+\/\?t=[\w-]+/.exec(out)
-    if (match) {
-      clearTimeout(timer)
-      return new URL(match[0])
-    }
+/** Waits for the session link in the server's output. */
+async function waitForUrl(ms: number): Promise<URL> {
+  const deadline = Date.now() + ms
+  while (Date.now() < deadline && proc.exitCode === null) {
+    const match = /http:\/\/127\.0\.0\.1:\d+\/\?t=[\w-]+/.exec(output.stdout)
+    if (match) return new URL(match[0])
+    await Bun.sleep(50)
   }
-  clearTimeout(timer)
-  const stderr = await new Response(proc.stderr).text()
-  return fail(`No session link printed.\n--- stdout ---\n${out}\n--- stderr ---\n${stderr}`)
+  return fail(proc.exitCode === null ? 'No session link printed' : `Exited with ${proc.exitCode}`)
+}
+
+async function drain(stream: ReadableStream<Uint8Array>, key: keyof typeof output): Promise<void> {
+  const decoder = new TextDecoder()
+  for await (const chunk of stream) output[key] += decoder.decode(chunk, { stream: true })
 }
