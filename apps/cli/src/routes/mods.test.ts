@@ -6,13 +6,13 @@ import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { listen } from '../../test/http'
 import { makeJar } from '../../test/jar'
+import { makeServices } from '../../test/services'
 import { readState } from '../instance/state'
 import { hashBytes } from '../jar/hash'
 import type { HashMatch, ProjectInfo } from '../providers/types'
 import { createSessionToken } from '../security'
 import { createApp } from '../server'
 import { InstanceService } from '../services/instance'
-import { LibraryService } from '../services/library'
 
 const sodiumJar = makeJar({
   'fabric.mod.json': JSON.stringify({
@@ -69,7 +69,7 @@ async function setup(options: { offline?: boolean } = {}) {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: { instance, library: new LibraryService(instance, fake.modrinth, () => 1000) },
+    services: makeServices(instance, fake.modrinth, () => 1000),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
     onInternalError: (err) => {

@@ -6,21 +6,21 @@ import { ApiErrorSchema, api, listEndpoints, TOKEN_HEADER } from '@mc-mod/shared
 import { fakeModrinth } from '../test/fake-modrinth'
 import { copyFixture } from '../test/fixtures'
 import { listen } from '../test/http'
+import { makeServices } from '../test/services'
 import { registeredEndpoints } from './routes/adapter'
 import { createSessionToken } from './security'
 import { createApp } from './server'
 import { InstanceService } from './services/instance'
-import { LibraryService } from './services/library'
 import { VERSION } from './version'
 
 let webDir: string
 let fixture: Awaited<ReturnType<typeof copyFixture>>
-let services: { instance: InstanceService; library: LibraryService }
+let services: ReturnType<typeof makeServices>
 
 beforeAll(async () => {
   fixture = await copyFixture('empty')
   const instance = await InstanceService.load(fixture.dir)
-  services = { instance, library: new LibraryService(instance, fakeModrinth().modrinth) }
+  services = makeServices(instance, fakeModrinth().modrinth)
   webDir = await mkdtemp(path.join(tmpdir(), 'mc-mod-web-'))
   await Bun.write(path.join(webDir, 'index.html'), '<!doctype html><title>mc-mod</title>')
   await Bun.write(path.join(webDir, 'assets/app-abc123.js'), 'console.log(1)')

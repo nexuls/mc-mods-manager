@@ -5,13 +5,15 @@ import { apiNotFound, createApiRouter, errorHandler } from './routes/adapter'
 import { healthRoutes } from './routes/health'
 import { instanceRoutes } from './routes/instance'
 import { modsRoutes } from './routes/mods'
+import { projectsRoutes } from './routes/projects'
 import { type Auth, checkHost, requireToken } from './security'
+import type { CatalogService } from './services/catalog'
 import type { InstanceService } from './services/instance'
 import type { LibraryService } from './services/library'
 
 export interface AppOptions {
   auth: Auth
-  services: { instance: InstanceService; library: LibraryService }
+  services: { instance: InstanceService; library: LibraryService; catalog: CatalogService }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string
   /** Validate responses against the contract (dev and tests). */
@@ -36,6 +38,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   healthRoutes(apiRouter, { onHeartbeat: options.onHeartbeat ?? (() => {}) })
   instanceRoutes(apiRouter, options.services)
   modsRoutes(apiRouter, options.services)
+  projectsRoutes(apiRouter, options.services)
 
   app.use('/api', express.json())
   app.use(apiRouter)

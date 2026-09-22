@@ -41,7 +41,9 @@ packages/shared/src/
     ├── errors.ts      # ApiError schema + error codes
     ├── instance.ts
     ├── mods.ts
-    ├── search.ts
+    ├── projects.ts    # search, project pages, versions
+    ├── meta.ts        # game versions, categories
+    ├── query.ts       # QueryBool / QueryInt for query-string values
     ├── install.ts
     ├── jobs.ts        # SSE event union
     ├── export.ts

@@ -4,11 +4,11 @@ import { ApiErrorSchema, api, TOKEN_HEADER } from '@mc-mod/shared'
 import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { listen } from '../../test/http'
+import { makeServices } from '../../test/services'
 import { stateFile } from '../instance/state'
 import { createSessionToken } from '../security'
 import { createApp } from '../server'
 import { InstanceService } from '../services/instance'
-import { LibraryService } from '../services/library'
 
 async function setup(fixture: string) {
   const f = await copyFixture(fixture)
@@ -16,7 +16,7 @@ async function setup(fixture: string) {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: { instance, library: new LibraryService(instance, fakeModrinth().modrinth) },
+    services: makeServices(instance, fakeModrinth().modrinth),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
   })

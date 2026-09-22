@@ -5,6 +5,7 @@ import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
 import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
 import { createApp } from '../server'
+import { CatalogService } from '../services/catalog'
 import { InstanceService } from '../services/instance'
 import { LibraryService } from '../services/library'
 import { VERSION } from '../version'
@@ -44,9 +45,14 @@ export async function run(argv: readonly string[]): Promise<void> {
     ? watchIdle({ onIdle: () => void shutdown('UI closed, server stopped.') })
     : undefined
 
+  const modrinth = new ModrinthProvider()
   const { app } = createApp({
     auth,
-    services: { instance, library: new LibraryService(instance, new ModrinthProvider()) },
+    services: {
+      instance,
+      library: new LibraryService(instance, modrinth),
+      catalog: new CatalogService(instance, modrinth),
+    },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),
     validateResponses: dev || process.env.NODE_ENV === 'test',
