@@ -64,7 +64,7 @@ Using plan → confirm → execute keeps the UI honest about dependencies before
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/export/preview?dirName=` | `{ dir, dirName, zipName, include: InstalledMod[], unknown: InstalledMod[], exclude: InstalledMod[], existingJars }`. `include` is enabled `server`/`both`, `unknown` enabled unknown-side, `exclude` client-only and disabled. `dirName` defaults to the `exportDirName` setting. BAD_REQUEST on plugin instances |
+| GET | `/api/export/preview?dirName=` | `{ dir, dirName, zipName, include: InstalledMod[], unknown: InstalledMod[], exclude: InstalledMod[], existingJars: string[] }` (`.jar` files in the folder now). `include` is enabled `server`/`both`, `unknown` enabled unknown-side, `exclude` client-only and disabled. `dirName` defaults to the `exportDirName` setting. BAD_REQUEST on plugin instances |
 | POST | `/api/export` | `{ mode: "copy" \| "zip", dirName?, clean: boolean, exclude?: fileName[] }` → `{ mode, path, count, removed }`. Copy writes `<instance>/<dirName>/` (clean removes other `.jar` files there, after the copy); zip writes `<instance>/<dirName>-<gameVersion>-<YYYY-MM-DD>.zip`. `exclude` leaves `include`/`unknown` jars out this time. The folder must not be or hold the mods folder (BAD_REQUEST); one export at a time (CONFLICT) |
 | POST | `/api/export/reveal` | `{ mode, dirName? }` → `{ opened, path }`: opens the export folder (copy) or the instance root (zip) in the OS file manager. `opened` is false without a desktop; NOT_FOUND before the first export |
 

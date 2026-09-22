@@ -73,7 +73,7 @@ export class ServerExportService {
     return {
       ...target,
       ...groupForExport(mods),
-      existingJars: (await this.existingJars(target.dir)).length,
+      existingJars: await this.existingJars(target.dir),
     }
   }
 
@@ -128,7 +128,10 @@ export class ServerExportService {
 
   private async existingJars(dir: string): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
-    return entries.filter((e) => e.isFile() && isJar(e.name)).map((e) => e.name)
+    return entries
+      .filter((e) => e.isFile() && isJar(e.name))
+      .map((e) => e.name)
+      .sort()
   }
 
   /**

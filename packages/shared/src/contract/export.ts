@@ -24,8 +24,8 @@ export const ExportPreview = z.strictObject({
   unknown: z.array(InstalledMod),
   /** Client-only and disabled mods. Never exported. */
   exclude: z.array(InstalledMod),
-  /** `.jar` files already in the export folder; a clean export removes them. */
-  existingJars: z.number().int().nonnegative(),
+  /** `.jar` files already in the export folder. A clean export removes those it doesn't write again. */
+  existingJars: z.array(z.string()),
 })
 export type ExportPreview = z.infer<typeof ExportPreview>
 

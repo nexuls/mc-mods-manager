@@ -114,7 +114,7 @@ test('preview groups mods by side; disabled ones are excluded', async () => {
   expect(names(p.include)).toEqual(['ledger-1.0.jar', 'lithium-1.0.jar'])
   expect(names(p.unknown)).toEqual(['mystery.jar'])
   expect(names(p.exclude)).toEqual(['sodium-0.6.0.jar', 'spark-1.0.jar.disabled'])
-  expect(p.existingJars).toBe(0)
+  expect(p.existingJars).toEqual([])
 })
 
 test('a clean copy replaces earlier jars, keeps other files and leaves mods/ alone', async () => {
@@ -123,7 +123,7 @@ test('a clean copy replaces earlier jars, keeps other files and leaves mods/ alo
   await Bun.write(path.join(out, 'old-mod.jar'), 'old')
   await Bun.write(path.join(out, 'lithium-1.0.jar'), 'stale bytes')
   await Bun.write(path.join(out, 'README.txt'), 'mine')
-  expect((await t.preview()).existingJars).toBe(2)
+  expect((await t.preview()).existingJars).toEqual(['lithium-1.0.jar', 'old-mod.jar'])
 
   const result = await t.run({ mode: 'copy', clean: true, exclude: ['mystery.jar'] })
   expect(result).toEqual({ mode: 'copy', path: out, count: 2, removed: 1 })
