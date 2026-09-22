@@ -307,3 +307,15 @@ Accepted.
   work lands on `main` directly and GitHub's generated notes only list pull requests.
 - **npm auth is a granular token secret** (`NPM_TOKEN` → `NPM_CONFIG_TOKEN`). `bun publish` has no provenance or
   trusted publishing support (checked 2026-09-22); revisit if it gains them.
+
+### D31 — Trash UI and web component tests (Phase 9)
+- **Trash ids are the file names in `.mc-mod/trash/`** (`<epoch ms>-<name>`), validated by `TrashId`, so the API needs no
+  index file and a trash filled by older versions just works. Files that don't match are ignored and never deleted.
+  Restore refuses when the jar is back in the folder *enabled or disabled*, since the list treats both as one jar.
+  `DELETE /api/mods/:fileName` returns the `trashId`, which the remove toast's Undo restores.
+- **Component tests share the `bun test` process with the CLI tests**, so happy-dom can't be a global preload (its
+  `fetch`/`Response` would replace Bun's under the CLI's HTTP tests). `withDom()` registers happy-dom once, then swaps
+  its globals in for each DOM test file and Bun's back after it. One window for the whole run, because React DOM and
+  Testing Library are imported once and keep the first `document`; they're imported with `await import()` after
+  `withDom()`. Cleanup is registered in `withDom()` itself: an `afterEach` in a shared module only runs for the first
+  file that imports it.

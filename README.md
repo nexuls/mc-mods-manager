@@ -30,7 +30,7 @@ with its required dependencies.
   whose side nobody knows, for you to review) into `server-mods/` or a zip, ready to upload.
   Client-only and disabled mods are left out, and your `mods/` folder isn't changed.
 - **Enables, disables and removes jars.** Disabling renames the file to `.jar.disabled`. Removed jars
-  go to `.mc-mod/trash/` and aren't deleted.
+  go to `.mc-mod/trash/` and aren't deleted: undo right away, or restore them later from **Trash**.
 - **Runs on your machine only.** The server listens on `127.0.0.1` and needs a per-run session
   token. See [Security](#security).
 
@@ -184,7 +184,7 @@ Some CurseForge authors don't allow third-party downloads. For those files, the 
 |---|---|
 | `<instance>/.mc-mod/state.json` | Version and loader overrides, links you set by hand, and a hash cache. Safe to delete: jars are identified again by hash. |
 | `<instance>/.mc-mod/tmp/` | Downloads that haven't been verified yet |
-| `<instance>/.mc-mod/trash/` | Removed jars |
+| `<instance>/.mc-mod/trash/` | Removed jars and ones replaced by updates, until you empty the trash |
 | `<instance>/server-mods/` or `<instance>/server-mods-<version>-<date>.zip` | Server exports, when you make one (folder name set in Settings). A new folder export replaces the jars of the last one. |
 | `~/.config/mc-mod/config.json` | Global settings and the CurseForge key, readable only by you (`%APPDATA%\mc-mod\Config\` on Windows, `~/Library/Preferences/mc-mod/` on macOS) |
 

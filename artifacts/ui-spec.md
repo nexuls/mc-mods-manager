@@ -18,8 +18,12 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 
 - Header instance badge opens the **Instance dialog** (change version/loader; shows detection sources).
 - If `needsSetup`, the Instance dialog opens automatically and blocks until filled.
-- Header right side: server status badge (Connected / Reconnecting / Disconnected; red after `/api/health` fails 3× in a row,
-  version in the tooltip) and a theme menu (Light / Dark / System).
+- Header right side: server status badge (Connected / Reconnecting / Disconnected; red after `/api/health` fails 3× in a row;
+  Not signed in when it answers 401; version in the tooltip; just the dot on phones) and a theme menu (Light / Dark / System).
+- **Page states** (App): a navigation + table skeleton while the instance loads; "Couldn't load the instance" with Try again
+  when that fails; "Open the link from the terminal" on a 401 (a link from an earlier run). Each page sits in an error
+  boundary keyed by path, so a crash shows "This page ran into a problem" (Try again / Reload) and navigating away
+  recovers. Empty and error blocks share `PageMessage` (icon, title, text, actions in a dashed box).
 - **Scrolling:** every scrolling region (the page below the header, the split view's lists and project page, dialog
   lists) is a `ScrollPanel`: shadcn's scrollbar, plus a soft shadow on each edge the content continues past. The
   header stays put and the page scrolls below it. Native scrollbars that remain (menus, text areas, code blocks) are
@@ -67,7 +71,9 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   a manual-only file gets a Download button instead.
 - **Link dialog:** possible matches from both platforms (same mod id, then name search; provider logo per row) and a field for a
   Modrinth or CurseForge URL/slug/id (platform toggle; CurseForge needs a key). It can also remove a manual link.
-- **Remove** asks first, then moves the jar to `.mc-mod/trash/`.
+- **Remove** asks first, then moves the jar to `.mc-mod/trash/`; the toast has **Undo** (restores it).
+- **Trash** button (with the count) opens the Trash dialog: newest first, name, when, size, "disabled"; Restore puts a jar
+  back under its old name (refused when the same jar is back); × deletes one for good; Empty trash asks first.
 - Empty state: "No mods yet" with a Browse button.
 
 ### Browse (`/browse`)
