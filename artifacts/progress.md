@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 8 — Server export (Phase 7 Updates done).
+**Current phase:** 9 — Polish & release (Phase 8 Server export done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -72,9 +72,9 @@ Update this file at the end of every working session (see AGENTS.md).
 - [ ] Follow-up: follow new required dependencies when an update needs them (a plan step before updating)
 
 ## Phase 8 — Server export
-- [ ] Side resolution (override > platform > jar)
-- [ ] Export preview + copy/zip modes
-- [ ] Export view
+- [x] Side resolution (platform > override > jar since D19; done in Phases 4 and 6)
+- [x] Export preview + copy/zip modes + reveal (`services/server-export.ts`, `/api/export*`)
+- [x] Export view (`/export`)
 
 ## Phase 9 — Polish & release
 - [ ] Error states, empty states, loading skeletons, dark mode
@@ -108,3 +108,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Phase 7 done: `POST /api/mods/check-updates` ranks each identified project's versions like the project page (D26), results kept in memory; update one / update all / change version as jobs that download, verify, place (keeping disabled state), then trash the old jar. Web: Check updates, Update all, Updates filter, row pill, Change version dialog, Update on Browse cards and project pages. On a scratch copy of the dev instance: 4 updates found in 1.7 s (Create: Central Kitchen, and 1.21.1 builds for the three 1.21.11 jars), Update all replaced them and cleared the incompatible flags, and Change version went back and forth. Checked with headless Chrome (puppeteer-core, scratch only) at 1440px, dark theme only. |
 | 2026-09-22 | CurseForge side from the files' "Client"/"Server" tags (D27), so CurseForge-identified mods stop showing Unknown. Checked the tags on the live API (Frogport Reworked, JEI, Fabric API, Sodium, Macaw's Bridges). |
 | 2026-09-22 | Shadcn scrollbar everywhere through `ScrollPanel`, with edge shadows where content continues (D28): the page below a fixed header, the split lists and project page, the install and update dialog lists; remaining native scrollbars styled to match. Checked with headless Chrome at 1600px (split, light and dark) and 1100px (single list): sticky table header still sticks, shadows show and hide at the ends. |
+| 2026-09-22 | Phase 8 done: `GET /api/export/preview`, `POST /api/export` (copy into `<instance>/server-mods/` with an optional clean, or a stored zip in the instance root) and `/api/export/reveal`; the target is a plain folder name that can't be or hold the mods folder (D29). Web `/export` view with Included / Needs review / Excluded groups, per-export checkboxes and the shared side menu (`ModSide`, moved out of the Installed row). On a scratch copy of the dev instance: 41 of 51 jars included (10 client-only excluded, none unknown), copy, clean copy (removed a planted stale jar after the confirm) and a 139 MB zip of 41 jars. Checked with headless Chrome (puppeteer-core, scratch only) at 1440px in dark and light, and 420px; Open folder wasn't clicked (it would open a real file manager). |

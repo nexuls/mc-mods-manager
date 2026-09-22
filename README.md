@@ -8,8 +8,8 @@ Run it in the instance's folder and it opens a local web UI. The UI shows what's
 Modrinth and CurseForge, and installs the right version for that instance's game version and loader,
 with its required dependencies.
 
-> **Status: work in progress, not yet published.** Listing, search, install and updates work. Server
-> export is next. See [Roadmap](#roadmap).
+> **Status: work in progress, not yet published.** Listing, search, install, updates and server export
+> work. See [Roadmap](#roadmap).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/ui-dark.png">
@@ -29,6 +29,9 @@ with its required dependencies.
 - **Updates jars.** "Check updates" finds the version it would install today for each identified jar,
   and you can update one, all of them, or switch a jar to any other version. The new file is downloaded
   and checked before the old one moves to `.mc-mod/trash/`.
+- **Exports server mods.** It copies the mods a server needs (server-side and both-sides, plus those
+  whose side nobody knows, for you to review) into `server-mods/` or a zip, ready to upload.
+  Client-only and disabled mods are left out, and your `mods/` folder isn't changed.
 - **Enables, disables and removes jars.** Disabling renames the file to `.jar.disabled`. Removed jars
   go to `.mc-mod/trash/` and aren't deleted.
 - **Runs on your machine only.** The server listens on `127.0.0.1` and needs a per-run session
@@ -151,9 +154,10 @@ Some CurseForge authors don't allow third-party downloads. For those files, the 
 | `<instance>/.mc-mod/state.json` | Version and loader overrides, links you set by hand, and a hash cache. Safe to delete: jars are identified again by hash. |
 | `<instance>/.mc-mod/tmp/` | Downloads that haven't been verified yet |
 | `<instance>/.mc-mod/trash/` | Removed jars |
+| `<instance>/server-mods/` or `<instance>/server-mods-<version>-<date>.zip` | Server exports, when you make one (folder name set in Settings). A new folder export replaces the jars of the last one. |
 | `~/.config/mc-mod/config.json` | Global settings and the CurseForge key, readable only by you (`%APPDATA%\mc-mod\Config\` on Windows, `~/Library/Preferences/mc-mod/` on macOS) |
 
-It changes nothing else in the instance except the jars in `mods/` or `plugins/`.
+It changes nothing else in the instance except the jars in `mods/` or `plugins/`, and the export you ask for.
 
 ## How it works
 
@@ -183,7 +187,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 - [x] Search and install from Modrinth
 - [x] CurseForge search, installs and identification
 - [x] Update checks, and updating one mod or all of them
-- [ ] Server export: copy the server-side mods to a folder or a zip for upload
+- [x] Server export: copy the server-side mods to a folder or a zip for upload
 - [ ] Publish to the npm registry, and standalone binaries
 
 Progress is tracked in [artifacts/progress.md](artifacts/progress.md).

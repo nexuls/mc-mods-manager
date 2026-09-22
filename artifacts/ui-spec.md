@@ -109,11 +109,15 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   failure: toast, and the dialog stays open with the errors and a Close button.
 
 ### Export (`/export`)
-- Target dir (editable), mode (Copy folder / Zip).
-- Three columns or grouped list: **Included** (server/both), **Needs review** (unknown), **Excluded** (client-only).
-  Users can move local items and items whose platform doesn't know the side between groups (persists as side override).
-- **Export** button → result path + "Open folder".
-- Hidden/explained for plugin instances (plugins are already server-only).
+- Folder name (defaults to the Settings value, applies to this export), format (Folder / Zip), and for Folder a
+  **Remove earlier exports** switch (on by default).
+- Grouped list: **Included** (server/both), **Needs review** (unknown, only when there are any), **Excluded**
+  (client-only and disabled). Included and review rows have a checkbox to leave a jar out of this export. The side
+  chip is the Installed side menu, so local items and items whose platform doesn't know the side can be moved for
+  good (side override).
+- **Export N mods** → confirmation only when a clean copy would remove old jars, then the result path + "Open folder"
+  (a toast gives the path when no file manager can be opened).
+- The nav item is hidden for plugin instances; `/export` explains that plugins are already server-only.
 
 ### Settings (`/settings`)
 - Cards: **CurseForge** (key status badge, password input; Save tests the key first; Test; Remove key; a note when

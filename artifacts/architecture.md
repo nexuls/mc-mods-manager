@@ -271,15 +271,18 @@ The UI always shows the chosen version and lets the user pick another from a dro
 Target: `<instance>/server-mods/` (configurable; plugins instances don't need this, the feature is for
 mod loaders).
 
-Side resolution per mod (first hit wins):
-1. User override in `state.json`.
-2. Modrinth `client_side` / `server_side` (`required`/`optional`/`unsupported`).
+Side resolution per mod (first hit wins; D19 put the platform first):
+1. Platform side: Modrinth `environment` / `client_side` / `server_side`, CurseForge file tags (D27).
+2. User override in `state.json` (for local files, or when the platform doesn't know).
 3. Jar metadata (`fabric.mod.json` `environment`, `mods.toml` `side` on the loader/minecraft dependency, `displayTest`).
 4. `unknown` → included, but highlighted for the user to decide.
 
-Export includes `server` + `both` + `unknown` (unknown is opt-out). Client-only mods are excluded.
-Export modes: **copy** (default, clears previous export first after confirmation) or **zip**
-(`server-mods-<version>-<date>.zip`). Never modifies the source `mods/` dir.
+Export includes enabled `server` + `both` + `unknown` jars (unknown is opt-out: untick it for one export, or set a
+side). Client-only and disabled jars are excluded. Export modes: **copy** (default) into `<instance>/<dirName>/`,
+with an optional clean that removes the folder's other `.jar` files after the copy (confirmed in the UI when it would
+remove any), or **zip** (`<dirName>-<version>-<date>.zip` in the instance root, jars stored uncompressed). The folder
+is a plain name in the instance root and never the mods folder or one holding it. Never modifies the source `mods/`
+dir (`services/server-export.ts`, D29).
 
 ## 8. Frontend (`apps/web`)
 

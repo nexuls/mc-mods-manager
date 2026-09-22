@@ -268,3 +268,22 @@ Accepted.
 - The Installed table and Browse results only become panels in the split view. Below it they stay plain, because a
   Radix viewport is a scroll container and would catch the table's sticky header instead of the page.
 - Radix's content wrapper is `display: table`; the panel makes it a block so `truncate` works inside.
+
+### D29 — Server export (Phase 8)
+- **The target is a folder name, not a path.** `dirName` (default: the `exportDirName` setting) is an `ExportDirName`,
+  so exports only land in `<instance>/<name>/` and zips in the instance root. The API spec's free `targetDir` is gone:
+  a clean export deletes jars, and a browser-supplied path could point it anywhere. A folder that is or holds the mods
+  folder is refused for the same reason.
+- **Clean copy removes only top-level `.jar` files**, and only after every new jar is copied (atomically, replacing
+  same-named ones), so a failed export never leaves the folder emptier and a server config dropped next to the jars
+  survives. The preview lists the folder's jars by name, so the UI asks for confirmation only when some would really
+  be removed.
+- **Disabled jars are excluded** like client-only ones: they aren't part of the running pack.
+- **Unknown sides are included for review.** Unticking one leaves it out of that export only (`exclude`); setting its
+  side (the Installed side menu, shared as `ModSide`) decides for good. Platform sides stay read-only (D19), so a
+  wrong platform side can still be skipped per export.
+- **Zips store jars uncompressed** (`fflate` `zipSync`, level 0): jars are zips already. Built in memory, which is fine
+  for packs of a few hundred MB; stream it if that ever isn't.
+- **Reveal opens only folders the backend picks** (the export folder or the instance root) with `open`, never a path
+  from the browser, because opening a file can run it. Without a desktop it answers `opened: false` and the UI shows
+  the path.
