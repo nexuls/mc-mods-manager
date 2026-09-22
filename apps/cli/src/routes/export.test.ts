@@ -67,7 +67,7 @@ async function setup(fixture = 'prism') {
         return true
       },
     }),
-    webDir: path.join(f.dir, 'no-web'),
+    web: { dir: path.join(f.dir, 'no-web') },
     validateResponses: true,
     onInternalError: (err) => {
       throw err

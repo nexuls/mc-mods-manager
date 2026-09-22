@@ -36,7 +36,13 @@ const auth = { mode: 'token', token } as const
 const headers = { [TOKEN_HEADER]: token }
 
 const make = () =>
-  createApp({ auth, services, webDir, validateResponses: true, onInternalError: () => {} })
+  createApp({
+    auth,
+    services,
+    web: { dir: webDir },
+    validateResponses: true,
+    onInternalError: () => {},
+  })
 
 test('every contract endpoint is registered', () => {
   const registered = registeredEndpoints(make().apiRouter)
@@ -51,7 +57,7 @@ describe('api', () => {
     const { app } = createApp({
       auth,
       services,
-      webDir,
+      web: { dir: webDir },
       validateResponses: true,
       onHeartbeat: () => beats++,
     })
@@ -99,13 +105,55 @@ describe('web', () => {
     const { app } = createApp({
       auth,
       services,
-      webDir: path.join(webDir, 'missing'),
+      web: { dir: path.join(webDir, 'missing') },
       validateResponses: true,
     })
     await using s = await listen(app)
     const res = await fetch(`${s.url}/`)
     expect(res.status).toBe(404)
     expect(await res.text()).toContain('not built')
+  })
+})
+
+describe('embedded web', () => {
+  const makeEmbedded = () =>
+    createApp({
+      auth,
+      services,
+      web: {
+        embedded: {
+          '/index.html': path.join(webDir, 'index.html'),
+          '/assets/app-abc123.js': path.join(webDir, 'assets/app-abc123.js'),
+        },
+      },
+      validateResponses: true,
+    }).app
+
+  test('serves hashed assets with long caching', async () => {
+    await using s = await listen(makeEmbedded())
+    const res = await fetch(`${s.url}/assets/app-abc123.js`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('javascript')
+    expect(res.headers.get('cache-control')).toContain('immutable')
+    expect(await res.text()).toBe('console.log(1)')
+  })
+
+  test('falls back to index.html for client routes', async () => {
+    await using s = await listen(makeEmbedded())
+    for (const route of ['/', '/browse/some/route', '/toString']) {
+      const res = await fetch(`${s.url}${route}`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+      expect(res.headers.get('content-type')).toContain('text/html')
+      expect(await res.text()).toContain('<title>mc-mod</title>')
+    }
+  })
+
+  test('leaves the API alone', async () => {
+    await using s = await listen(makeEmbedded())
+    const res = await fetch(`${s.url}/api/nope`, { headers })
+    expect(res.status).toBe(404)
+    expect(ApiErrorSchema.parse(await res.json()).error.code).toBe('NOT_FOUND')
   })
 })
 
@@ -138,7 +186,12 @@ describe('security', () => {
   })
 
   test('dev mode skips the checks', async () => {
-    const { app } = createApp({ auth: { mode: 'dev' }, services, webDir, validateResponses: true })
+    const { app } = createApp({
+      auth: { mode: 'dev' },
+      services,
+      web: { dir: webDir },
+      validateResponses: true,
+    })
     await using s = await listen(app)
     const res = await fetch(`${s.url}/api/health`, { headers: { host: 'localhost:5173' } })
     expect(res.status).toBe(200)

@@ -19,6 +19,12 @@ import type { ServerExportService } from './services/server-export'
 import type { SettingsService } from './services/settings'
 import type { UpdatesService } from './services/updates'
 
+/**
+ * Where the built web UI comes from: a directory on disk (`dist/web` next to the bundle), or the
+ * files embedded in a standalone binary, keyed by URL path (`/index.html`, `/assets/…`).
+ */
+export type WebAssets = { dir: string } | { embedded: Readonly<Record<string, string>> }
+
 export interface AppOptions {
   auth: Auth
   services: {
@@ -31,8 +37,8 @@ export interface AppOptions {
     updates: UpdatesService
     serverExport: ServerExportService
   }
-  /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
-  webDir: string
+  /** The built web UI. Missing in source/dev runs, where Vite serves the UI. */
+  web: WebAssets
   /** Validate responses against the contract (dev and tests). */
   validateResponses: boolean
   /** Called on every health request; drives `--exit-on-close`. */
@@ -63,7 +69,8 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   app.use('/api', express.json())
   app.use(apiRouter)
   app.use('/api', apiNotFound)
-  serveWeb(app, options.webDir)
+  if ('embedded' in options.web) serveEmbeddedWeb(app, options.web.embedded)
+  else serveWeb(app, options.web.dir)
   app.use(errorHandler(options.onInternalError ?? ((err) => console.error(err))))
 
   return { app, apiRouter }
@@ -72,12 +79,7 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
 function serveWeb(app: Express, webDir: string): void {
   const index = path.join(webDir, 'index.html')
   if (!existsSync(index)) {
-    app.use((_req, res) => {
-      res
-        .status(404)
-        .type('text')
-        .send('The web UI is not built. In development, use the Vite dev server instead.')
-    })
+    webNotBuilt(app)
     return
   }
 
@@ -95,5 +97,40 @@ function serveWeb(app: Express, webDir: string): void {
     }
     res.setHeader('Cache-Control', 'no-store')
     res.sendFile(index)
+  })
+}
+
+/** Serves the web UI embedded in a standalone binary, with the same caching and SPA fallback. */
+function serveEmbeddedWeb(app: Express, files: Readonly<Record<string, string>>): void {
+  const index = files['/index.html']
+  if (index === undefined) {
+    webNotBuilt(app)
+    return
+  }
+  app.use(async (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      next()
+      return
+    }
+    try {
+      // Unknown paths are client-side routes: they get index.html, like `serveWeb`.
+      const sent = (Object.hasOwn(files, req.path) ? files[req.path] : undefined) ?? index
+      if (sent === index) res.setHeader('Cache-Control', 'no-store')
+      else if (req.path.startsWith('/assets/')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+      res.type(path.extname(sent)).send(Buffer.from(await Bun.file(sent).arrayBuffer()))
+    } catch (err) {
+      next(err)
+    }
+  })
+}
+
+function webNotBuilt(app: Express): void {
+  app.use((_req, res) => {
+    res
+      .status(404)
+      .type('text')
+      .send('The web UI is not built. In development, use the Vite dev server instead.')
   })
 }

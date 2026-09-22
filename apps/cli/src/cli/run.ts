@@ -6,7 +6,7 @@ import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
 import { CurseForgeProvider } from '../providers/curseforge'
 import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
-import { createApp } from '../server'
+import { createApp, type WebAssets } from '../server'
 import { CatalogService } from '../services/catalog'
 import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
@@ -22,8 +22,13 @@ import { HOST, listen, PortInUseError } from './listen'
 import { createProgram, DEFAULT_PORT, parseOptions } from './options'
 import * as terminal from './terminal'
 
+export interface RunOptions {
+  /** The web UI files a standalone binary embeds (see `scripts/compile.ts`), by URL path. */
+  embeddedWeb?: Readonly<Record<string, string>>
+}
+
 /** The `mc-mod` command: parse options, start the server, open the UI, stop on Ctrl+C. */
-export async function run(argv: readonly string[]): Promise<void> {
+export async function run(argv: readonly string[], runOptions: RunOptions = {}): Promise<void> {
   const options = parseOptions(createProgram(), argv)
   const env = parseEnv()
   const dev = env.MC_MOD_DEV && !IS_BUNDLE
@@ -82,8 +87,7 @@ export async function run(argv: readonly string[]): Promise<void> {
       updates: new UpdatesService({ library, catalog, installer, curseforge, store }),
       serverExport: new ServerExportService({ instance, library, config, openFolder }),
     },
-    // The bundle lives at dist/bin.js with the web build copied to dist/web.
-    webDir: path.join(import.meta.dir, 'web'),
+    web: webAssets(runOptions),
     validateResponses: dev || process.env.NODE_ENV === 'test',
     onHeartbeat: () => idle?.beat(),
     onInternalError: terminal.internalError,
@@ -135,6 +139,12 @@ export async function run(argv: readonly string[]): Promise<void> {
     void shutdown('Server stopped.')
   })
   process.on('SIGTERM', () => void shutdown('Server stopped.'))
+}
+
+function webAssets({ embeddedWeb }: RunOptions): WebAssets {
+  if (embeddedWeb) return { embedded: embeddedWeb }
+  // The bundle lives at dist/bin.js with the web build copied to dist/web.
+  return { dir: path.join(import.meta.dir, 'web') }
 }
 
 function isDirectory(p: string): boolean {

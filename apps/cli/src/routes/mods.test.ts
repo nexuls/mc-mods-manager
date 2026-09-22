@@ -91,7 +91,7 @@ async function setup(
       curseforge: options.curseforge ?? fakeCurseForge({ enabled: false }).curseforge,
       config: options.config,
     }),
-    webDir: path.join(f.dir, 'no-web'),
+    web: { dir: path.join(f.dir, 'no-web') },
     validateResponses: true,
     onInternalError: (err) => {
       throw err

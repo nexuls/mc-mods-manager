@@ -51,7 +51,7 @@ async function setup(curseforge?: FakeCurseForge) {
   const { app } = createApp({
     auth: { mode: 'token', token },
     services: makeServices({ instance, modrinth: fake.modrinth, curseforge }),
-    webDir: path.join(f.dir, 'no-web'),
+    web: { dir: path.join(f.dir, 'no-web') },
     validateResponses: true,
     onInternalError: (err) => {
       throw err

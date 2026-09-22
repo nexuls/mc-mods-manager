@@ -112,7 +112,7 @@ async function setup(options: { fileName?: string; newName?: string } = {}) {
   const { app } = createApp({
     auth: { mode: 'token', token },
     services,
-    webDir: path.join(f.dir, 'no-web'),
+    web: { dir: path.join(f.dir, 'no-web') },
     validateResponses: true,
     onInternalError: (err) => {
       throw err
