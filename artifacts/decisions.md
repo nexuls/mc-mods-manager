@@ -99,3 +99,26 @@ Accepted.
 - **`PUT /api/instance` replaces the overrides** instead of merging them. The UI sends the whole form, and `{}` means "back to detection".
   It re-detects before saving, so an invalid `contentDir` never reaches `state.json`.
 - **Plugin metadata never sets the game version**, because `api-version` is only a minimum.
+
+### D17 — Installed mods: identification timing, state records and compatibility rules
+Accepted.
+- **`GET /api/mods` waits for one bulk lookup** of jars never looked up before, instead of an offline first render plus
+  a background lookup (architecture §7.2 steps 2–3). It's one request per 500 hashes: 3.6 s for 38 jars on the first
+  launch, then milliseconds from `state.json`. Misses are recorded too (`checkedAt`), so unknown jars aren't looked up
+  again until **Refresh**. If Modrinth can't be reached, the list still returns, with a warning. Revisit with a job + SSE if
+  large packs feel slow.
+- **`state.json` `mods` is keyed by sha1**: lookup results (`sources`, `checkedAt`) and user choices (`manual`, `unlinked`,
+  `sideOverride`, `primarySource`). Records of removed files are pruned unless they hold a user choice, so a re-added jar
+  keeps its link and side. Enabling/disabling keeps everything, because renaming doesn't change the hash, and the jar
+  cache is keyed by the name without `.disabled`.
+- **Side from Modrinth** prefers the per-version `environment`, then the project's `environment[]`, then legacy
+  `client_side`/`server_side`. "Optional on the other side" counts as `both`, so server exports keep those mods.
+- **Compatibility** uses the platform's loaders/game versions for the exact file, and falls back to the jar's own loaders
+  and version range. Quilt runs Fabric builds, Paper/Purpur run Spigot/Bukkit plugins, Waterfall runs BungeeCord plugins,
+  and NeoForge on 1.20.1 runs Forge mods. Plugin game versions aren't checked, since they're minimums in practice.
+- **Manual links are checked against Modrinth when they're made** (404 → `NOT_FOUND`), and the title and icon are saved with
+  them, so the row looks right offline.
+- **Remove moves the jar to `.mc-mod/trash/<epoch ms>-<name>`** via `paths.ts` (`renameInside`, with a copy fallback for
+  `EXDEV`). There's no restore UI yet.
+- **Web unit tests** get their own `tsconfig.test.json` project with Bun types, and the app project excludes `*.test.ts`.
+

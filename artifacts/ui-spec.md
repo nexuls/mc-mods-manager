@@ -23,11 +23,17 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 ## Views
 
 ### Installed (`/`)
-- Toolbar: search filter, filter chips (All / Updates available / Disabled / Unidentified / Client-only / Server-side),
-  buttons: **Check updates**, **Update all**, **Refresh**.
-- Table (shadcn `Table`): icon, name + file name, version, source badge (Modrinth/CurseForge/Local), side badge
-  (editable via dropdown), update available pill, enabled `Switch`, row menu (Open page, Change version, Remove).
-- Empty state: "No mods yet" + button to Browse.
+- Toolbar: search filter, filter chips with counts (All / Disabled / Unidentified / Incompatible / Client-only / Server-side;
+  *Updates available* comes with Phase 7), buttons: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
+- Lookup warnings (e.g. Modrinth unreachable) show as an alert above the table.
+- Table (shadcn `Table`), sorted by name: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
+  badge, version, source badge (Modrinth/CurseForge/Local, with "+CurseForge" when on both; the tooltip says how it was found),
+  side (dropdown: Automatic / Client / Server / Both; unknown is highlighted), enabled `Switch`, row menu (Open on
+  Modrinth/CurseForge, Updates from ▸ when on both, Link to project…, Treat as local / Identify automatically, Remove…).
+  *Update available pill* and *Change version* come with Phase 7.
+- **Link dialog:** possible matches (same mod id, then name search) and a field for a Modrinth URL/slug/id. It can also remove a manual link.
+- **Remove** asks first, then moves the jar to `.mc-mod/trash/`.
+- Empty state: "No mods yet" (a button to Browse comes with Phase 5).
 
 ### Browse (`/browse`)
 - Provider tabs: Modrinth | CurseForge (disabled with tooltip + link to Settings if no key).
@@ -57,4 +63,4 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 
 ## shadcn components expected
 button, input, badge, table, dialog, dropdown-menu, select, switch, tabs, tooltip, sonner (toasts),
-skeleton, scroll-area, card, separator, alert, progress, field, label (all installed), plus command (quick search) later.
+skeleton, scroll-area, card, separator, alert, progress, field, label, alert-dialog, toggle-group (all installed), plus command (quick search) later.

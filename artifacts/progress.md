@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 4 — Installed mods (Phase 3 instance detection done; jar metadata parsers already in).
+**Current phase:** 5 — Search & install (Phase 4 installed mods done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -45,10 +45,10 @@ Update this file at the end of every working session (see AGENTS.md).
 ## Phase 4 — Installed mods
 - [x] Jar metadata parsers (fabric, quilt, forge, neoforge, mcmod.info, plugin.yml, paper-plugin.yml, bungee.yml, velocity-plugin.json) — done in Phase 3 for the heuristic
 - [x] sha1/sha512 + CurseForge murmur2 fingerprint (tested)
-- [ ] Hash cache in state.json
-- [ ] Identification pipeline (architecture §7.2): install record, Modrinth `/version_files`, launcher metadata (packwiz `.pw.toml`, CF `minecraftinstance.json`, ATLauncher), dual-source merge, compatibility check
-- [ ] "Possible match" suggestions + manual link/unlink
-- [ ] Installed view: table, enable/disable, remove, side badge
+- [x] Hash cache in state.json (`jarCache`, keyed by file name without `.disabled`, invalidated by size/mtime or `JAR_CACHE_VERSION`)
+- [x] Identification pipeline (architecture §7.2): install record (read; written by the installer in Phase 5), Modrinth `/version_files`, launcher metadata (packwiz `.pw.toml`, CF `minecraftinstance.json`, ATLauncher), dual-source merge, compatibility check. The CurseForge fingerprint lookup plugs in with Phase 6
+- [x] "Possible match" suggestions + manual link/unlink (Modrinth; CurseForge links come with Phase 6)
+- [x] Installed view: table, enable/disable, remove (to `.mc-mod/trash/`), side badge, filters, link dialog
 
 ## Phase 5 — Search & install (Modrinth)
 - [ ] Modrinth provider: search, project, versions, tags
@@ -61,6 +61,7 @@ Update this file at the end of every working session (see AGENTS.md).
 - [ ] Settings view + global config + key test
 - [ ] CF provider: search, mod, files, fingerprints (plug into identification pipeline)
 - [ ] Manual-download-required handling
+- [ ] CurseForge manual links + suggestions (`PATCH /api/mods/:fileName` currently answers `PROVIDER_DISABLED`)
 
 ## Phase 7 — Updates
 - [ ] Check updates (Modrinth bulk + CF)
@@ -73,6 +74,7 @@ Update this file at the end of every working session (see AGENTS.md).
 
 ## Phase 9 — Polish & release
 - [ ] Error states, empty states, loading skeletons, dark mode
+- [ ] Web component tests (happy-dom); trash restore/empty UI
 - [ ] README with usage + CurseForge key instructions
 - [ ] Windows/macOS path testing
 - [ ] `bun publish --dry-run`
@@ -87,3 +89,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Phase 1 scaffolding done: bun workspaces, web (Vite 8/React 19/Tailwind 4/shadcn radix-nova), shared, cli (Express 5), Biome, bun test, build pipeline. check/typecheck/test/build all pass. |
 | 2026-09-22 | Phase 2 done: shared contract (`defineEndpoint`, errors, `api.health`), `route()` adapter + error middleware, token/Host security, web `call()` client, `mc-mod` command with clack/picocolors terminal UI, port fallback, Chromium app mode, `--exit-on-close`, `.env` isolation. `bun link` verified. |
 | 2026-09-22 | Phase 3 done: version ranges (`lib/mc-version.ts`), jar metadata parsers (fflate), safe paths + `state.json`, detectors with fixtures, `GET/PUT /api/instance`, CLI startup summary, web header + setup dialog (checked with headless Chrome screenshots). |
+| 2026-09-22 | Phase 4 done: sha1/sha512 + CurseForge murmur2 (vectors from the C reference), jar scan with size+mtime cache, Modrinth provider (hash lookup, projects, search; live test behind `MC_MOD_LIVE=1`), launcher metadata, source merge + compatibility + side, `/api/mods` (list/refresh/PATCH/DELETE/suggestions), Installed view. On a copy of the dev instance: 37 of 38 jars identified by hash in 3.6 s, reload from state.json in 3 ms, and the three 1.21.11 jars flagged incompatible. Checked with headless Chrome screenshots; menus and dialogs not clicked through in a browser. |

@@ -211,9 +211,10 @@ records `method` and `confidence` so the UI can show why we think so.
 
 Order of evaluation per scan:
 1. Hash all jars (`.jar` and `.jar.disabled`), using the size+mtime cache, so renamed files are still identified.
-2. Apply #1 (own record) and #3 (launcher metadata) offline, which gives an instant first render.
-3. Send the Modrinth and CurseForge bulk lookups (#2) **in parallel** for all jars, even ones already matched, to
-   confirm them and to find the same file on the other platform.
+2. Apply #1 (own record) and #3 (launcher metadata) offline.
+3. Send the Modrinth and CurseForge bulk lookups (#2) **in parallel** for jars not looked up before (all jars on
+   **Refresh**), even ones already matched, to confirm them and to find the same file on the other platform. The
+   request waits for this lookup instead of rendering first (D17).
 4. Offer #4 suggestions for whatever is left, lazily when the user opens that row.
 5. Save results to `state.json` keyed by sha1, so the next launch works offline except for update checks.
 
