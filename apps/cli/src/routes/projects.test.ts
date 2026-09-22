@@ -49,7 +49,7 @@ async function setup() {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: makeServices(instance, fake.modrinth),
+    services: makeServices({ instance, modrinth: fake.modrinth }),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
     onInternalError: (err) => {

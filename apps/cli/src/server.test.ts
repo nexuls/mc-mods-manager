@@ -20,7 +20,7 @@ let services: ReturnType<typeof makeServices>
 beforeAll(async () => {
   fixture = await copyFixture('empty')
   const instance = await InstanceService.load(fixture.dir)
-  services = makeServices(instance, fakeModrinth().modrinth)
+  services = makeServices({ instance, modrinth: fakeModrinth().modrinth })
   webDir = await mkdtemp(path.join(tmpdir(), 'mc-mod-web-'))
   await Bun.write(path.join(webDir, 'index.html'), '<!doctype html><title>mc-mod</title>')
   await Bun.write(path.join(webDir, 'assets/app-abc123.js'), 'console.log(1)')

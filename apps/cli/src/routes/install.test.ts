@@ -59,15 +59,15 @@ async function setup(versions: ProjectVersion[] = [version()]) {
   const f = await copyFixture('prism')
   const fake = fakeModrinth({ projects: [lithium], versions })
   const downloads: string[] = []
-  const services = makeServices(
-    await InstanceService.load(f.dir),
-    fake.modrinth,
-    () => 1000,
-    async (url) => {
+  const services = makeServices({
+    instance: await InstanceService.load(f.dir),
+    modrinth: fake.modrinth,
+    now: () => 1000,
+    fetch: async (url) => {
       downloads.push(url)
       return new Response(jar)
     },
-  )
+  })
   const token = createSessionToken()
   const { app } = createApp({
     auth: { mode: 'token', token },

@@ -16,7 +16,7 @@ async function setup(fixture: string) {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: makeServices(instance, fakeModrinth().modrinth),
+    services: makeServices({ instance, modrinth: fakeModrinth().modrinth }),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
   })

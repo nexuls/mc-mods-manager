@@ -62,7 +62,10 @@ async function setup(versions: ProjectVersion[], projects: ProjectInfo[]) {
       },
     },
   })
-  const services = makeServices(await InstanceService.load(f.dir), fake.modrinth)
+  const services = makeServices({
+    instance: await InstanceService.load(f.dir),
+    modrinth: fake.modrinth,
+  })
   return { installer: services.installer, [Symbol.asyncDispose]: f[Symbol.asyncDispose] }
 }
 
