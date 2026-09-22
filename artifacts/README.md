@@ -12,5 +12,6 @@ Planning and working documents for `mc-mod`. Read in this order:
 | [instance-detection.md](instance-detection.md) | How we detect version/loader and parse jar metadata |
 | [external-apis.md](external-apis.md) | Modrinth + CurseForge endpoints and quirks |
 | [setup-commands.md](setup-commands.md) | Official init commands for every package |
+| [releasing.md](releasing.md) | Versions, the release workflow, npm and binary publishing |
 | [decisions.md](decisions.md) | ADR log |
 | [open-questions.md](open-questions.md) | Unresolved choices with the defaults assumed |

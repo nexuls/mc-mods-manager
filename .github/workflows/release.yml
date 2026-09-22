@@ -1,0 +1,164 @@
+# Releases mc-mod: bumps the version, builds, publishes `mc-mod` to npm, and creates a GitHub release
+# with standalone binaries for every platform. Runs only when started by hand (Actions → Release →
+# Run workflow). Setup and the full procedure: artifacts/releasing.md.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump (ignored when an exact version is given)
+        type: choice
+        options: [patch, minor, major, prepatch, preminor, premajor, prerelease]
+        default: patch
+      version:
+        description: Exact version instead of a bump, e.g. 1.0.0 (optional)
+        type: string
+        required: false
+      preid:
+        description: Prerelease id for pre* bumps
+        type: string
+        default: beta
+      dry_run:
+        description: Dry run (build, test and pack everything; push, publish and release nothing)
+        type: boolean
+        default: false
+
+# One release at a time; never cancel one halfway through.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push the release commit and tag, create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Releases only run from main
+        if: ${{ !inputs.dry_run && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Real releases run from main (this run is on $GITHUB_REF). Dry runs work on any branch."
+          exit 1
+
+      - name: Releases need the npm token
+        if: ${{ !inputs.dry_run }}
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_CONFIG_TOKEN" ]; then
+            echo "::error::The NPM_TOKEN secret isn't set. See artifacts/releasing.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags and history, for the release notes
+
+      # No version given: setup-bun reads packageManager (bun@x.y.z) from package.json.
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Lint, typecheck and test
+        run: |
+          bun run check
+          bun run typecheck
+          bun test
+
+      - name: Bump the version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXACT: ${{ inputs.version }}
+          PREID: ${{ inputs.preid }}
+        run: |
+          version=$(bun scripts/version.ts "${EXACT:-$BUMP}" --preid "$PREID")
+          tag="v$version"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "::error::Tag $tag already exists on origin."
+            exit 1
+          fi
+          case "$version" in *-*) npm_tag=next prerelease=true ;; *) npm_tag=latest prerelease=false ;; esac
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "npm_tag=$npm_tag"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (npm dist-tag: $npm_tag)"
+
+      - name: Build the npm package
+        run: bun run build
+
+      - name: Compile standalone binaries
+        run: bun run compile --all
+
+      - name: Smoke test
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          test "$(bun apps/cli/dist/bin.js --version)" = "$VERSION"
+          test "$(dist/release/mc-mod-linux-x64 --version)" = "$VERSION"
+          cat dist/release/SHA256SUMS
+
+      - name: Check the npm package
+        working-directory: apps/cli
+        env:
+          # A dry run doesn't authenticate, so any token works when the secret isn't set.
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN || 'dry-run' }}
+        run: bun publish --dry-run --access public --tag "${{ steps.version.outputs.npm_tag }}"
+
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          bun scripts/release-notes.ts "$VERSION" > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the dry run's output
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mc-mod-${{ steps.version.outputs.version }}-dry-run
+          path: |
+            dist/release/
+            ${{ runner.temp }}/notes.md
+          retention-days: 7
+
+      # Push first: if main moved since the run started, this fails before anything is published.
+      - name: Commit and tag the release
+        if: ${{ !inputs.dry_run }}
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/cli/package.json
+          git commit -m "chore(release): $TAG"
+          git tag -a "$TAG" -m "mc-mod $TAG"
+          git push --atomic origin HEAD:main "refs/tags/$TAG"
+
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
+        working-directory: apps/cli
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bun publish --access public --tag "${{ steps.version.outputs.npm_tag }}"
+
+      - name: Create the GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release create "$TAG" dist/release/* \
+            --verify-tag \
+            --title "mc-mod $TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            "${flags[@]}"
