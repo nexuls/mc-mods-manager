@@ -370,3 +370,52 @@ test('GET suggestions: same mod id, then name search', async () => {
   ])
   expect(t.calls.search).toEqual(['My Mod'])
 })
+
+test('PATCH links to a CurseForge project (with a key)', async () => {
+  const cf = fakeCurseForge({ projects: [{ ...jei, iconUrl: 'https://media.forgecdn.net/j.png' }] })
+  await using t = await setup({ curseforge: cf.curseforge })
+  const res = await t.request('PATCH', t.file('my-mod-1.0.jar'), {
+    link: { provider: 'curseforge', projectId: '238222' },
+  })
+  expect(api.mods.update.response.parse(await res.json())).toMatchObject({
+    primarySource: 'curseforge',
+    sources: [
+      {
+        provider: 'curseforge',
+        projectId: '238222',
+        title: 'Just Enough Items',
+        iconUrl: 'https://media.forgecdn.net/j.png',
+        method: 'manual',
+      },
+    ],
+  })
+  const missing = await t.request('PATCH', t.file('my-mod-1.0.jar'), {
+    link: { provider: 'curseforge', projectId: '999' },
+  })
+  expect(missing.status).toBe(404)
+})
+
+test('PATCH to CurseForge without a key is PROVIDER_DISABLED', async () => {
+  await using t = await setup()
+  const res = await t.request('PATCH', t.file('my-mod-1.0.jar'), {
+    link: { provider: 'curseforge', projectId: '238222' },
+  })
+  expect(ApiErrorSchema.parse(await res.json()).error.code).toBe('PROVIDER_DISABLED')
+})
+
+test('GET suggestions adds CurseForge matches, and skips CurseForge when it fails', async () => {
+  const cf = fakeCurseForge({
+    projects: [{ id: '42', slug: 'my-mod', title: 'My Mod', description: '', side: 'unknown' }],
+  })
+  await using t = await setup({ curseforge: cf.curseforge })
+  const res = await t.request('GET', `${t.file('my-mod-1.0.jar')}/suggestions`)
+  const { suggestions } = api.mods.suggestions.response.parse(await res.json())
+  expect(suggestions.map((s) => [s.provider, s.projectId, s.reason])).toEqual([
+    ['modrinth', 'MYMOD', 'Same mod id'],
+    ['curseforge', '42', 'Same mod id'],
+  ])
+
+  await using offline = await setup({ curseforge: fakeCurseForge({ offline: true }).curseforge })
+  const r2 = await offline.request('GET', `${offline.file('my-mod-1.0.jar')}/suggestions`)
+  expect(api.mods.suggestions.response.parse(await r2.json()).suggestions).toHaveLength(1)
+})

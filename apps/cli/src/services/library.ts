@@ -23,6 +23,7 @@ import { applyLookup, buildInstalledMod, projectKey } from './identify'
 import type { InstanceService } from './instance'
 
 const SUGGESTION_LIMIT = 6
+const CF_SUGGESTION_LIMIT = 4
 
 type Modrinth = Pick<ModrinthProvider, 'identify' | 'getProjects' | 'getProject' | 'search'>
 type CurseForge = Pick<
@@ -244,14 +245,20 @@ export class LibraryService {
 
     let manual: ModSource | undefined
     if (body.link) {
-      if (body.link.provider !== 'modrinth') {
-        throw new AppError('PROVIDER_DISABLED', 'Linking to CurseForge needs CurseForge support.')
+      const { provider, projectId } = body.link
+      if (provider === 'curseforge' && !this.curseforge.enabled()) {
+        throw new AppError('PROVIDER_DISABLED', 'Add a CurseForge API key in Settings first.')
       }
-      const project = await this.modrinth.getProject(body.link.projectId)
-      if (!project) throw new AppError('NOT_FOUND', `No Modrinth project "${body.link.projectId}"`)
-      this.projects.set(projectKey('modrinth', project.id), project)
+      const project =
+        provider === 'modrinth'
+          ? await this.modrinth.getProject(projectId)
+          : await this.curseforge.getProject(projectId, this.instance.instance.contentKind)
+      if (!project) {
+        throw new AppError('NOT_FOUND', `No ${providerLabel[provider]} project "${projectId}"`)
+      }
+      this.projects.set(projectKey(provider, project.id), project)
       manual = {
-        provider: 'modrinth',
+        provider,
         projectId: project.id,
         slug: project.slug,
         title: project.title,
@@ -302,41 +309,62 @@ export class LibraryService {
     return { fileName, trashPath: path.relative(root, dest) }
   }
 
-  /** Modrinth projects that might be this jar: same mod id as a slug, then a name search. */
+  /**
+   * Projects that might be this jar: same mod id as a slug, then a name search, on Modrinth and (with a
+   * key) CurseForge. CurseForge failures are skipped: some keys can't search at all.
+   */
   async suggestions(fileName: string): Promise<ModSuggestion[]> {
     const jar = await this.jar(fileName)
     const { contentKind, loader } = this.instance.instance
-    const out: ModSuggestion[] = []
-    const add = (p: ProjectInfo, reason: string) => {
-      if (out.some((s) => s.projectId === p.id)) return
-      out.push({
-        provider: 'modrinth',
-        projectId: p.id,
-        slug: p.slug,
-        title: p.title,
-        description: p.description,
-        iconUrl: p.iconUrl,
-        author: p.author,
-        downloads: p.downloads,
-        reason,
-      })
-    }
-
     const id = jar.meta?.id
-    if (id && /^[\w.-]+$/.test(id)) {
-      const bySlug = await this.modrinth.getProject(id.replaceAll('_', '-'))
-      if (bySlug) add(bySlug, 'Same mod id')
-    }
+    const slug = id && /^[\w.-]+$/.test(id) ? id.replaceAll('_', '-') : undefined
     // Jar names like "Create: Frogport Reworked" can miss where the file name's words hit.
     const queries = [...new Set([jar.meta?.name, id, nameFromFile(fileName)])].filter(
       (q): q is string => Boolean(q?.trim()),
     )
-    for (const text of queries) {
-      const hits = await this.modrinth.search({ text, kind: contentKind, loader, limit: 5 })
-      for (const h of hits) add(h, 'Name search')
-      if (hits.length > 0) break
+
+    const find = async (
+      provider: Provider,
+      client: Pick<Modrinth, 'getProject' | 'search'>,
+    ): Promise<ModSuggestion[]> => {
+      const out: ModSuggestion[] = []
+      const add = (p: ProjectInfo, reason: string) => {
+        if (out.some((s) => s.projectId === p.id)) return
+        out.push({
+          provider,
+          projectId: p.id,
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          iconUrl: p.iconUrl,
+          author: p.author,
+          downloads: p.downloads,
+          reason,
+        })
+      }
+      const bySlug = slug ? await client.getProject(slug) : null
+      if (bySlug) add(bySlug, 'Same mod id')
+      for (const text of queries) {
+        const hits = await client.search({ text, kind: contentKind, loader, limit: 5 })
+        for (const h of hits) add(h, 'Name search')
+        if (hits.length > 0) break
+      }
+      return out
     }
-    return out.slice(0, SUGGESTION_LIMIT)
+
+    const [modrinth, curseforge] = await Promise.all([
+      find('modrinth', this.modrinth),
+      this.curseforge.enabled()
+        ? find('curseforge', {
+            getProject: (idOrSlug) => this.curseforge.getProject(idOrSlug, contentKind),
+            search: (q) => this.curseforge.search(q),
+          }).catch((err: unknown) => {
+            if (err instanceof AppError) return []
+            throw err
+          })
+        : [],
+    ])
+    return [...modrinth.slice(0, SUGGESTION_LIMIT), ...curseforge.slice(0, CF_SUGGESTION_LIMIT)]
   }
 }
 
