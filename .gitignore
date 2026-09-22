@@ -5,6 +5,9 @@ node_modules
 out
 dist
 apps/cli/.compile
+# copied from the root by scripts/prepare-package.ts
+apps/cli/README.md
+apps/cli/LICENSE
 *.tgz
 
 # code coverage

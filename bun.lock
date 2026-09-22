@@ -17,9 +17,11 @@
       "bin": {
         "mc-mod": "./dist/bin.js",
       },
-      "dependencies": {
+      "devDependencies": {
         "@clack/prompts": "^1.8.1",
         "@mc-mod/shared": "workspace:*",
+        "@types/bun": "catalog:",
+        "@types/express": "^5.0.6",
         "commander": "^15.0.0",
         "env-paths": "^4.0.0",
         "express": "^5.2.1",
@@ -27,13 +29,9 @@
         "open": "^11.0.4",
         "picocolors": "^1.1.1",
         "smol-toml": "^1.8.0",
+        "typescript": "catalog:",
         "yaml": "^2.9.1",
         "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@types/bun": "catalog:",
-        "@types/express": "^5.0.6",
-        "typescript": "catalog:",
       },
     },
     "apps/web": {

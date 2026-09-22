@@ -2,7 +2,25 @@
   "name": "mc-mod",
   "version": "0.0.0",
   "description": "Manage Minecraft mods and plugins from a local web UI",
+  "keywords": [
+    "minecraft",
+    "mods",
+    "plugins",
+    "modrinth",
+    "curseforge",
+    "fabric",
+    "forge",
+    "neoforge",
+    "quilt",
+    "paper",
+    "cli"
+  ],
+  "homepage": "https://github.com/nexuls/mc-mods-manager#readme",
+  "bugs": {
+    "url": "https://github.com/nexuls/mc-mods-manager/issues"
+  },
   "license": "MIT",
+  "author": "Arif Sardar",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nexuls/mc-mods-manager.git",
@@ -13,7 +31,9 @@
     "mc-mod": "./dist/bin.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "bun": ">=1.3"
@@ -24,13 +44,10 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "catalog:",
-    "@types/express": "^5.0.6",
-    "typescript": "catalog:"
-  },
-  "dependencies": {
     "@clack/prompts": "^1.8.1",
     "@mc-mod/shared": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/express": "^5.0.6",
     "commander": "^15.0.0",
     "env-paths": "^4.0.0",
     "express": "^5.2.1",
@@ -38,6 +55,7 @@
     "open": "^11.0.4",
     "picocolors": "^1.1.1",
     "smol-toml": "^1.8.0",
+    "typescript": "catalog:",
     "yaml": "^2.9.1",
     "zod": "catalog:"
   }
