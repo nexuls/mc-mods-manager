@@ -230,3 +230,23 @@ Accepted.
 - The split layout's classes no longer hang off the `xl` breakpoint: `LibraryView` sets `data-split` when both lists
   show, and a `split:` custom variant in `index.css` applies them. With the split off on a wide screen, the page scrolls
   as it does on a narrow one.
+
+### D26 — Update checks rank versions per project
+- **The update is the version the project page would recommend** (§7.3: native loader, exact game version, release over
+  pre-release unless allowed, newest). Checking ranks each identified project's versions for the instance, one versions
+  request per project (6 at a time, cached 5 min), for Modrinth and CurseForge alike. Modrinth's bulk
+  `POST /version_files/update` would be one request, but it picks by date alone, so it could disagree with the
+  recommended version (a Fabric build on Quilt, a beta) and it only knows exact files, not manual links. On the dev
+  instance (38 Modrinth projects) a fresh check takes about 1.7 s.
+- **Never a downgrade:** an installed version that's newer than the pick (a beta while releases win) has no update.
+  A version that doesn't fit the instance does get the one that fits, which is how the three 1.21.11 jars in the dev
+  instance got their 1.21.1 builds. A jar whose installed version isn't known (manual link, launcher record without the
+  file) gets none.
+- **Results live in memory** for the run (`UpdateStore`, keyed by sha1) and are added to every list, so nothing stale is
+  shown on the next launch. They're dropped when the loader, game version, content kind or pre-release setting changes,
+  and only apply while the source they came from is still the jar's primary one.
+- **Updating is a job** like installing (same events): download to `.mc-mod/tmp/`, verify, put the new file in place,
+  then trash the old one. "Change version" is the same endpoint with a `versionId`, older ones included. Update all
+  leaves out files that must be downloaded by hand; the dialog links to them.
+- **New dependencies aren't followed** on update yet: a new version that needs another mod installs without it
+  (follow-up in progress.md).

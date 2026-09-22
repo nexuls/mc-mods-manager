@@ -263,7 +263,9 @@ The UI always shows the chosen version and lets the user pick another from a dro
 - If CurseForge returns `downloadUrl: null` (author disabled 3rd-party distribution), the plan item is `manual` with a
   "Download" link to the file's page instead of failing silently; installing it anyway fails with
   `MANUAL_DOWNLOAD_REQUIRED`. Once the user drops the file in, the fingerprint lookup identifies it.
-- Updating = download new file, then delete old file only after the new one is verified.
+- Updating = download the new file, verify it, put it in the content dir (disabled if the old one was), and only then
+  move the old file to `.mc-mod/trash/`. When both have the same name, the old file goes to the trash just before the
+  rename and is put back if the rename fails. The side override and pinned provider carry over to the new file.
 
 ### 7.6 Server export
 Target: `<instance>/server-mods/` (configurable; plugins instances don't need this, the feature is for

@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 7 — Updates (Phase 6 CurseForge done).
+**Current phase:** 8 — Server export (Phase 7 Updates done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -67,8 +67,9 @@ Update this file at the end of every working session (see AGENTS.md).
 - [ ] Follow-up: `modLoaderTypes` (multi-loader search on Quilt / NeoForge 1.20.1) is sent as a JSON array; check it with a key that may search
 
 ## Phase 7 — Updates
-- [ ] Check updates (Modrinth bulk + CF)
-- [ ] Update one / update all
+- [x] Check updates (per-project ranking on Modrinth and CurseForge, D26; `services/updates.ts`)
+- [x] Update one / update all / change version (`InstallerService.replace`, update and change-version dialogs)
+- [ ] Follow-up: follow new required dependencies when an update needs them (a plan step before updating)
 
 ## Phase 8 — Server export
 - [ ] Side resolution (override > platform > jar)
@@ -104,3 +105,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Toggle for the split view next to the search bar, wide screens only, remembered per browser (D25). Side column now hides below 672px, since the 5 : 4 split cut off the row menus at 1440px. Checked with headless Chrome: default on, off survives a reload, nav and Browse route follow it, no toggle at 1000px; the table fits at 1280, 1440 and 1920px. |
 | 2026-09-22 | README rewritten for users (install from source, options, CurseForge key, files written, roadmap); MIT LICENSE; SECURITY.md with private reporting and the threat model. |
 | 2026-09-22 | README illustrations in `docs/images/`: banner, how-it-works diagram and terminal as SVG, UI and install-dialog screenshots (headless Chrome on a scratch copy of the dev instance); each in dark and light via `<picture>`. |
+| 2026-09-22 | Phase 7 done: `POST /api/mods/check-updates` ranks each identified project's versions like the project page (D26), results kept in memory; update one / update all / change version as jobs that download, verify, place (keeping disabled state), then trash the old jar. Web: Check updates, Update all, Updates filter, row pill, Change version dialog, Update on Browse cards and project pages. On a scratch copy of the dev instance: 4 updates found in 1.7 s (Create: Central Kitchen, and 1.21.1 builds for the three 1.21.11 jars), Update all replaced them and cleared the incompatible flags, and Change version went back and forth. Checked with headless Chrome (puppeteer-core, scratch only) at 1440px, dark theme only. |

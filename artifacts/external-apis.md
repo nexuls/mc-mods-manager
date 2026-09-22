@@ -22,7 +22,7 @@ Verify endpoints against the live docs before implementing each one — APIs dri
 | Versions | `GET /project/{id}/version?loaders=["fabric"]&game_versions=["1.21.4"]` |
 | Version | `GET /version/{id}` |
 | Identify by hash (bulk) | `POST /version_files` `{ hashes: [...], algorithm: "sha1" }` |
-| Updates (bulk) | `POST /version_files/update` `{ hashes, algorithm, loaders, game_versions }` |
+| Updates (bulk) | `POST /version_files/update` `{ hashes, algorithm, loaders, game_versions }`: not used, see D26 |
 | Game versions list | `GET /tag/game_version` |
 | Loaders list | `GET /tag/loader` |
 
@@ -107,6 +107,5 @@ interface Provider {
   getProject(id: string): Promise<Project>;
   getVersions(id: string, f: VersionFilter): Promise<ProjectVersion[]>;
   identify(files: HashedFile[]): Promise<Map<string, Match>>; // key = fileName
-  checkUpdates(matches: Match[], ctx: InstanceCtx): Promise<Map<string, ProjectVersion>>;
 }
 ```

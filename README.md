@@ -8,8 +8,8 @@ Run it in the instance's folder and it opens a local web UI. The UI shows what's
 Modrinth and CurseForge, and installs the right version for that instance's game version and loader,
 with its required dependencies.
 
-> **Status: work in progress, not yet published.** Listing, search and install work. Update checks
-> and server export are next. See [Roadmap](#roadmap).
+> **Status: work in progress, not yet published.** Listing, search, install and updates work. Server
+> export is next. See [Roadmap](#roadmap).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/ui-dark.png">
@@ -26,6 +26,9 @@ with its required dependencies.
 - **Searches Modrinth and CurseForge**, showing only results for your version and loader.
 - **Installs the best version**, with its required dependencies, after you confirm the plan.
   Downloads are checked against the platform's hash before they're moved into `mods/` or `plugins/`.
+- **Updates jars.** "Check updates" finds the version it would install today for each identified jar,
+  and you can update one, all of them, or switch a jar to any other version. The new file is downloaded
+  and checked before the old one moves to `.mc-mod/trash/`.
 - **Enables, disables and removes jars.** Disabling renames the file to `.jar.disabled`. Removed jars
   go to `.mc-mod/trash/` and aren't deleted.
 - **Runs on your machine only.** The server listens on `127.0.0.1` and needs a per-run session
@@ -179,7 +182,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 - [x] Installed mods: identify, enable/disable, remove
 - [x] Search and install from Modrinth
 - [x] CurseForge search, installs and identification
-- [ ] Update checks, and updating one mod or all of them
+- [x] Update checks, and updating one mod or all of them
 - [ ] Server export: copy the server-side mods to a folder or a zip for upload
 - [ ] Publish to the npm registry, and standalone binaries
 
