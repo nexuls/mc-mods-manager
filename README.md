@@ -8,9 +8,6 @@ Run it in the instance's folder and it opens a local web UI. The UI shows what's
 Modrinth and CurseForge, and installs the right version for that instance's game version and loader,
 with its required dependencies.
 
-> **Status: work in progress, not yet published.** Listing, search, install, updates and server export
-> work. See [Roadmap](#roadmap).
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/ui-dark.png">
   <img alt="The mc-mod web UI: installed mods on the left, Modrinth search results for the instance on the right" src="docs/images/ui-light.png" width="100%">
@@ -70,7 +67,44 @@ for the version and loader and remembers the answer. Details are in
 
 ## Install
 
-`mc-mod` isn't on the npm registry yet. To install it from source:
+With [Bun](https://bun.com) 1.3 or newer:
+
+```sh
+bun add -g mc-mod
+```
+
+Or run it once without installing: `bunx mc-mod`.
+
+### Standalone binary
+
+If you don't have Bun, download the binary for your platform from the
+[latest release](https://github.com/nexuls/mc-mods-manager/releases/latest). It has the runtime built
+in, so it needs nothing else.
+
+| Platform | File |
+|---|---|
+| Linux x64 | `mc-mod-linux-x64` |
+| Linux arm64 | `mc-mod-linux-arm64` |
+| macOS Apple silicon | `mc-mod-darwin-arm64` |
+| macOS Intel | `mc-mod-darwin-x64` |
+| Windows x64 | `mc-mod-windows-x64.exe` |
+
+On Linux and macOS, rename it to `mc-mod`, make it executable and move it onto your `PATH`:
+
+```sh
+chmod +x mc-mod-linux-x64
+sudo mv mc-mod-linux-x64 /usr/local/bin/mc-mod
+```
+
+macOS blocks binaries downloaded in a browser. Clear the flag once with
+`xattr -d com.apple.quarantine mc-mod`. Each release lists SHA-256 checksums in `SHA256SUMS`.
+
+### Updating
+
+`bun update -g mc-mod`, or download the new binary. The instance state in `.mc-mod/` and your
+settings carry over.
+
+### From source
 
 ```sh
 git clone https://github.com/nexuls/mc-mods-manager.git
@@ -79,9 +113,6 @@ bun install
 bun run build
 cd apps/cli && bun link
 ```
-
-`mc-mod` is then available in your shell. Once it's published, you'll be able to install it with
-`bun add -g mc-mod`.
 
 ## Usage
 
@@ -188,7 +219,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 - [x] CurseForge search, installs and identification
 - [x] Update checks, and updating one mod or all of them
 - [x] Server export: copy the server-side mods to a folder or a zip for upload
-- [ ] Publish to the npm registry, and standalone binaries
+- [x] Published to npm as `mc-mod`, with standalone binaries on GitHub releases
 
 Progress is tracked in [artifacts/progress.md](artifacts/progress.md).
 
@@ -211,8 +242,11 @@ bun run dev --kill   # stop it
 bun run check        # Biome lint and format check
 bun run typecheck
 bun test
-bun run build
+bun run build        # npm package in apps/cli
+bun run compile      # standalone binary in dist/release/
 ```
+
+Releases are cut by hand from GitHub Actions. See [artifacts/releasing.md](artifacts/releasing.md).
 
 Use a copy of an instance for `MC_MOD_DIR`, not the one you play on.
 

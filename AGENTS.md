@@ -32,7 +32,9 @@ bun run dev              # tmux session "mc-mod" (windows: cli on :4719, web/vit
 bun run dev --kill       # stop the tmux dev session
 bun run dev --no-tmux    # both apps in the current terminal (automatic fallback if tmux is missing)
 # Dev instance: set MC_MOD_DIR in apps/cli/.env.local (gitignored; see apps/cli/.env.example)
-bun run build            # web → cli (bun build) → copy web dist into cli/dist/web
+bun run build            # web → cli (bun build) → copy web dist, README, LICENSE into apps/cli
+bun run compile [--all]  # standalone binaries (web UI embedded) → dist/release/
+bun run bump <patch|minor|…|x.y.z>  # version in apps/cli/package.json (the release workflow does this)
 bun run check            # biome lint + format check (must pass)
 bun run fix              # biome autofix
 bun run typecheck        # tsc --noEmit in every workspace
@@ -106,4 +108,6 @@ cd apps/cli && bun link  # then run `mc-mod` in any instance dir
 - Use Conventional Commits with a scope where it helps: `feat(cli): …`, `fix(web): …`, `chore(shared): …`,
   `docs: …`, `test: …`, `build: …`, `style: …`. Subject in imperative mood, ≤ 72 chars. Add a body when the *why* isn't obvious.
 - Doc/progress updates for a change go in that change's commit, or in a `docs:` commit right after it.
+- Releases only come from the manual **Release** workflow (`artifacts/releasing.md`). Don't bump the
+  version, tag, or `bun publish` by hand.
 - Never rewrite published history (no force-push, no amending pushed commits).

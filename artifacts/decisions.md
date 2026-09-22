@@ -287,3 +287,23 @@ Accepted.
 - **Reveal opens only folders the backend picks** (the export folder or the instance root) with `open`, never a path
   from the browser, because opening a file can run it. Without a desktop it answers `opened: false` and the UI shows
   the path.
+
+### D30 — Releases: manual workflow, npm + binaries together
+- **Manual only.** One `workflow_dispatch` workflow (`release.yml`) cuts releases; nothing publishes on push. Every
+  release publishes `mc-mod` to npm *and* creates a GitHub release with binaries, so the two never drift apart.
+  Details and recovery steps: `releasing.md`.
+- **The version lives only in `apps/cli/package.json`.** The workflow bumps it (`scripts/version.ts`, npm's bump
+  rules, no extra dependency), commits `chore(release): vX.Y.Z`, tags `vX.Y.Z` and pushes both atomically *before*
+  publishing, so a moved `main` fails the run with nothing published. Prereleases go to the npm dist-tag `next`.
+- **The npm package has no runtime dependencies.** `dist/bin.js` is a full bundle, so everything moved to
+  `devDependencies`; that also keeps the private `@mc-mod/shared` out of installs. It still needs Bun (`bun` shebang),
+  which the binaries cover for everyone else.
+- **Binaries embed the web UI** through a generated entry that imports each `dist/web` file with
+  `{ type: 'file' }` and passes a URL path → embedded path map to `run()`; `createApp` serves it like `dist/web`
+  (same caching and SPA fallback). Cross-compiled on one Linux runner; x64 targets use Bun's baseline build (no
+  AVX2 needed, which old server hardware lacks). `.env`/`bunfig.toml` autoloading is off, like the npm bin's
+  `--no-env-file`, and dev mode is compiled out the same way (D15).
+- **Release notes come from Conventional Commits** since the previous tag (`scripts/release-notes.ts`), since
+  work lands on `main` directly and GitHub's generated notes only list pull requests.
+- **npm auth is a granular token secret** (`NPM_TOKEN` → `NPM_CONFIG_TOKEN`). `bun publish` has no provenance or
+  trusted publishing support (checked 2026-09-22); revisit if it gains them.

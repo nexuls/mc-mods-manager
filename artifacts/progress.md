@@ -81,8 +81,9 @@ Update this file at the end of every working session (see AGENTS.md).
 - [ ] Web component tests (happy-dom); trash restore/empty UI
 - [x] README with usage + CurseForge key instructions (update it as Phases 7–8 land)
 - [ ] Windows/macOS path testing
-- [ ] `bun publish --dry-run`
-- [ ] Optional: `bun build --compile` standalone binaries (linux/macos/windows)
+- [x] `bun publish --dry-run`; the package ships with no runtime dependencies, README and LICENSE (D30)
+- [x] `bun build --compile` standalone binaries (linux x64/arm64, macOS x64/arm64, windows x64) with the web UI embedded (`scripts/compile.ts`)
+- [x] Manual release workflow: version bump, npm publish, tagged GitHub release with binaries (`.github/workflows/release.yml`, `releasing.md`)
 
 ## Session log
 | Date | Summary |
