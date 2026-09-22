@@ -1,15 +1,13 @@
 import { SettingsIcon } from 'lucide-react'
+import { ServerStatus } from '@/components/server-status'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useHealth } from '@/hooks/use-health'
 import { useInstance } from '@/hooks/use-instance'
 import { describeInstance } from '@/lib/instance'
 
 export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
   const instance = useInstance()
-  const health = useHealth()
 
   return (
     <header className="flex h-14 items-center gap-3 border-b px-4">
@@ -23,7 +21,7 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
         <Skeleton className="h-8 w-56" />
       )}
       <div className="ml-auto flex items-center gap-2">
-        {health.isError && <Badge variant="destructive">Server disconnected</Badge>}
+        <ServerStatus />
         <ThemeToggle />
       </div>
     </header>
