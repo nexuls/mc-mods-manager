@@ -6,6 +6,7 @@ import { AppNav } from '@/components/app-nav'
 import { BrowseView } from '@/components/browse-view'
 import { InstalledView } from '@/components/installed-view'
 import { InstanceDialog } from '@/components/instance-dialog'
+import { ProjectView } from '@/components/project-view'
 import { Badge } from '@/components/ui/badge'
 import { useInstance } from '@/hooks/use-instance'
 import { ApiClientError } from '@/lib/api'
@@ -38,6 +39,7 @@ function App() {
                   element={<InstalledView contentLabel={contentDirName[ready.contentKind]} />}
                 />
                 <Route path="browse" element={<BrowseView contentKind={ready.contentKind} />} />
+                <Route path="project/:provider/:id" element={<ProjectView />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
