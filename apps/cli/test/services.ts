@@ -1,4 +1,5 @@
 import { CatalogService } from '../src/services/catalog'
+import { InstallerService } from '../src/services/installer'
 import type { InstanceService } from '../src/services/instance'
 import { LibraryService } from '../src/services/library'
 import type { FakeModrinth } from './fake-modrinth'
@@ -9,9 +10,7 @@ export function makeServices(
   modrinth: FakeModrinth,
   now: () => number = Date.now,
 ) {
-  return {
-    instance,
-    library: new LibraryService(instance, modrinth, now),
-    catalog: new CatalogService(instance, modrinth),
-  }
+  const library = new LibraryService(instance, modrinth, now)
+  const catalog = new CatalogService(instance, modrinth)
+  return { instance, library, catalog, installer: new InstallerService(library, catalog, modrinth) }
 }

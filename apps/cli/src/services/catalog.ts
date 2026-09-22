@@ -3,6 +3,7 @@ import {
   type Category,
   type ContentKind,
   type Input,
+  loaderInfo,
   type Project,
   type Provider,
   type RankedVersion,
@@ -25,7 +26,7 @@ type SearchInput = Input<typeof api.projects.search>['query']
 const ALLOW_PRERELEASE = false
 
 /** CurseForge needs an API key and comes with Phase 6. */
-function requireModrinth(provider: Provider): void {
+export function requireModrinth(provider: Provider): void {
   if (provider !== 'modrinth') {
     throw new AppError(
       'PROVIDER_DISABLED',
@@ -84,6 +85,17 @@ export class CatalogService {
    */
   async versions(provider: Provider, id: string, all: boolean): Promise<RankedVersion[]> {
     requireModrinth(provider)
+    const list = await this.ranked(id, all)
+    if (!list) throw new AppError('NOT_FOUND', `No Modrinth project "${id}"`)
+    return list
+  }
+
+  /** The recommended version of a Modrinth project, if any fits (or the project doesn't exist). */
+  async bestVersion(id: string): Promise<RankedVersion | undefined> {
+    return (await this.ranked(id, false))?.find((v) => v.recommended)
+  }
+
+  private async ranked(id: string, all: boolean): Promise<RankedVersion[] | null> {
     const ctx = this.versionContext()
     const list = await this.modrinth.getVersions(
       id,
@@ -94,8 +106,16 @@ export class CatalogService {
             gameVersions: ctx.contentKind === 'mod' && ctx.gameVersion ? [ctx.gameVersion] : [],
           },
     )
-    if (!list) throw new AppError('NOT_FOUND', `No Modrinth project "${id}"`)
-    return rankVersions(list, ctx)
+    return list ? rankVersions(list, ctx) : null
+  }
+
+  /** `Fabric 1.21.4`, for messages. */
+  describeTarget(): string {
+    const { loader, gameVersion } = this.instance.instance
+    return (
+      [loader ? loaderInfo[loader].label : null, gameVersion].filter(Boolean).join(' ') ||
+      'this instance'
+    )
   }
 
   gameVersions(includeSnapshots: boolean): Promise<string[]> {

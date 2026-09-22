@@ -53,7 +53,7 @@ Update this file at the end of every working session (see AGENTS.md).
 ## Phase 5 — Search & install (Modrinth)
 - [x] Modrinth provider: search, project, versions, tags (in-memory TTL cache, `lib/ttl-cache.ts`)
 - [x] Best-version selection algorithm (+ tests): `services/versions.ts`
-- [ ] Dependency resolution + install plan endpoint
+- [x] Dependency resolution + install plan endpoint (`services/installer.ts`)
 - [ ] Download, hash verify, atomic write; SSE job progress
 - [ ] Browse view, project detail, install dialog
 

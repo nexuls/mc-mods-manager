@@ -6,6 +6,7 @@ import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
 import { createApp } from '../server'
 import { CatalogService } from '../services/catalog'
+import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
 import { LibraryService } from '../services/library'
 import { VERSION } from '../version'
@@ -46,12 +47,15 @@ export async function run(argv: readonly string[]): Promise<void> {
     : undefined
 
   const modrinth = new ModrinthProvider()
+  const library = new LibraryService(instance, modrinth)
+  const catalog = new CatalogService(instance, modrinth)
   const { app } = createApp({
     auth,
     services: {
       instance,
-      library: new LibraryService(instance, modrinth),
-      catalog: new CatalogService(instance, modrinth),
+      library,
+      catalog,
+      installer: new InstallerService(library, catalog, modrinth),
     },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),
