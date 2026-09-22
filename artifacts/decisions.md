@@ -205,3 +205,8 @@ Accepted.
   any depth; the page is sized to the viewport there (a fixed `100svh - 8rem`, the header plus padding).
 - **Container queries** (Tailwind v4 `@container`) instead of viewport breakpoints for the table columns and result
   cards, because a pane's width depends on the split, not the window. The page max width grew from 1280px to 1536px.
+
+### D23 — Wider page, Installed wider than Browse
+- The page may be up to 1920px wide (D22 had 1536px), and the split is `3fr : 2fr` in Installed's favour, since the table
+  has more columns to show than a result card. Browse keeps at least 26rem, so at 1280px its cards drop the author and
+  updated time instead of cutting titles short. At 1920px Installed is wide enough for all its columns.

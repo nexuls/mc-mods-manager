@@ -291,7 +291,7 @@ function ProjectCard({
 
   return (
     <li className="bg-card hover:border-foreground/20 h-38 relative flex items-stretch gap-4 rounded-xl border p-4 transition-colors">
-      {/* Smaller icon, title and stats when the list is narrow (the split view). */}
+      {/* Narrow lists (the split view) get a smaller icon and title, fewer stats and no author. */}
       <ProjectIcon
         url={hit.iconUrl}
         className="h-full size-auto rounded-2xl @max-xl:size-20 @max-xl:rounded-xl"
@@ -305,7 +305,9 @@ function ProjectCard({
             {hit.title}
           </Link>
           {hit.author && (
-            <span className="text-muted-foreground shrink-0 text-sm">by {hit.author}</span>
+            <span className="text-muted-foreground shrink-0 text-sm @max-lg:hidden">
+              by {hit.author}
+            </span>
           )}
         </div>
         <p className="text-muted-foreground line-clamp-2">{hit.description}</p>
@@ -349,7 +351,10 @@ function ProjectCard({
           )}
         </div>
         {hit.updatedAt && (
-          <span className="flex items-center gap-1.5" title={`Updated ${shortDate(hit.updatedAt)}`}>
+          <span
+            className="flex items-center gap-1.5 @max-lg:hidden"
+            title={`Updated ${shortDate(hit.updatedAt)}`}
+          >
             <HistoryIcon className="size-4" />
             {timeAgo(hit.updatedAt, Date.now(), true)}
           </span>

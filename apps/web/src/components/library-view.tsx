@@ -80,7 +80,8 @@ export function LibraryView({
         autoFocus={pane === 'browse'}
       />
       {split ? (
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-8">
+        // Installed gets more room; Browse keeps enough for its cards.
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(26rem,2fr)] gap-8">
           <section aria-label={`Installed ${contentLabel}`} className="@container min-h-0">
             {installed}
           </section>
