@@ -1,5 +1,11 @@
-import type { PlanBody, PlanItem } from '@mc-mod/shared'
-import { AlertTriangleIcon, CheckIcon, CircleXIcon, DownloadIcon } from 'lucide-react'
+import { contentDirName, type PlanBody, type PlanItem, providerLabel } from '@mc-mod/shared'
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  CircleXIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SideChip } from '@/components/mod-chips'
@@ -19,6 +25,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type ItemProgress, useInstallJob, useInstallPlan } from '@/hooks/use-install'
+import { useInstance } from '@/hooks/use-instance'
 import { errorMessage } from '@/lib/api'
 import { fileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -103,6 +110,8 @@ export function InstallDialog({
       return next
     })
 
+  const instance = useInstance().data?.instance
+  const contentLabel = instance ? contentDirName[instance.contentKind] : 'mods'
   const deps = chosen.length - (main?.status === 'install' ? 1 : 0)
   const totalSize = chosen.reduce((n, i) => n + (i.size ?? 0), 0)
 
@@ -116,11 +125,13 @@ export function InstallDialog({
               ? 'Looking up versions and dependencies…'
               : main?.status === 'installed'
                 ? 'This project is already installed.'
-                : main?.status === 'unavailable'
-                  ? "There's no version of it for this instance."
-                  : deps > 0
-                    ? `${target?.title} and ${deps} ${deps === 1 ? 'dependency' : 'dependencies'} will be downloaded.`
-                    : `${target?.title} will be downloaded.`}
+                : main?.status === 'manual'
+                  ? `Its author only allows downloading it from the ${providerLabel[main.provider]} website: download it there and put it in the ${contentLabel} folder, and mc-mod will pick it up.${deps > 0 ? ` ${deps} ${deps === 1 ? 'dependency' : 'dependencies'} can still be installed here.` : ''}`
+                  : main?.status === 'unavailable'
+                    ? "There's no version of it for this instance."
+                    : deps > 0
+                      ? `${target?.title} and ${deps} ${deps === 1 ? 'dependency' : 'dependencies'} will be downloaded.`
+                      : `${target?.title} will be downloaded.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -176,7 +187,7 @@ export function InstallDialog({
               <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button disabled={busy || main?.status !== 'install'} onClick={() => void install()}>
+              <Button disabled={busy || chosen.length === 0} onClick={() => void install()}>
                 <DownloadIcon />
                 {busy ? 'Installing…' : chosen.length > 1 ? `Install ${chosen.length}` : 'Install'}
               </Button>
@@ -252,13 +263,21 @@ function PlanRow({
         <CircleXIcon className="text-destructive size-4" aria-label="Failed" />
       ) : item.status === 'installed' ? (
         <Badge variant="outline">Installed</Badge>
+      ) : item.status === 'manual' && item.pageUrl ? (
+        <Button variant="outline" size="sm" asChild>
+          <a href={item.pageUrl} target="_blank" rel="noreferrer noopener">
+            Download
+            <ExternalLinkIcon />
+          </a>
+        </Button>
       ) : item.status === 'unavailable' ? (
         <Badge variant="outline" className="text-destructive">
           Unavailable
         </Badge>
-      ) : (
+      ) : item.side !== 'unknown' || item.provider === 'modrinth' ? (
+        // CurseForge has no side information, so its "unknown" says nothing.
         <SideChip side={item.side} />
-      )}
+      ) : null}
     </li>
   )
 }

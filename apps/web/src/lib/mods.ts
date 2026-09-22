@@ -109,8 +109,8 @@ export function countByFilter(mods: readonly InstalledMod[]): Record<ModFilter, 
 }
 
 /**
- * The project page. Modrinth redirects `/project/<id|slug>` to the right page type. The CurseForge
- * `/projects/<id>` redirect is unverified (its bot protection blocks curl); Phase 6 has real slugs.
+ * The project page. Modrinth redirects `/project/<id|slug>` and CurseForge `/projects/<id>` to the
+ * right page type (both checked 2026-09-22), so the class (mod or plugin) doesn't matter here.
  */
 export function projectUrl(s: Pick<ModSource, 'provider' | 'projectId' | 'slug'>): string {
   return s.provider === 'modrinth'
@@ -141,4 +141,20 @@ export function parseModrinthRef(input: string): string | null {
   const url = /^(?:https?:\/\/)?(?:www\.)?modrinth\.com\/[a-z]+\/([\w.-]+)/i.exec(s)
   if (url?.[1]) return url[1]
   return /^[\w.-]{2,64}$/.test(s) ? s : null
+}
+
+/**
+ * A CurseForge project id or slug from what the user typed: `238222`, a page URL like
+ * `https://www.curseforge.com/minecraft/mc-mods/jei/files`, or `/projects/238222`. A bare slug only
+ * counts with `bareSlug` (in a search box, words are a search). Null when it's none of these.
+ */
+export function parseCurseForgeRef(input: string, options: { bareSlug?: boolean } = {}) {
+  const s = input.trim()
+  const url =
+    /^(?:https?:\/\/)?(?:www\.)?curseforge\.com\/(?:minecraft\/[a-z-]+|projects)\/([\w.-]+)/i.exec(
+      s,
+    )
+  if (url?.[1]) return url[1]
+  if (/^\d{1,10}$/.test(s)) return s
+  return options.bareSlug && /^[a-z0-9][\w.-]{1,63}$/i.test(s) ? s : null
 }

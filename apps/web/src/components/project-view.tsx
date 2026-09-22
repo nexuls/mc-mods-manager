@@ -46,6 +46,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useProject, useVersions } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
+import { browseHref } from '@/lib/browse'
 import { compactNumber, shortDate, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -66,7 +67,7 @@ function ProjectPage({ provider, id }: { provider: Provider; id: string }) {
   return (
     <div className="flex flex-col gap-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
-        <Link to="/browse">
+        <Link to={browseHref(provider)}>
           <ArrowLeftIcon />
           Browse
         </Link>
@@ -154,7 +155,8 @@ function ProjectHeader({
                 {p.license}
               </span>
             )}
-            <SideChip side={p.side} />
+            {/* CurseForge has no side information, so its "unknown" says nothing. */}
+            {(p.side !== 'unknown' || p.provider === 'modrinth') && <SideChip side={p.side} />}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button variant="outline" size="sm" asChild>
@@ -298,6 +300,17 @@ function VersionRow({ version: v, onInstall }: { version: RankedVersion; onInsta
           </span>
           {v.recommended && <Badge>Recommended</Badge>}
           {v.type !== 'release' && <Badge variant="outline">{v.type}</Badge>}
+          {v.file && !v.file.url && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline">Manual download</Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                The author only allows downloading this file from the {providerLabel[v.provider]}{' '}
+                website.
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         {v.note && <p className="text-muted-foreground text-xs">{v.note}</p>}
       </TableCell>

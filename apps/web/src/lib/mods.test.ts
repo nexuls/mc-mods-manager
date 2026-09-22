@@ -4,6 +4,7 @@ import {
   countByFilter,
   displayName,
   filterMods,
+  parseCurseForgeRef,
   parseModrinthRef,
   projectUrl,
   sortMods,
@@ -155,4 +156,21 @@ test.each([
   ['https://example.com/x', null],
 ])('parseModrinthRef(%p) → %p', (input, out) => {
   expect(parseModrinthRef(input)).toBe(out)
+})
+
+describe('parseCurseForgeRef', () => {
+  test.each([
+    ['238222', '238222'],
+    ['https://www.curseforge.com/minecraft/mc-mods/jei/files/all', 'jei'],
+    ['curseforge.com/minecraft/bukkit-plugins/worldedit', 'worldedit'],
+    ['https://www.curseforge.com/projects/238222', '238222'],
+  ])('%p → %p', (input, ref) => {
+    expect(parseCurseForgeRef(input)).toBe(ref)
+  })
+
+  test('a bare slug only when asked for', () => {
+    expect(parseCurseForgeRef('jei')).toBeNull()
+    expect(parseCurseForgeRef('jei', { bareSlug: true })).toBe('jei')
+    expect(parseCurseForgeRef('https://modrinth.com/mod/jei', { bareSlug: true })).toBeNull()
+  })
 })

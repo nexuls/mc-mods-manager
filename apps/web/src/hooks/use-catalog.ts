@@ -2,20 +2,22 @@ import { api, type ContentKind, type Provider, type SearchQuery } from '@mc-mod/
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { call } from '@/lib/api'
 
-export function useSearch(query: SearchQuery) {
+export function useSearch(query: SearchQuery, enabled = true) {
   return useQuery({
     queryKey: ['search', query],
     queryFn: () => call(api.projects.search, { query }),
+    enabled,
     // Keep the old results on screen while the next page or query loads.
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   })
 }
 
-export function useCategories(kind: ContentKind) {
+export function useCategories(kind: ContentKind, provider: Provider, enabled = true) {
   return useQuery({
-    queryKey: ['categories', kind],
-    queryFn: () => call(api.meta.categories, { query: { kind } }),
+    queryKey: ['categories', provider, kind],
+    queryFn: () => call(api.meta.categories, { query: { kind, provider } }),
+    enabled,
     staleTime: Number.POSITIVE_INFINITY,
   })
 }

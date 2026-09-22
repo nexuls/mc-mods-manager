@@ -3,18 +3,22 @@ import {
   Loader,
   loaderInfo,
   type ProjectHit,
+  Provider,
+  providerLabel,
   type SearchResponse,
   type SearchSort,
   searchSortLabel,
 } from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
+  ArrowRightIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
   HeartIcon,
   HistoryIcon,
+  KeyRoundIcon,
   SearchIcon,
   SearchXIcon,
 } from 'lucide-react'
@@ -40,10 +44,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCategories, useSearch } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
+import { useSettings } from '@/hooks/use-settings'
 import { errorMessage } from '@/lib/api'
 import { type BrowseState, parseBrowseParams, toBrowseParams, toSearchQuery } from '@/lib/browse'
 import { compactNumber, shortDate, timeAgo } from '@/lib/format'
-import { sideLabel } from '@/lib/mods'
+import { parseCurseForgeRef, sideLabel } from '@/lib/mods'
 import { cn } from '@/lib/utils'
 
 const ALL_CATEGORIES = '_all'
@@ -76,8 +81,14 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
     }
   }, [state.q])
 
-  const search = useSearch(toSearchQuery(state))
-  const categories = useCategories(contentKind)
+  const settings = useSettings()
+  // CurseForge without a key: explain instead of showing an error.
+  const needsKey = state.provider === 'curseforge' && settings.data?.curseforgeKeySet === false
+  const canSearch = state.provider === 'modrinth' || settings.data?.curseforgeKeySet === true
+  const search = useSearch(toSearchQuery(state), canSearch)
+  // A pasted page URL or project id opens the project directly (some keys can't search at all).
+  const cfRef = state.provider === 'curseforge' && canSearch ? parseCurseForgeRef(state.q) : null
+  const categories = useCategories(contentKind, state.provider, canSearch)
   const categoryLabels = useMemo(
     () => new Map(categories.data?.categories.map((c) => [c.name, c.label])),
     [categories.data],
@@ -100,24 +111,21 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
           <h1 className="text-2xl font-semibold tracking-tight">Browse {noun}</h1>
           <p className="text-muted-foreground text-sm">{describeFilters(data?.filters, noun)}</p>
         </div>
-        <Tabs value="modrinth">
+        <Tabs
+          value={state.provider}
+          onValueChange={(v) => {
+            const provider = Provider.safeParse(v)
+            // Categories differ per platform, so the filter starts over.
+            if (provider.success) update({ provider: provider.data, category: undefined })
+          }}
+        >
           <TabsList>
-            <TabsTrigger value="modrinth">
-              <ProviderLogo provider="modrinth" className="size-3.5" />
-              Modrinth
-            </TabsTrigger>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* A span, since disabled buttons don't fire the hover events tooltips need. */}
-                <span>
-                  <TabsTrigger value="curseforge" disabled>
-                    <ProviderLogo provider="curseforge" className="size-3.5" />
-                    CurseForge
-                  </TabsTrigger>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>CurseForge needs an API key and isn't supported yet.</TooltipContent>
-            </Tooltip>
+            {Provider.options.map((p) => (
+              <TabsTrigger key={p} value={p}>
+                <ProviderLogo provider={p} className="size-3.5" />
+                {providerLabel[p]}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </Tabs>
       </div>
@@ -128,7 +136,7 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={`Search ${noun} on Modrinth`}
+            placeholder={`Search ${noun} on ${providerLabel[state.provider]}`}
             className="pl-8"
             aria-label={`Search ${noun}`}
             autoFocus
@@ -172,7 +180,32 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
         </div>
       </div>
 
-      {search.isPending ? (
+      {cfRef && (
+        <Link
+          to={`/project/curseforge/${cfRef}`}
+          className="bg-card hover:border-foreground/20 flex items-center gap-3 rounded-xl border p-4 transition-colors"
+        >
+          <ProviderLogo provider="curseforge" className="size-5 text-[#F16436]" />
+          <span className="flex-1">
+            Open CurseForge project <span className="font-medium">{cfRef}</span>
+          </span>
+          <ArrowRightIcon className="text-muted-foreground size-4" />
+        </Link>
+      )}
+
+      {needsKey ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center">
+          <KeyRoundIcon className="text-muted-foreground size-10" />
+          <p className="font-medium">CurseForge needs an API key</p>
+          <p className="text-muted-foreground max-w-md text-sm">
+            CurseForge only lets apps search it with a key. You can create one for free and add it
+            in Settings; it stays on this computer.
+          </p>
+          <Button asChild>
+            <Link to="/settings">Add a key in Settings</Link>
+          </Button>
+        </div>
+      ) : search.isPending ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }, (_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
@@ -274,7 +307,8 @@ function ProjectCard({
   onInstall: () => void
   categoryLabels: ReadonlyMap<string, string>
 }) {
-  const href = `/project/${hit.provider}/${hit.slug || hit.id}`
+  // CurseForge slugs need an extra lookup (they're only unique per class), so link by id there.
+  const href = `/project/${hit.provider}/${hit.provider === 'modrinth' ? hit.slug || hit.id : hit.id}`
   // Real categories first; loaders (also in the list) only count toward "+N".
   const labels = hit.categories.map((c) => ({
     label: categoryLabels.get(c) ?? loaderLabel(c) ?? c,

@@ -157,7 +157,8 @@ export class InstallerService {
         if (manual) {
           item.pageUrl = version.pageUrl
           item.reason = `Download by hand from ${providerLabel[provider]}`
-          if (role !== 'optional') {
+          // The main project's own status says this; a dependency needs the warning.
+          if (role === 'required') {
             warnings.push(
               `${project.title}'s author only allows downloads from the ${providerLabel[provider]} website. Download it there and put it in the ${contentDirName[this.deps.instance.instance.contentKind]} folder.`,
             )
