@@ -61,6 +61,9 @@ import { cn } from '@/lib/utils'
 
 const SIDES: Side[] = ['client', 'server', 'both']
 
+/** Badge labels in the name cell: hidden (icon only) while the cell is narrower than 24rem. */
+const BADGE_TEXT = '@max-sm/name:hidden'
+
 const sideSourceLabel = {
   override: 'set by you',
   platform: 'from the platform',
@@ -114,17 +117,17 @@ export function ModRow({
       </TableCell>
 
       <TableCell className="max-w-0 min-w-48">
-        {/* Badges keep their size; the name gives way, but never entirely. */}
-        <div className="flex items-center gap-2 overflow-hidden *:data-[slot=badge]:shrink-0">
-          <span className="min-w-16 truncate font-medium" title={name}>
+        {/* A narrow cell shows the badges as icons (the tooltips still say what they are), so the name keeps room. */}
+        <div className="@container/name flex items-center gap-1.5 *:data-[slot=badge]:shrink-0">
+          <span className="min-w-0 truncate font-medium" title={name}>
             {name}
           </span>
           {(mod.compatibility === 'wrong-loader' || mod.compatibility === 'wrong-game-version') && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="destructive">
+                <Badge variant="destructive" aria-label="Incompatible">
                   <AlertTriangleIcon />
-                  Incompatible
+                  <span className={BADGE_TEXT}>Incompatible</span>
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -140,9 +143,14 @@ export function ModRow({
                   variant="secondary"
                   className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
                 >
-                  <button type="button" onClick={onUpdate} className="cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={onUpdate}
+                    aria-label={`Update ${name}`}
+                    className="cursor-pointer"
+                  >
                     <ArrowUpCircleIcon />
-                    Update
+                    <span className={BADGE_TEXT}>Update</span>
                   </button>
                 </Badge>
               </TooltipTrigger>
@@ -156,7 +164,10 @@ export function ModRow({
           {mod.conflict && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline">Link conflict</Badge>
+                <Badge variant="outline" aria-label="Link conflict">
+                  <UnlinkIcon />
+                  <span className={BADGE_TEXT}>Link conflict</span>
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>
                 Your manual link points elsewhere, but the exact file belongs to this project.

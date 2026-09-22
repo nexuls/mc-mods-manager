@@ -52,7 +52,8 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   doesn't know) the chip opens a dropdown (Automatic / Client / Server / Both), enabled `Switch`, row menu (Open on
   Modrinth/CurseForge, Updates from ▸ when on both, Update to X, Change version…, Link to project…, Treat as local /
   Identify automatically, Remove…). A green **Update** pill next to the name (new version in its tooltip) opens the update
-  dialog for that jar.
+  dialog for that jar. While the name cell is narrower than 24rem (usual in the split), its badges show only their icon,
+  so the name keeps room; the tooltips still name them.
 - **Update dialog** (Update all, the row pill, Browse cards, project pages): one row per jar with `old → new` version and
   size, then a progress bar, check or error per row; the footer shows the download size. Files the author only allows
   downloading from the website get a **Download** link and aren't part of the job. All done: toast and close (it stays
