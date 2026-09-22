@@ -74,6 +74,32 @@ export async function renameInside(base: string, from: string, to: string): Prom
 }
 
 /**
+ * Copies `from` over `to` via a temp file next to `to`, so `to` is never half-written. `from` must be
+ * inside `base` too: exports only ever copy out of the instance.
+ */
+export async function copyFileAtomic(base: string, from: string, to: string): Promise<void> {
+  const src = resolveInside(base, from)
+  const dest = resolveInside(base, to)
+  await mkdir(path.dirname(dest), { recursive: true })
+  const tmp = path.join(
+    path.dirname(dest),
+    `.${path.basename(dest)}.${randomBytes(4).toString('hex')}.tmp`,
+  )
+  try {
+    await copyFile(src, tmp)
+    await rename(tmp, dest)
+  } catch (err) {
+    await rm(tmp, { force: true })
+    throw err
+  }
+}
+
+/** Deletes one file inside `base`. Missing files are fine. */
+export async function removeInside(base: string, target: string): Promise<void> {
+  await rm(resolveInside(base, target), { force: true })
+}
+
+/**
  * Moves a file from the content dir to `<root>/.mc-mod/trash/<timestamp>-<name>` instead of deleting it.
  * Returns the trash path.
  */

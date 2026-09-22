@@ -3,8 +3,10 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
+  copyFileAtomic,
   isInside,
   moveToTrash,
+  removeInside,
   renameInside,
   resolveInside,
   safeJarName,
@@ -47,6 +49,39 @@ describe('writeFileAtomic', () => {
 
   test('refuses to write outside the base', async () => {
     await expect(writeFileAtomic(dir, '../escape.txt', 'x')).rejects.toThrow('outside')
+  })
+})
+
+describe('copyFileAtomic / removeInside', () => {
+  let dir: string
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), 'mc-mod-paths-'))
+  })
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('copies over an existing file, leaves no temp files, keeps the source', async () => {
+    await Bun.write(path.join(dir, 'mods/a.jar'), 'new')
+    await Bun.write(path.join(dir, 'out/a.jar'), 'old')
+    await copyFileAtomic(dir, 'mods/a.jar', 'out/a.jar')
+    expect(await Bun.file(path.join(dir, 'out/a.jar')).text()).toBe('new')
+    expect(await readdir(path.join(dir, 'out'))).toEqual(['a.jar'])
+    expect(await Bun.file(path.join(dir, 'mods/a.jar')).text()).toBe('new')
+  })
+
+  test('refuses sources and targets outside the base', async () => {
+    await Bun.write(path.join(dir, 'mods/a.jar'), 'x')
+    await expect(copyFileAtomic(dir, 'mods/a.jar', '../a.jar')).rejects.toThrow('outside')
+    await expect(copyFileAtomic(dir, '/etc/hostname', 'a.jar')).rejects.toThrow('outside')
+  })
+
+  test('removes files inside the base only', async () => {
+    await Bun.write(path.join(dir, 'out/a.jar'), 'x')
+    await removeInside(dir, 'out/a.jar')
+    await removeInside(dir, 'out/missing.jar')
+    expect(await readdir(path.join(dir, 'out'))).toEqual([])
+    await expect(removeInside(dir, '../x')).rejects.toThrow('outside')
   })
 })
 
