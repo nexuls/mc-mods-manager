@@ -258,3 +258,13 @@ Accepted.
 - The side comes from the file only (hash matches and versions). Projects, Browse hits and project pages stay
   `unknown`, because the mod endpoints don't give a project-wide side.
 - Jars looked up before this keep their cached sources until the next Refresh.
+
+### D28 — Scroll regions are ScrollPanels with edge shadows
+- Every scrolling region uses the shadcn scrollbar through `components/scroll-panel.tsx`, which builds on the Radix
+  primitive (with shadcn's `ScrollBar`) instead of editing `ui/scroll-area.tsx`: it needs a viewport ref, viewport
+  classes and edge shadows. A shadow shows on each edge the content continues past (scroll + ResizeObserver).
+- The page scrolls inside a panel below a fixed header rather than on the window, so the header's edge shadow works
+  and the scrollbar matches. Code that scrolled the window uses `usePageScroll()` (the page viewport) instead.
+- The Installed table and Browse results only become panels in the split view. Below it they stay plain, because a
+  Radix viewport is a scroll container and would catch the table's sticky header instead of the page.
+- Radix's content wrapper is `display: table`; the panel makes it a block so `truncate` works inside.

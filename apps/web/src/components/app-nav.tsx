@@ -27,7 +27,7 @@ export function AppNav() {
   return (
     <nav
       aria-label="Main"
-      className="flex shrink-0 gap-1 md:sticky md:top-24 md:w-44 md:flex-col md:self-start"
+      className="flex shrink-0 gap-1 md:sticky md:top-8 md:w-44 md:flex-col md:self-start"
     >
       {links.map(({ to, label, Icon, end, also, library }) => (
         <NavLink

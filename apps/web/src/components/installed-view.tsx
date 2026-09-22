@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { ChangeVersionDialog } from '@/components/change-version-dialog'
 import { LinkDialog } from '@/components/link-dialog'
 import { ModRow } from '@/components/mod-row'
+import { ScrollPanel } from '@/components/scroll-panel'
 import { SortableHead } from '@/components/sortable-head'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { UpdateDialog } from '@/components/update-dialog'
 import { useCheckUpdates, useMods, useRefreshMods } from '@/hooks/use-mods'
+import { useSplitView } from '@/hooks/use-split-view'
 import { errorMessage } from '@/lib/api'
 import {
   countByFilter,
@@ -32,6 +34,7 @@ import {
   type SortKey,
   toggleSort,
 } from '@/lib/mods'
+import { cn } from '@/lib/utils'
 
 /** The installed list; `text` comes from the shared search bar. */
 export function InstalledView({ contentLabel, text }: { contentLabel: string; text: string }) {
@@ -53,6 +56,53 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
   const changingMod = all.find((m) => m.fileName === changing)
   const withUpdates = all.filter((m) => m.update)
+
+  const { split } = useSplitView()
+  const card = 'bg-card min-h-0 rounded-xl border **:data-[slot=table-container]:overflow-x-clip'
+  const table = (
+    <>
+      <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
+        {/* Opaque cells (muted/40 over the card) and a shadow for the line: a collapsed border stays behind. */}
+        <TableHeader className="sticky top-0 z-10 [&_th]:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0">
+          <TableRow>
+            <TableHead />
+            <SortableHead column="name" sort={sort} onSort={onSort}>
+              Name
+            </SortableHead>
+            <TableHead className="@max-3xl:hidden">Version</TableHead>
+            <SortableHead column="source" sort={sort} onSort={onSort}>
+              Source
+            </SortableHead>
+            <SortableHead column="side" sort={sort} onSort={onSort} className="@max-2xl:hidden">
+              Side
+            </SortableHead>
+            <SortableHead column="enabled" sort={sort} onSort={onSort}>
+              Enabled
+            </SortableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shown.map((m) => (
+            <ModRow
+              key={m.fileName}
+              mod={m}
+              onLink={() => setLinking(m.fileName)}
+              onUpdate={() => setUpdating([m])}
+              onChangeVersion={() => setChanging(m.fileName)}
+            />
+          ))}
+        </TableBody>
+      </Table>
+      {shown.length === 0 && (
+        <p className="text-muted-foreground py-12 text-center text-sm">
+          {text.trim()
+            ? `No installed ${contentLabel} match “${text.trim()}”.`
+            : 'Nothing matches this filter.'}
+        </p>
+      )}
+    </>
+  )
 
   return (
     // Split view: the table scrolls on its own below the title and filters.
@@ -162,51 +212,15 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
             </Link>
           </Button>
         </div>
+      ) : // The table's own wrapper is `overflow-clip`, not hidden/auto, so the header can stick: to the page, or to
+      // this card where it scrolls on its own (split view). Below the split the card mustn't scroll or clip
+      // either, or the header would stick to it instead of the page.
+      split ? (
+        <ScrollPanel className={card} topShadowClassName="top-10">
+          {table}
+        </ScrollPanel>
       ) : (
-        // `overflow-clip`, not hidden/auto (here and on the table's wrapper), so the header can stick: to the
-        // page below the app header, or to this card where it scrolls on its own (split view).
-        <div className="bg-card overflow-clip rounded-xl border split:min-h-0 split:overflow-y-auto *:data-[slot=table-container]:overflow-x-clip">
-          <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
-            {/* Opaque cells (muted/40 over the card) and a shadow for the line: a collapsed border stays behind. */}
-            <TableHeader className="split:top-0 sticky top-16 z-10 [&_th]:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0">
-              <TableRow>
-                <TableHead />
-                <SortableHead column="name" sort={sort} onSort={onSort}>
-                  Name
-                </SortableHead>
-                <TableHead className="@max-3xl:hidden">Version</TableHead>
-                <SortableHead column="source" sort={sort} onSort={onSort}>
-                  Source
-                </SortableHead>
-                <SortableHead column="side" sort={sort} onSort={onSort} className="@max-2xl:hidden">
-                  Side
-                </SortableHead>
-                <SortableHead column="enabled" sort={sort} onSort={onSort}>
-                  Enabled
-                </SortableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown.map((m) => (
-                <ModRow
-                  key={m.fileName}
-                  mod={m}
-                  onLink={() => setLinking(m.fileName)}
-                  onUpdate={() => setUpdating([m])}
-                  onChangeVersion={() => setChanging(m.fileName)}
-                />
-              ))}
-            </TableBody>
-          </Table>
-          {shown.length === 0 && (
-            <p className="text-muted-foreground py-12 text-center text-sm">
-              {text.trim()
-                ? `No installed ${contentLabel} match “${text.trim()}”.`
-                : 'Nothing matches this filter.'}
-            </p>
-          )}
-        </div>
+        <div className={cn(card, 'overflow-clip')}>{table}</div>
       )}
 
       {linkingMod && (

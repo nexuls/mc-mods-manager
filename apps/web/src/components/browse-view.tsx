@@ -28,6 +28,7 @@ import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstallDialog, type InstallTarget } from '@/components/install-dialog'
 import { ProviderLogo, sideIcon } from '@/components/mod-chips'
 import { ProjectIcon } from '@/components/project-icon'
+import { ScrollPanel } from '@/components/scroll-panel'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -45,7 +46,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { UpdateDialog } from '@/components/update-dialog'
 import { useCategories, useSearch } from '@/hooks/use-catalog'
 import { projectKey, useInstalledProjects } from '@/hooks/use-mods'
+import { usePageScroll } from '@/hooks/use-page-scroll'
 import { useSettings } from '@/hooks/use-settings'
+import { useSplitView } from '@/hooks/use-split-view'
 import { errorMessage } from '@/lib/api'
 import {
   type BrowseState,
@@ -88,12 +91,38 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1
   const noun = contentKind === 'plugin' ? 'plugins' : 'mods'
   // The results scroll on their own in the split view, and with the page otherwise.
-  const results = useRef<HTMLUListElement>(null)
+  const results = useRef<HTMLDivElement>(null)
+  const pageScroll = usePageScroll()
+  const { split } = useSplitView()
   const goToPage = (page: number) => {
     update({ page })
     results.current?.scrollTo({ top: 0 })
-    window.scrollTo({ top: 0 })
+    pageScroll.current?.scrollTo({ top: 0 })
   }
+
+  const hits = data && (
+    <ul
+      className={cn(
+        // In the split the scrollbar gets a gutter instead of covering the cards' edge.
+        'split:pr-3 flex flex-col gap-3 transition-opacity',
+        search.isPlaceholderData && 'opacity-60',
+      )}
+    >
+      {data.hits.map((hit) => (
+        <ProjectCard
+          key={hit.id}
+          hit={hit}
+          categoryLabels={categoryLabels}
+          location={location}
+          installed={installed.get(projectKey(hit.provider, hit.id))}
+          onInstall={() =>
+            setTarget({ provider: hit.provider, projectId: hit.id, title: hit.title })
+          }
+          onUpdate={(mod) => setUpdating([mod])}
+        />
+      ))}
+    </ul>
+  )
 
   return (
     <div className="split:h-full split:min-h-0 flex flex-col gap-6">
@@ -207,27 +236,13 @@ export function BrowseView({ contentKind }: { contentKind: ContentKind }) {
         </div>
       ) : (
         <>
-          <ul
-            ref={results}
-            className={cn(
-              'flex flex-col gap-3 transition-opacity split:min-h-0 split:overflow-y-auto',
-              search.isPlaceholderData && 'opacity-60',
-            )}
-          >
-            {search.data.hits.map((hit) => (
-              <ProjectCard
-                key={hit.id}
-                hit={hit}
-                categoryLabels={categoryLabels}
-                location={location}
-                installed={installed.get(projectKey(hit.provider, hit.id))}
-                onInstall={() =>
-                  setTarget({ provider: hit.provider, projectId: hit.id, title: hit.title })
-                }
-                onUpdate={(mod) => setUpdating([mod])}
-              />
-            ))}
-          </ul>
+          {split ? (
+            <ScrollPanel viewportRef={results} className="min-h-0 flex-1">
+              {hits}
+            </ScrollPanel>
+          ) : (
+            hits
+          )}
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground text-sm tabular-nums">
               {compactNumber(search.data.total)} results · page {state.page + 1} of {pages}

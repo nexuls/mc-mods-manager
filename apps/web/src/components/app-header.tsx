@@ -10,7 +10,7 @@ export function AppHeader({ onEditInstance }: { onEditInstance: () => void }) {
   const instance = useInstance()
 
   return (
-    <header className="bg-background/85 sticky top-0 z-20 border-b backdrop-blur">
+    <header className="bg-background shrink-0 border-b">
       <div className="mx-auto flex h-16 w-full max-w-[120rem] items-center gap-4 px-6">
         <span className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SideChip } from '@/components/mod-chips'
 import { ProjectIcon } from '@/components/project-icon'
+import { ScrollPanel } from '@/components/scroll-panel'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -159,18 +160,20 @@ export function InstallDialog({
                 </AlertDescription>
               </Alert>
             )}
-            <ul className="-mx-2 flex max-h-[50vh] flex-col gap-1 overflow-y-auto px-2">
-              {items.map((item) => (
-                <PlanRow
-                  key={item.projectId}
-                  item={item}
-                  checked={chosen.includes(item)}
-                  locked={started || item.status !== 'install' || item.role !== 'optional'}
-                  onCheckedChange={(on) => toggle(item.projectId, on)}
-                  progress={progressOf(item)}
-                />
-              ))}
-            </ul>
+            <ScrollPanel className="-mx-2" viewportClassName="max-h-[50vh]">
+              <ul className="flex flex-col gap-1 px-2">
+                {items.map((item) => (
+                  <PlanRow
+                    key={item.projectId}
+                    item={item}
+                    checked={chosen.includes(item)}
+                    locked={started || item.status !== 'install' || item.role !== 'optional'}
+                    onCheckedChange={(on) => toggle(item.projectId, on)}
+                    progress={progressOf(item)}
+                  />
+                ))}
+              </ul>
+            </ScrollPanel>
           </>
         )}
 

@@ -6,9 +6,11 @@ import { useLocation, useMatch, useNavigate, useSearchParams } from 'react-route
 import { BrowseView } from '@/components/browse-view'
 import { InstalledView } from '@/components/installed-view'
 import { ProjectView } from '@/components/project-view'
+import { ScrollPanel } from '@/components/scroll-panel'
 import { SearchBar } from '@/components/search-bar'
 import { Toggle } from '@/components/ui/toggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { usePageScroll } from '@/hooks/use-page-scroll'
 import { useSplitView } from '@/hooks/use-split-view'
 import { parseBrowseParams, projectOrigin, toBrowseParams } from '@/lib/browse'
 import { cn } from '@/lib/utils'
@@ -77,20 +79,30 @@ export function LibraryView({ contentKind }: { contentKind: ContentKind }) {
       : [`Filter ${contentLabel}`, `Filter ${contentLabel}`]
 
   // Below the split the page itself scrolls: remember where the list was, and return there on Back.
+  const page = usePageScroll()
   const listScroll = useRef(0)
   useEffect(() => {
-    if (project) return
+    const el = page.current
+    if (project || !el) return
     const onScroll = () => {
-      listScroll.current = window.scrollY
+      listScroll.current = el.scrollTop
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [project])
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [project, page])
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when a project opens, changes or closes
   useLayoutEffect(() => {
-    if (!split) window.scrollTo({ top: project ? 0 : listScroll.current })
+    if (!split) page.current?.scrollTo({ top: project ? 0 : listScroll.current })
   }, [project?.path])
 
+  const projectView = project && (
+    <ProjectView
+      key={project.path}
+      provider={project.provider}
+      id={project.id}
+      back={{ pathname: origin, search: location.search }}
+    />
+  )
   const installed = <InstalledView contentLabel={contentLabel} text={text} />
   const browse = (
     // The project covers the list in the split (the list keeps its own scroll) and replaces it below.
@@ -98,16 +110,15 @@ export function LibraryView({ contentKind }: { contentKind: ContentKind }) {
       <div className={cn('split:h-full', project && 'hidden split:block split:invisible')}>
         <BrowseView contentKind={contentKind} />
       </div>
-      {project && (
-        <div className="bg-background split:absolute split:inset-0 split:overflow-y-auto">
-          <ProjectView
-            key={project.path}
-            provider={project.provider}
-            id={project.id}
-            back={{ pathname: origin, search: location.search }}
-          />
-        </div>
-      )}
+      {project &&
+        (split ? (
+          // Radix pins the panel's own position to relative, so a wrapper takes the place of the list.
+          <div className="bg-background absolute inset-0">
+            <ScrollPanel className="h-full">{projectView}</ScrollPanel>
+          </div>
+        ) : (
+          projectView
+        ))}
     </div>
   )
 

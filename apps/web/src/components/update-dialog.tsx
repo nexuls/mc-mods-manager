@@ -10,6 +10,7 @@ import {
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { ProjectIcon } from '@/components/project-icon'
+import { ScrollPanel } from '@/components/scroll-panel'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -96,11 +97,13 @@ export function UpdateDialog({
             <AlertDescription>Nothing to update. Check for updates first.</AlertDescription>
           </Alert>
         ) : (
-          <ul className="-mx-2 flex max-h-[50vh] flex-col gap-1 overflow-y-auto px-2">
-            {list.map((m) => (
-              <UpdateRow key={m.fileName} mod={m} progress={progressOf(m)} />
-            ))}
-          </ul>
+          <ScrollPanel className="-mx-2" viewportClassName="max-h-[50vh]">
+            <ul className="flex flex-col gap-1 px-2">
+              {list.map((m) => (
+                <UpdateRow key={m.fileName} mod={m} progress={progressOf(m)} />
+              ))}
+            </ul>
+          </ScrollPanel>
         )}
 
         <DialogFooter className="items-center">

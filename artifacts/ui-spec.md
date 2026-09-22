@@ -20,6 +20,10 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - If `needsSetup`, the Instance dialog opens automatically and blocks until filled.
 - Header right side: server status badge (Connected / Reconnecting / Disconnected; red after `/api/health` fails 3× in a row,
   version in the tooltip) and a theme menu (Light / Dark / System).
+- **Scrolling:** every scrolling region (the page below the header, the split view's lists and project page, dialog
+  lists) is a `ScrollPanel`: shadcn's scrollbar, plus a soft shadow on each edge the content continues past. The
+  header stays put and the page scrolls below it. Native scrollbars that remain (menus, text areas, code blocks) are
+  thin with a border-coloured thumb to match.
 
 ## Views
 
