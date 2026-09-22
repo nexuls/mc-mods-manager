@@ -1,25 +1,35 @@
+import { useState } from 'react'
+import { AppHeader } from '@/components/app-header'
+import { InstanceDialog } from '@/components/instance-dialog'
 import { Badge } from '@/components/ui/badge'
-import { useHealth } from '@/hooks/use-health'
+import { useInstance } from '@/hooks/use-instance'
 import { ApiClientError } from '@/lib/api'
 
 function App() {
-  const health = useHealth()
+  const instance = useInstance()
+  const [editing, setEditing] = useState(false)
+
+  const unauthorized =
+    instance.error instanceof ApiClientError && instance.error.code === 'UNAUTHORIZED'
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-3">
-      <h1 className="text-2xl font-semibold">mc-mod</h1>
-      {health.isPending ? (
-        <Badge variant="secondary">Connecting…</Badge>
-      ) : health.isSuccess ? (
-        <Badge variant="secondary">Connected · v{health.data.version}</Badge>
-      ) : (
-        <Badge variant="destructive">
-          {health.error instanceof ApiClientError && health.error.code === 'UNAUTHORIZED'
-            ? 'Not authorized. Open the link printed in the terminal.'
-            : 'Server disconnected'}
-        </Badge>
+    <div className="flex min-h-svh flex-col">
+      <AppHeader onEditInstance={() => setEditing(true)} />
+      <main className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
+        {unauthorized ? (
+          <Badge variant="destructive">
+            Not authorized. Open the link printed in the terminal.
+          </Badge>
+        ) : instance.data ? (
+          <p className="text-muted-foreground text-sm break-all">
+            {instance.data.instance.contentDir}
+          </p>
+        ) : null}
+      </main>
+      {instance.data && (
+        <InstanceDialog data={instance.data} open={editing} onOpenChange={setEditing} />
       )}
-    </main>
+    </div>
   )
 }
 
