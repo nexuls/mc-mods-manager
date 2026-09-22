@@ -120,9 +120,12 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
           </Button>
         </div>
       ) : (
-        <div className="bg-card overflow-hidden rounded-xl border xl:min-h-0 xl:overflow-y-auto">
+        // `overflow-clip`, not hidden/auto (here and on the table's wrapper), so the header can stick: to the
+        // page below the app header, or to this card where it scrolls on its own (xl).
+        <div className="bg-card overflow-clip rounded-xl border xl:min-h-0 xl:overflow-y-auto *:data-[slot=table-container]:overflow-x-clip">
           <Table className="[&_td]:py-3 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
-            <TableHeader className="bg-muted/40">
+            {/* Opaque cells (muted/40 over the card) and a shadow for the line: a collapsed border stays behind. */}
+            <TableHeader className="sticky top-16 z-10 xl:top-0 [&_th]:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0">
               <TableRow>
                 <TableHead />
                 <SortableHead column="name" sort={sort} onSort={onSort}>
