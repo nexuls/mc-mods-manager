@@ -86,7 +86,7 @@ apps/cli/src/
 │   └── idle.ts             # --exit-on-close heartbeat watcher
 ├── server.ts               # express app factory (testable without listening)
 ├── errors.ts               # AppError(code) thrown by services/routes
-├── config.ts               # global config (~/.config/mc-mod/config.json): CF API key, defaults
+├── config.ts               # ConfigService: global config.json (CF key, preferences), written 0600; env key wins
 ├── security.ts             # token middleware, host/origin checks
 ├── instance/
 │   ├── layout.ts           # start dir → instance root + game dir (mods/, Prism game dir, versions/<id>)
@@ -114,6 +114,7 @@ apps/cli/src/
 │   ├── versions.ts         # best-version picking (§7.3)
 │   ├── installer.ts        # install plan (deps), install job: download, verify hash, write, record
 │   ├── jobs.ts             # in-memory background jobs + their event logs
+│   ├── settings.ts         # get/save settings, test a CurseForge key
 │   ├── updates.ts          # check updates for identified mods
 │   └── server-export.ts    # compute server-side set and copy to export dir
 ├── env.ts                  # zod schema for env vars + parsed CLI options
@@ -124,6 +125,7 @@ apps/cli/src/
     ├── mods.ts
     ├── projects.ts         # search, projects, versions, meta
     ├── install.ts          # plan, install, job events (SSE)
+    ├── settings.ts
     └── export.ts
 ```
 
@@ -258,8 +260,9 @@ The UI always shows the chosen version and lets the user pick another from a dro
 - Download to `<instance>/.mc-mod/tmp/`, verify hash (sha1/sha512 for Modrinth, sha1 for CF), then atomic
   rename into the content dir.
 - Filename comes from the platform, sanitized (`path.basename`, no separators, must end in `.jar`).
-- If CurseForge returns `downloadUrl: null` (author disabled 3rd-party distribution), show a
-  "Download manually" link to the CurseForge page instead of failing silently.
+- If CurseForge returns `downloadUrl: null` (author disabled 3rd-party distribution), the plan item is `manual` with a
+  "Download" link to the file's page instead of failing silently; installing it anyway fails with
+  `MANUAL_DOWNLOAD_REQUIRED`. Once the user drops the file in, the fingerprint lookup identifies it.
 - Updating = download new file, then delete old file only after the new one is verified.
 
 ### 7.6 Server export

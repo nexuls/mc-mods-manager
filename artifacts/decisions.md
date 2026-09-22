@@ -166,3 +166,31 @@ Accepted.
 - **Descriptions** render with react-markdown + remark-gfm, raw HTML through rehype-raw and then rehype-sanitize
   (GitHub's schema plus `<center>`). `@tailwindcss/typography` styles them.
 
+
+### D21 — CurseForge and global settings (Phase 6)
+- **Config:** `ConfigService` loads `config.json` from `env-paths('mc-mod').config` once per run and writes it back on
+  every change (atomic, mode 0600, since it holds the key). Loose schema with per-field `.catch()` defaults, so one bad
+  value doesn't reset the rest and fields from newer versions survive. `CURSEFORGE_API_KEY` wins over the saved key, and
+  the UI says so. The key is write-only over the API. Theme stays in the browser (next-themes, D18), not in the config.
+  The pre-release choice replaces D20's `ALLOW_PRERELEASE` constant.
+- **Key test:** `GET /v1/games/432`, because `/categories` answers without a key. Saving from the UI tests first,
+  so a typo can't quietly break every CurseForge call. The provider reads the key through a getter, so a new key applies
+  without a restart.
+- **Search can be forbidden per key.** A real, freshly approved key gets 403 on `/mods/search` only. We report that with
+  its own error (`CurseForgeSearchForbiddenError`), the key test mentions it, and Browse offers "Open CurseForge
+  project" for a pasted page URL or id. Slugs need search, so web links use numeric ids for CurseForge.
+- **Identification:** the fingerprint lookup runs in parallel with Modrinth's for jars without `checkedAt.curseforge`,
+  only when a key is set, so adding a key later looks up every jar once. A failed lookup (including a rejected key) is
+  a warning, and Modrinth's results still load. Fetched projects are keyed `provider:id`.
+- **Catalog and installer** pick the platform per request. CurseForge filters files on one game version and one loader
+  at most, so lists without `all` are narrowed to compatible files after ranking, and multi-loader instances (Quilt,
+  NeoForge 1.20.1) ask without a loader filter. At most 500 files per project, newest first. Dependencies stay on
+  the project's platform (CF `relationType` 3 required, 2 optional, 5 incompatible; tools and embedded ones ignored).
+- **Manual downloads:** `VersionFile.url` is nullable and versions carry `pageUrl`. A plan item with a fitting file but no
+  URL is `manual` (its dependencies are still followed); only manual *dependencies* add a warning, since the main item's
+  status already says it. We never build forgecdn URLs by hand for such files, because that would bypass the author's choice.
+- **Side:** CurseForge has no reliable side data (the "Client"/"Server" tags aren't trusted), so CurseForge projects are
+  `unknown` and the UI hides the chip for them rather than showing a warning colour.
+- **Suggestions** come from both platforms (up to 6 Modrinth, then up to 4 CurseForge); CurseForge failures are skipped.
+- **Web:** API errors are retried once instead of three times (a rejected key answered quickly but showed ~7 s late), and
+  the page sends no referrer, which fixed imgur images in descriptions.

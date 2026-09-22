@@ -66,12 +66,31 @@ Notes:
 | Game versions | `GET /minecraft/version` |
 
 Notes:
-- `downloadUrl` may be `null` when the author disabled third-party distribution → show "Open on CurseForge" link.
+- `downloadUrl` may be `null` when the author disabled third-party distribution → the plan shows the item as `manual`
+  with a Download link to the file's page. We never build a forgecdn URL by hand for such files.
 - File `gameVersions[]` mixes MC versions, loader names ("Fabric", "NeoForge") and sometimes "Client"/"Server"
   — parse it, but don't treat "Server" as reliable side info.
 - `dependencies[].relationType`: 1 Embedded, 2 Optional, 3 Required, 4 Tool, 5 Incompatible, 6 Include.
 - File `hashes[]`: `algo` 1 = sha1, 2 = md5.
 - Plugins on CurseForge (Bukkit class) have poor loader metadata; version matching falls back to `gameVersions`.
+
+Verified 2026-09-22 against the live docs and API (with a real key):
+- Enums: `modLoaderType` 0 Any, 1 Forge, 2 Cauldron, 3 LiteLoader, 4 Fabric, 5 Quilt, 6 NeoForge. `sortField` 1 Featured,
+  2 Popularity, 3 LastUpdated, 4 Name, 5 Author, 6 TotalDownloads, 7 Category, 8 GameVersion, 9 EarlyAccess,
+  10 FeaturedReleased, 11 ReleasedDate, 12 Rating. `releaseType` 1 Release, 2 Beta, 3 Alpha. `relationType` as above.
+- Every response wraps its payload in `data`; searches and file lists add `pagination { index, pageSize, resultCount,
+  totalCount }`. `pageSize` max 50 and `index + pageSize ≤ 10,000`.
+- `modLoaderType` "must be coupled with gameVersion" (docs). `modLoaderTypes` takes a list; we send a JSON array
+  (`[5,4]`), which the docs don't spell out and couldn't be checked (see below).
+- Mods have `links.websiteUrl` (the page, e.g. `https://www.curseforge.com/minecraft/mc-mods/jei`); a file's page is
+  `<websiteUrl>/files/<fileId>`. `www.curseforge.com/projects/<id>` redirects (308) to the project page.
+- `GET /categories` and `GET /minecraft/version` answer **without** a key, so the key test uses `GET /games/432`.
+  A bad key gets 403 (`/fingerprints` answers 401).
+- **Some keys can't search**: a freshly approved key gets 403 "API Key missing or invalid" on `/mods/search` only; mods,
+  files, descriptions, fingerprints and `POST /mods/featured` work. Slugs can only be resolved through search, so such keys
+  need numeric project ids. mc-mod reports this separately from a rejected key (`CurseForgeSearchForbiddenError`).
+- `allowModDistribution: false` example: Corail Tombstone (243707); its files have `downloadUrl: null`.
+- Class ids: Mods 6, Bukkit Plugins 5 (from `/categories?classesOnly=true`).
 
 ## Caching
 

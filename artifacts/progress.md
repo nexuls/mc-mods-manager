@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 6 — CurseForge (Phase 5 search & install done).
+**Current phase:** 7 — Updates (Phase 6 CurseForge done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -59,10 +59,12 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] Browse view, project detail, install dialog (react-router: `/`, `/browse`, `/project/:provider/:id`)
 
 ## Phase 6 — CurseForge
-- [ ] Settings view + global config + key test
-- [ ] CF provider: search, mod, files, fingerprints (plug into identification pipeline)
-- [ ] Manual-download-required handling
-- [ ] CurseForge manual links + suggestions (`PATCH /api/mods/:fileName` currently answers `PROVIDER_DISABLED`)
+- [x] Settings view + global config + key test (`config.ts`, `/api/settings`, `settings-view.tsx`)
+- [x] CF provider: search, mod, files, fingerprints (plug into identification pipeline) (`providers/curseforge.ts`)
+- [x] CurseForge in Browse, project pages and installs (catalog/installer pick the platform per request)
+- [x] Manual-download-required handling (`manual` plan items with a Download link)
+- [x] CurseForge manual links + suggestions
+- [ ] Follow-up: `modLoaderTypes` (multi-loader search on Quilt / NeoForge 1.20.1) is sent as a JSON array; check it with a key that may search
 
 ## Phase 7 — Updates
 - [ ] Check updates (Modrinth bulk + CF)
@@ -94,3 +96,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | UI polish ahead of Phase 5: theme toggle (next-themes), server status badge, pointer cursor on controls, roomier layout (D18). Checked with headless Chrome screenshots in light and dark; the theme menu wasn't clicked through. |
 | 2026-09-22 | Side is read-only when it comes from Modrinth/CurseForge; overrides only apply to local files or unknown platform sides (D19). |
 | 2026-09-22 | Phase 5 done: Modrinth search/project/versions/tags with a TTL cache, best-version picker (§7.3), install plan with recursive required deps, background install job (download to `.mc-mod/tmp`, sha1+sha512 check, atomic rename, install record) with SSE progress via `streamRoute()`, web routing + Browse + project page + install dialog (D20). Checked on a copy of the dev instance: Create Aeronautics planned Sable as required and Create as installed; installs landed as `install-record`, compatible. The install dialog was clicked through with puppeteer-core (scratch only, not a dependency). |
+| 2026-09-22 | Repaired `api-spec.md` (3eefe6b had inserted a section between every character). Phase 6 done: CurseForge provider (verified live; enums from the docs), global config + Settings view with key test, fingerprint identification next to Modrinth's, CurseForge search/project/versions/installs, manual-download items, CurseForge links and suggestions (D21). With the user's key (saved via the new Settings on their dev server), 33 of 39 dev-instance jars matched by fingerprint, and Mouse Tweaks installed from forgecdn on a scratch copy. That key may not use `/mods/search` at all, so CurseForge search results were only checked against fakes. Checked with headless Chrome screenshots (Settings, Browse states, project page, install and manual dialogs, link dialog). |
