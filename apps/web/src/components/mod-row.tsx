@@ -1,10 +1,4 @@
-import {
-  type InstalledMod,
-  type Provider,
-  providerLabel,
-  type Side,
-  type UpdateModBody,
-} from '@mc-mod/shared'
+import { type InstalledMod, type Provider, providerLabel, type UpdateModBody } from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
   ArrowUpCircleIcon,
@@ -18,7 +12,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { SideChip, SideChipButton, SourceChip } from '@/components/mod-chips'
+import { SourceChip } from '@/components/mod-chips'
+import { ModSide } from '@/components/mod-side'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -49,27 +43,11 @@ import { TableCell, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRemoveMod, useUpdateMod } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
-import {
-  displayName,
-  displayVersion,
-  methodLabel,
-  primary,
-  projectUrl,
-  sideLabel,
-} from '@/lib/mods'
+import { displayName, displayVersion, methodLabel, primary, projectUrl } from '@/lib/mods'
 import { cn } from '@/lib/utils'
-
-const SIDES: Side[] = ['client', 'server', 'both']
 
 /** Badge labels in the name cell: hidden (icon only) while the cell is narrower than 24rem. */
 const BADGE_TEXT = '@max-sm/name:hidden'
-
-const sideSourceLabel = {
-  override: 'set by you',
-  platform: 'from the platform',
-  jar: 'from the jar',
-  unknown: 'unknown',
-} as const
 
 export function ModRow({
   mod,
@@ -207,44 +185,7 @@ export function ModRow({
       </TableCell>
 
       <TableCell className="@max-2xl:hidden">
-        {mod.sideSource === 'platform' && main ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SideChip side={mod.side} className={cn(!mod.enabled && 'opacity-60')} />
-            </TooltipTrigger>
-            <TooltipContent>
-              From {providerLabel[main.provider]}. Treat as local to set it yourself.
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SideChipButton
-                side={mod.side}
-                aria-label={`Side: ${sideLabel[mod.side]}. Change side`}
-                className={cn(!mod.enabled && 'opacity-60')}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                Side: {sideSourceLabel[mod.sideSource]}
-              </DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={mod.sideSource === 'override' ? mod.side : 'auto'}
-                onValueChange={(v) =>
-                  patch({ sideOverride: v === 'auto' ? null : SIDES.find((s) => s === v) })
-                }
-              >
-                <DropdownMenuRadioItem value="auto">Automatic</DropdownMenuRadioItem>
-                {SIDES.map((s) => (
-                  <DropdownMenuRadioItem key={s} value={s}>
-                    {sideLabel[s]}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <ModSide mod={mod} className={cn(!mod.enabled && 'opacity-60')} />
       </TableCell>
 
       <TableCell>
