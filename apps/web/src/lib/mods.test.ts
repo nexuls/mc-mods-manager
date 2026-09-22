@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import type { InstalledMod } from '@mc-mod/shared'
-import { countByFilter, displayName, filterMods, parseModrinthRef, projectUrl } from './mods'
+import {
+  countByFilter,
+  displayName,
+  filterMods,
+  parseModrinthRef,
+  projectUrl,
+  sortMods,
+  toggleSort,
+} from './mods'
 
 const mod = (x: Partial<InstalledMod>): InstalledMod => ({
   fileName: 'a.jar',
@@ -73,6 +81,59 @@ describe('filterMods', () => {
       client: 1,
       server: 1,
     })
+  })
+})
+
+describe('sortMods', () => {
+  const cf = mod({
+    fileName: 'jei.jar',
+    side: 'both',
+    primarySource: 'curseforge',
+    sources: [
+      { provider: 'curseforge', projectId: '238222', slug: 'jei', title: 'JEI', method: 'hash' },
+    ],
+  })
+  const iris = mod({
+    ...sodium,
+    fileName: 'iris.jar',
+    sources: [{ ...sodium.sources[0], title: 'Iris' }],
+  })
+  const all = [sodium, local, cf, iris]
+  const names = (key: 'name' | 'source' | 'side' | 'enabled', desc = false) =>
+    sortMods(all, { key, desc }).map(displayName)
+
+  test('by name, both directions', () => {
+    expect(names('name')).toEqual(['Iris', 'JEI', 'mine.jar.disabled', 'Sodium'])
+    expect(names('name', true)).toEqual(['Sodium', 'mine.jar.disabled', 'JEI', 'Iris'])
+  })
+
+  test('by source: Modrinth, CurseForge, then local; ties by name A→Z even descending', () => {
+    expect(names('source')).toEqual(['Iris', 'Sodium', 'JEI', 'mine.jar.disabled'])
+    expect(names('source', true)).toEqual(['mine.jar.disabled', 'JEI', 'Iris', 'Sodium'])
+  })
+
+  test('by side: client, server, both, unknown', () => {
+    const unknown = mod({ fileName: 'x.jar', side: 'unknown' })
+    const server = mod({ fileName: 'y.jar', side: 'server' })
+    expect(
+      sortMods([unknown, cf, server, sodium], { key: 'side', desc: false }).map((m) => m.side),
+    ).toEqual(['client', 'server', 'both', 'unknown'])
+  })
+
+  test('by enabled: enabled first', () => {
+    expect(names('enabled')).toEqual(['Iris', 'JEI', 'Sodium', 'mine.jar.disabled'])
+    expect(names('enabled', true)[0]).toBe('mine.jar.disabled')
+  })
+
+  test('does not mutate the input', () => {
+    const copy = [...all]
+    sortMods(all, { key: 'side', desc: true })
+    expect(all).toEqual(copy)
+  })
+
+  test('toggleSort flips the same column and starts a new one ascending', () => {
+    expect(toggleSort({ key: 'name', desc: false }, 'name')).toEqual({ key: 'name', desc: true })
+    expect(toggleSort({ key: 'name', desc: true }, 'side')).toEqual({ key: 'side', desc: false })
   })
 })
 

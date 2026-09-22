@@ -43,26 +43,56 @@ export function displayVersion(m: InstalledMod): string | undefined {
   return primary(m)?.versionNumber ?? m.meta?.version
 }
 
+export const SortKey = ['name', 'source', 'side', 'enabled'] as const
+export type SortKey = (typeof SortKey)[number]
+export type ModSort = { key: SortKey; desc: boolean }
+
+export const defaultSort: ModSort = { key: 'name', desc: false }
+
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true })
+
+// Ascending orders for the non-name columns. Local files sort after both providers.
+const sourceRank = (m: InstalledMod) => {
+  const p = primary(m)?.provider
+  return p === 'modrinth' ? 0 : p === 'curseforge' ? 1 : 2
+}
+const sideRank: Record<Side, number> = { client: 0, server: 1, both: 2, unknown: 3 }
+
+const compareBy: Record<SortKey, (a: InstalledMod, b: InstalledMod) => number> = {
+  name: (a, b) => collator.compare(displayName(a), displayName(b)),
+  source: (a, b) => sourceRank(a) - sourceRank(b),
+  side: (a, b) => sideRank[a.side] - sideRank[b.side],
+  // Enabled first.
+  enabled: (a, b) => Number(b.enabled) - Number(a.enabled),
+}
+
+/** Sorts a copy by one column. Ties always fall back to name A→Z, whatever the direction. */
+export function sortMods(mods: readonly InstalledMod[], sort: ModSort): InstalledMod[] {
+  const dir = sort.desc ? -1 : 1
+  return [...mods].sort((a, b) => dir * compareBy[sort.key](a, b) || compareBy.name(a, b))
+}
+
+/** The next sort after clicking a column header: flip the direction, or start ascending on a new column. */
+export function toggleSort(current: ModSort, key: SortKey): ModSort {
+  return current.key === key ? { key, desc: !current.desc } : { key, desc: false }
+}
+
 export function filterMods(
   mods: readonly InstalledMod[],
   filter: ModFilter,
   text: string,
+  sort: ModSort = defaultSort,
 ): InstalledMod[] {
   const q = text.trim().toLowerCase()
-  const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true })
-  return mods
-    .filter(
-      (m) =>
-        matchesFilter[filter](m) &&
-        (!q ||
-          [
-            displayName(m),
-            m.fileName,
-            m.meta?.id ?? '',
-            ...m.sources.map((s) => s.slug ?? ''),
-          ].some((x) => x.toLowerCase().includes(q))),
-    )
-    .sort((a, b) => collator.compare(displayName(a), displayName(b)))
+  const shown = mods.filter(
+    (m) =>
+      matchesFilter[filter](m) &&
+      (!q ||
+        [displayName(m), m.fileName, m.meta?.id ?? '', ...m.sources.map((s) => s.slug ?? '')].some(
+          (x) => x.toLowerCase().includes(q),
+        )),
+  )
+  return sortMods(shown, sort)
 }
 
 export function countByFilter(mods: readonly InstalledMod[]): Record<ModFilter, number> {

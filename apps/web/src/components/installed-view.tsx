@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { LinkDialog } from '@/components/link-dialog'
 import { ModRow } from '@/components/mod-row'
+import { SortableHead } from '@/components/sortable-head'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,18 +13,29 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useMods, useRefreshMods } from '@/hooks/use-mods'
 import { errorMessage } from '@/lib/api'
-import { countByFilter, filterLabel, filterMods, ModFilter } from '@/lib/mods'
+import {
+  countByFilter,
+  defaultSort,
+  filterLabel,
+  filterMods,
+  ModFilter,
+  type ModSort,
+  type SortKey,
+  toggleSort,
+} from '@/lib/mods'
 
 export function InstalledView({ contentLabel }: { contentLabel: string }) {
   const mods = useMods()
   const refresh = useRefreshMods()
   const [filter, setFilter] = useState<ModFilter>('all')
   const [text, setText] = useState('')
+  const [sort, setSort] = useState<ModSort>(defaultSort)
+  const onSort = (key: SortKey) => setSort((s) => toggleSort(s, key))
   // The mod whose link dialog is open, by file name (the row may re-render with new data).
   const [linking, setLinking] = useState<string | null>(null)
 
   const all = mods.data?.mods ?? []
-  const shown = filterMods(all, filter, text)
+  const shown = filterMods(all, filter, text, sort)
   const counts = countByFilter(all)
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
 
@@ -115,11 +127,19 @@ export function InstalledView({ contentLabel }: { contentLabel: string }) {
             <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead />
-                <TableHead>Name</TableHead>
+                <SortableHead column="name" sort={sort} onSort={onSort}>
+                  Name
+                </SortableHead>
                 <TableHead>Version</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Side</TableHead>
-                <TableHead>Enabled</TableHead>
+                <SortableHead column="source" sort={sort} onSort={onSort}>
+                  Source
+                </SortableHead>
+                <SortableHead column="side" sort={sort} onSort={onSort}>
+                  Side
+                </SortableHead>
+                <SortableHead column="enabled" sort={sort} onSort={onSort}>
+                  Enabled
+                </SortableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>

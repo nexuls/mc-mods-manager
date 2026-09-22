@@ -27,7 +27,8 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 - Toolbar: search filter, filter chips with counts (All / Disabled / Unidentified / Incompatible / Client-only / Server-side;
   *Updates available* comes with Phase 7), buttons: **Refresh** (looks every jar up again); **Check updates**, **Update all** in Phase 7.
 - Lookup warnings (e.g. Modrinth unreachable) show as an alert above the table.
-- Table (shadcn `Table`), sorted by name: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
+- Table (shadcn `Table`), sorted by name by default; Name, Source (Modrinth, CurseForge, Local), Side (client, server,
+  both, unknown) and Enabled (enabled first) headers sort on click, again to reverse, ties by name A→Z. Columns: icon, name + file name, "Incompatible" badge (reason in a tooltip), "Link conflict"
   badge, version, source chip (translucent brand-colour tint + logo: Modrinth green, CurseForge orange; the second provider's logo
   is added when on both; Local is a quiet grey chip; the tooltip says how it was found),
   side chip that opens a dropdown (Automatic / Client / Server / Both; tint + icon: client sky, server violet,
