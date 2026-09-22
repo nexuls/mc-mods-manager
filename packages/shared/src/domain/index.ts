@@ -1,4 +1,5 @@
 export * from './instance'
+export * from './jar-meta'
 export * from './loader'
 export * from './side'
 export * from './state'
