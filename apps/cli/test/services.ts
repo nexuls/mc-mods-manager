@@ -9,6 +9,7 @@ import type { InstanceService } from '../src/services/instance'
 import { JobService } from '../src/services/jobs'
 import { LibraryService } from '../src/services/library'
 import { SettingsService } from '../src/services/settings'
+import { UpdateStore, UpdatesService } from '../src/services/updates'
 import type { FakeCurseForge } from './fake-curseforge'
 import type { FakeModrinth } from './fake-modrinth'
 
@@ -37,8 +38,16 @@ export function makeServices(o: ServiceOptions) {
       () => config.curseforgeKey(),
       async () => new Response('{}', { status: 404 }),
     )
-  const library = new LibraryService({ instance, modrinth, curseforge, config, now })
   const catalog = new CatalogService(instance, modrinth, curseforge, config)
+  const store = new UpdateStore(() => catalog.versionContext())
+  const library = new LibraryService({
+    instance,
+    modrinth,
+    curseforge,
+    config,
+    updates: store,
+    now,
+  })
   const jobs = new JobService()
   const installer = new InstallerService({
     instance,
@@ -53,5 +62,6 @@ export function makeServices(o: ServiceOptions) {
     onInternalError: (err) => console.error(err),
   })
   const settings = new SettingsService(config, curseforge)
-  return { instance, library, catalog, jobs, installer, settings, config, curseforge }
+  const updates = new UpdatesService({ library, catalog, installer, curseforge, store })
+  return { instance, library, catalog, jobs, installer, settings, updates, config, curseforge }
 }

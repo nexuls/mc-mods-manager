@@ -15,6 +15,7 @@ import type { InstanceService } from './services/instance'
 import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
 import type { SettingsService } from './services/settings'
+import type { UpdatesService } from './services/updates'
 
 export interface AppOptions {
   auth: Auth
@@ -25,6 +26,7 @@ export interface AppOptions {
     installer: InstallerService
     jobs: JobService
     settings: SettingsService
+    updates: UpdatesService
   }
   /** Built web UI (`dist/web`). Missing in source/dev runs, where Vite serves the UI. */
   webDir: string

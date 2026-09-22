@@ -13,6 +13,7 @@ import { InstanceService } from '../services/instance'
 import { JobService } from '../services/jobs'
 import { LibraryService } from '../services/library'
 import { SettingsService } from '../services/settings'
+import { UpdateStore, UpdatesService } from '../services/updates'
 import { VERSION } from '../version'
 import { openBrowser } from './browser'
 import { watchIdle } from './idle'
@@ -55,9 +56,19 @@ export async function run(argv: readonly string[]): Promise<void> {
 
   const modrinth = new ModrinthProvider()
   const curseforge = new CurseForgeProvider(() => config.curseforgeKey())
-  const library = new LibraryService({ instance, modrinth, curseforge, config })
   const catalog = new CatalogService(instance, modrinth, curseforge, config)
+  const store = new UpdateStore(() => catalog.versionContext())
+  const library = new LibraryService({ instance, modrinth, curseforge, config, updates: store })
   const jobs = new JobService()
+  const installer = new InstallerService({
+    instance,
+    library,
+    catalog,
+    modrinth,
+    curseforge,
+    jobs,
+    onInternalError: terminal.internalError,
+  })
   const { app } = createApp({
     auth,
     services: {
@@ -66,15 +77,8 @@ export async function run(argv: readonly string[]): Promise<void> {
       catalog,
       jobs,
       settings: new SettingsService(config, curseforge),
-      installer: new InstallerService({
-        instance,
-        library,
-        catalog,
-        modrinth,
-        curseforge,
-        jobs,
-        onInternalError: terminal.internalError,
-      }),
+      installer,
+      updates: new UpdatesService({ library, catalog, installer, curseforge, store }),
     },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),

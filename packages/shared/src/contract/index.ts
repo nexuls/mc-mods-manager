@@ -19,7 +19,14 @@ export {
 } from './install'
 export { InstanceResponse } from './instance'
 export { JobEvent, JobId } from './jobs'
-export { ModsResponse, UpdateModBody } from './mods'
+export {
+  ModsResponse,
+  UpdateAllBody,
+  UpdateJobItem,
+  UpdateJobResponse,
+  UpdateModBody,
+  UpdateOneBody,
+} from './mods'
 export {
   ProjectId,
   SEARCH_PAGE_SIZE,

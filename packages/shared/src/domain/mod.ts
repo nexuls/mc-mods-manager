@@ -54,6 +54,27 @@ export type ModSource = z.infer<typeof ModSource>
 export const Compatibility = z.enum(['ok', 'wrong-loader', 'wrong-game-version', 'unknown'])
 export type Compatibility = z.infer<typeof Compatibility>
 
+/** A newer version of an installed mod, from its primary source (found by "Check updates"). */
+export const ModUpdate = z.strictObject({
+  provider: Provider,
+  projectId: z.string().min(1),
+  versionId: z.string().min(1),
+  versionNumber: z.string(),
+  /** ISO date. */
+  publishedAt: z.string(),
+  /** The file it installs as. */
+  fileName: z.string(),
+  size: z.number().int().nonnegative(),
+  /**
+   * The author only allows downloads from the platform's website (CurseForge): the user downloads it
+   * from `pageUrl`, and "Update all" leaves it out.
+   */
+  manual: z.boolean(),
+  /** The version's page on the platform. */
+  pageUrl: z.string().optional(),
+})
+export type ModUpdate = z.infer<typeof ModUpdate>
+
 /** Which rule decided `InstalledMod.side`. */
 export const SideSource = z.enum(['override', 'platform', 'jar', 'unknown'])
 export type SideSource = z.infer<typeof SideSource>
@@ -82,6 +103,8 @@ export const InstalledMod = z.strictObject({
   compatibilityReason: z.string().optional(),
   side: Side,
   sideSource: SideSource,
+  /** Set after "Check updates" when the primary source has a newer fitting version. */
+  update: ModUpdate.optional(),
 })
 export type InstalledMod = z.infer<typeof InstalledMod>
 

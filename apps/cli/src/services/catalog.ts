@@ -22,11 +22,11 @@ import { queryLoaders, rankVersions, type VersionContext } from './versions'
 
 type Modrinth = Pick<
   ModrinthProvider,
-  'browse' | 'getProjectPage' | 'getVersions' | 'gameVersions' | 'categories'
+  'browse' | 'getProjectPage' | 'getVersions' | 'getVersionsByIds' | 'gameVersions' | 'categories'
 >
 type CurseForge = Pick<
   CurseForgeProvider,
-  'browse' | 'getProjectPage' | 'getVersions' | 'categories'
+  'browse' | 'getProjectPage' | 'getVersions' | 'getVersionsByIds' | 'categories'
 >
 
 type SearchInput = Input<typeof api.projects.search>['query']
@@ -37,6 +37,7 @@ interface Platform {
   browse(q: BrowseQuery): Promise<{ hits: ProjectHit[]; total: number }>
   getProjectPage(id: string): Promise<Project | null>
   getVersions(id: string, filter: VersionFilter): Promise<ProjectVersion[] | null>
+  getVersionsByIds(ids: readonly string[]): Promise<Map<string, ProjectVersion>>
   categories(kind: ContentKind): Promise<Category[]>
 }
 
@@ -59,6 +60,7 @@ export class CatalogService {
       browse: (q) => cf.browse(q),
       getProjectPage: (id) => cf.getProjectPage(id, kind()),
       getVersions: (id, filter) => cf.getVersions(id, filter, kind()),
+      getVersionsByIds: (ids) => cf.getVersionsByIds(ids),
       categories: (k) => cf.categories(k),
     }
   }
@@ -111,6 +113,11 @@ export class CatalogService {
   /** The recommended version of a project, if any fits (or the project doesn't exist). */
   async bestVersion(provider: Provider, id: string): Promise<RankedVersion | undefined> {
     return (await this.ranked(provider, id, false))?.find((v) => v.recommended)
+  }
+
+  /** Versions by id; ids the platform doesn't know are missing from the map. */
+  versionsByIds(provider: Provider, ids: readonly string[]): Promise<Map<string, ProjectVersion>> {
+    return this.platform(provider).getVersionsByIds(ids)
   }
 
   private async ranked(

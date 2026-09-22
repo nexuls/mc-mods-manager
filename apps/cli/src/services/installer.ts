@@ -13,9 +13,10 @@ import {
   type Provider,
   providerLabel,
   type RankedVersion,
+  type VersionFile,
 } from '@mc-mod/shared'
 import { AppError } from '../errors'
-import { renameInside, resolveInside, safeJarName, stateDir } from '../instance/paths'
+import { moveToTrash, renameInside, resolveInside, safeJarName, stateDir } from '../instance/paths'
 import { updateState } from '../instance/state'
 import { hashBytes } from '../jar/hash'
 import { downloadVerified } from '../lib/download'
@@ -38,6 +39,14 @@ interface Platform {
   getProjects(ids: readonly string[]): Promise<Map<string, ProjectInfo>>
   getVersionsByIds(ids: readonly string[]): Promise<Map<string, ProjectVersion>>
 }
+
+/** An installed jar and the version that replaces it. */
+export interface ReplaceTarget {
+  mod: InstalledMod
+  version: ProjectVersion
+}
+
+type ItemResult = { fileName: string; skipped: boolean }
 
 /** Progress events per item are sent at most this often. */
 const PROGRESS_INTERVAL_MS = 150
@@ -266,21 +275,49 @@ export class InstallerService {
     })
 
     const job = this.deps.jobs.create()
-    void this.run(job, list, projects)
+    void this.run(
+      job,
+      list.map((version) => (index) => {
+        const project = projects.get(projectKey(version.provider, version.projectId))
+        return this.installOne(job, index, version, project)
+      }),
+    )
     return { jobId: job.id }
   }
 
-  private async run(
-    job: Job,
-    versions: readonly ProjectVersion[],
-    projects: ReadonlyMap<string, ProjectInfo>,
-  ): Promise<void> {
+  /**
+   * Replaces installed jars with other versions of them (updates, "Change version") in a background job.
+   * Returns the job id right away; progress comes as job events.
+   */
+  async replace(targets: readonly ReplaceTarget[]): Promise<{ jobId: string }> {
+    const projects = new Map<string, ProjectInfo>()
+    for (const provider of new Set(targets.map((t) => t.version.provider))) {
+      // Titles and icons for the install records; only nice to have.
+      const found = await this.platform(provider)
+        .getProjects(
+          targets.filter((t) => t.version.provider === provider).map((t) => t.version.projectId),
+        )
+        .catch(() => new Map<string, ProjectInfo>())
+      for (const [id, p] of found) projects.set(projectKey(provider, id), p)
+    }
+    const job = this.deps.jobs.create()
+    void this.run(
+      job,
+      targets.map((target) => (index) => {
+        const project = projects.get(projectKey(target.version.provider, target.version.projectId))
+        return this.replaceOne(job, index, target, project)
+      }),
+    )
+    return { jobId: job.id }
+  }
+
+  /** Runs the items one by one, reporting each as done or failed, then `done`. */
+  private async run(job: Job, tasks: readonly ((index: number) => Promise<ItemResult>)[]) {
     let installed = 0
     let failed = 0
-    for (const [index, version] of versions.entries()) {
+    for (const [index, task] of tasks.entries()) {
       try {
-        const project = projects.get(projectKey(version.provider, version.projectId))
-        const done = await this.installOne(job, index, version, project)
+        const done = await task(index)
         job.emit({ type: 'item-done', index, ...done })
         installed++
       } catch (err) {
@@ -306,19 +343,9 @@ export class InstallerService {
     index: number,
     version: ProjectVersion,
     project: ProjectInfo | undefined,
-  ): Promise<{ fileName: string; skipped: boolean }> {
+  ): Promise<ItemResult> {
     const { root, contentDir } = this.deps.instance.instance
-    const { file } = version
-    if (!file) throw new AppError('NOT_FOUND', `${version.name} has no jar file to install`)
-    const fileName = safeJarName(file.name)
-    const url = file.url
-    if (!url) {
-      throw new AppError(
-        'MANUAL_DOWNLOAD_REQUIRED',
-        `The author only allows downloading ${fileName} from the ${providerLabel[version.provider]} website`,
-        { pageUrl: version.pageUrl },
-      )
-    }
+    const { file, fileName, url } = downloadable(version)
     const dest = resolveInside(root, path.join(contentDir, fileName))
 
     if (await exists(`${dest}.disabled`)) {
@@ -333,26 +360,9 @@ export class InstallerService {
       throw new AppError('CONFLICT', `A different ${fileName} is already in the folder`)
     }
 
-    const tmp = resolveInside(root, path.join(stateDir(root), 'tmp', `${crypto.randomUUID()}.jar`))
-    let last = 0
+    const tmp = this.tmpFile()
     try {
-      const { sha1 } = await downloadVerified(
-        {
-          url,
-          sha1: file.sha1,
-          sha512: file.sha512,
-          size: file.size,
-          file: tmp,
-          headers: { 'User-Agent': USER_AGENT },
-          onProgress: (received, total) => {
-            const now = Date.now()
-            if (now - last < PROGRESS_INTERVAL_MS && received !== total) return
-            last = now
-            job.emit({ type: 'progress', index, received, total })
-          },
-        },
-        this.deps.fetch ?? ((url, init) => globalThis.fetch(url, init)),
-      )
+      const { sha1 } = await this.download(job, index, file, url, tmp)
       await renameInside(root, tmp, dest)
       await this.record(sha1, version, project)
       return { fileName, skipped: false }
@@ -361,11 +371,109 @@ export class InstallerService {
     }
   }
 
-  /** Writes the install record (architecture §7.2 #1), so the file is identified offline. */
+  /**
+   * Downloads and verifies the new version first, puts it in the content dir (disabled if the old jar
+   * was), and only then moves the old jar to `.mc-mod/trash/` (architecture §7.5). When both have the
+   * same name, the old jar goes to the trash just before the rename and comes back if the rename fails.
+   */
+  private async replaceOne(
+    job: Job,
+    index: number,
+    { mod, version }: ReplaceTarget,
+    project: ProjectInfo | undefined,
+  ): Promise<ItemResult> {
+    const { root, contentDir } = this.deps.instance.instance
+    const { file, fileName, url } = downloadable(version)
+    const now = () => (this.deps.now ?? Date.now)()
+    const old = resolveInside(root, path.join(contentDir, mod.fileName))
+    if (!(await exists(old))) {
+      throw new AppError('NOT_FOUND', `${mod.fileName} is no longer in the folder`)
+    }
+    const target = mod.enabled ? fileName : `${fileName}.disabled`
+    const dest = resolveInside(root, path.join(contentDir, target))
+    // The new file under its other name (enabled or disabled) would be a second copy.
+    const twin = resolveInside(
+      root,
+      path.join(contentDir, mod.enabled ? `${fileName}.disabled` : fileName),
+    )
+    if (twin !== old && (await exists(twin))) {
+      throw new AppError('CONFLICT', `${path.basename(twin)} is already in the folder`)
+    }
+    if (dest !== old && (await exists(dest))) {
+      const { sha1 } = hashBytes(await Bun.file(dest).bytes())
+      if (!file.sha1 || sha1 !== file.sha1.toLowerCase()) {
+        throw new AppError('CONFLICT', `A different ${target} is already in the folder`)
+      }
+      // The new version is already there: only the old one has to go.
+      await moveToTrash(root, old, now())
+      await this.record(sha1, version, project, mod.sha1)
+      return { fileName: target, skipped: true }
+    }
+
+    const tmp = this.tmpFile()
+    try {
+      const { sha1 } = await this.download(job, index, file, url, tmp)
+      if (dest === old) {
+        const trashed = await moveToTrash(root, old, now())
+        try {
+          await renameInside(root, tmp, dest)
+        } catch (err) {
+          await renameInside(root, trashed, old).catch(() => {})
+          throw err
+        }
+      } else {
+        await renameInside(root, tmp, dest)
+        await moveToTrash(root, old, now())
+      }
+      await this.record(sha1, version, project, mod.sha1)
+      return { fileName: target, skipped: false }
+    } finally {
+      await rm(tmp, { force: true })
+    }
+  }
+
+  private tmpFile(): string {
+    const { root } = this.deps.instance.instance
+    return resolveInside(root, path.join(stateDir(root), 'tmp', `${crypto.randomUUID()}.jar`))
+  }
+
+  /** Streams a file to `tmp`, checking its size and hashes, with throttled progress events. */
+  private async download(
+    job: Job,
+    index: number,
+    file: VersionFile,
+    url: string,
+    tmp: string,
+  ): Promise<{ sha1: string }> {
+    let last = 0
+    return downloadVerified(
+      {
+        url,
+        sha1: file.sha1,
+        sha512: file.sha512,
+        size: file.size,
+        file: tmp,
+        headers: { 'User-Agent': USER_AGENT },
+        onProgress: (received, total) => {
+          const now = Date.now()
+          if (now - last < PROGRESS_INTERVAL_MS && received !== total) return
+          last = now
+          job.emit({ type: 'progress', index, received, total })
+        },
+      },
+      this.deps.fetch ?? ((url, init) => globalThis.fetch(url, init)),
+    )
+  }
+
+  /**
+   * Writes the install record (architecture §7.2 #1), so the file is identified offline. `replaced` is
+   * the sha1 of the jar it replaces, whose side override and pinned provider carry over.
+   */
   private async record(
     sha1: string,
     version: ProjectVersion,
     project: ProjectInfo | undefined,
+    replaced?: string,
   ): Promise<void> {
     const source: ModSource = {
       provider: version.provider,
@@ -383,11 +491,14 @@ export class InstallerService {
     const now = (this.deps.now ?? Date.now)()
     await updateState(this.deps.instance.instance.root, (s) => {
       const r = s.mods?.[sha1]
+      const before = replaced ? s.mods?.[replaced] : undefined
       return {
         ...s,
         mods: {
           ...s.mods,
           [sha1]: {
+            sideOverride: before?.sideOverride,
+            primarySource: before?.primarySource,
             ...r,
             sources: [...(r?.sources ?? []).filter((x) => x.provider !== source.provider), source],
             checkedAt: { ...r?.checkedAt, [source.provider]: now },
@@ -412,6 +523,25 @@ export class InstallerService {
       return [{ projectId, type: d.type }]
     })
   }
+}
+
+/** The version's jar and its download URL; throws when there's none to download. */
+function downloadable(version: ProjectVersion): {
+  file: VersionFile
+  fileName: string
+  url: string
+} {
+  const { file } = version
+  if (!file) throw new AppError('NOT_FOUND', `${version.name} has no jar file to install`)
+  const fileName = safeJarName(file.name)
+  if (!file.url) {
+    throw new AppError(
+      'MANUAL_DOWNLOAD_REQUIRED',
+      `The author only allows downloading ${fileName} from the ${providerLabel[version.provider]} website`,
+      { pageUrl: version.pageUrl },
+    )
+  }
+  return { file, fileName, url: file.url }
 }
 
 function modName(m: InstalledMod): string {

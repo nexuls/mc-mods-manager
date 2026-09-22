@@ -21,6 +21,7 @@ import type { ModrinthProvider } from '../providers/modrinth'
 import type { HashMatch, ProjectInfo } from '../providers/types'
 import { applyLookup, buildInstalledMod, projectKey } from './identify'
 import type { InstanceService } from './instance'
+import { type UpdateStore, withUpdate } from './updates'
 
 const SUGGESTION_LIMIT = 6
 const CF_SUGGESTION_LIMIT = 4
@@ -36,6 +37,8 @@ export interface LibraryDeps {
   modrinth: Modrinth
   curseforge: CurseForge
   config: Pick<ConfigService, 'config'>
+  /** Results of the last update check, added to every list. */
+  updates?: Pick<UpdateStore, 'get'>
   now?: () => number
 }
 
@@ -143,14 +146,17 @@ export class LibraryService {
     const inst = this.instance.instance
     return {
       mods: jars.map((jar) =>
-        buildInstalledMod({
-          jar,
-          record: recordOf(jar.sha1),
-          launcher: launcher.get(jar.sha1) ?? [],
-          instance: inst,
-          preferred: this.deps.config.config.preferredProvider,
-          projects: this.projects,
-        }),
+        withUpdate(
+          buildInstalledMod({
+            jar,
+            record: recordOf(jar.sha1),
+            launcher: launcher.get(jar.sha1) ?? [],
+            instance: inst,
+            preferred: this.deps.config.config.preferredProvider,
+            projects: this.projects,
+          }),
+          this.deps.updates?.get(jar.sha1),
+        ),
       ),
       warnings,
     }

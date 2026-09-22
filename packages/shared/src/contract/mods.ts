@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { InstalledMod, ModFileName, ModSuggestion, Provider } from '../domain/mod'
 import { Side } from '../domain/side'
 import { defineEndpoint } from './define'
+import { JobId } from './jobs'
+import { ProjectId } from './projects'
 
 export const ModsResponse = z.strictObject({
   mods: z.array(InstalledMod),
@@ -66,4 +68,67 @@ export const suggestions = defineEndpoint({
   path: '/api/mods/:fileName/suggestions',
   params: FileParams,
   response: z.strictObject({ suggestions: z.array(ModSuggestion) }),
+})
+
+/**
+ * Looks for a newer fitting version of every identified mod on its primary source (architecture §7.3).
+ * The results are kept for this run, so later lists include `update` too.
+ */
+export const checkUpdates = defineEndpoint({
+  method: 'POST',
+  path: '/api/mods/check-updates',
+  response: ModsResponse,
+})
+
+/** One jar an update job replaces. `item-*` job events use the index into `items`. */
+export const UpdateJobItem = z.strictObject({
+  fileName: ModFileName,
+  title: z.string(),
+  fromVersion: z.string().optional(),
+  toVersion: z.string(),
+})
+export type UpdateJobItem = z.infer<typeof UpdateJobItem>
+
+export const UpdateJobResponse = z.strictObject({
+  jobId: JobId,
+  items: z.array(UpdateJobItem),
+})
+export type UpdateJobResponse = z.infer<typeof UpdateJobResponse>
+
+export const UpdateOneBody = z.strictObject({
+  /**
+   * A version of the primary source's project, newer or older ("Change version"). Left out: the update
+   * found by the last check, or the best version for the instance.
+   */
+  versionId: ProjectId.optional(),
+})
+export type UpdateOneBody = z.infer<typeof UpdateOneBody>
+
+/**
+ * Replaces one jar with another version of it in a background job: download, verify, then the old
+ * jar goes to `.mc-mod/trash/`. A disabled jar stays disabled.
+ */
+export const updateOne = defineEndpoint({
+  method: 'POST',
+  path: '/api/mods/:fileName/update',
+  params: FileParams,
+  body: UpdateOneBody,
+  response: UpdateJobResponse,
+})
+
+export const UpdateAllBody = z.strictObject({
+  /** Only these jars; every jar with an update when left out. */
+  fileNames: z.array(ModFileName).max(500).optional(),
+})
+export type UpdateAllBody = z.infer<typeof UpdateAllBody>
+
+/**
+ * Updates every jar the last check found an update for (or the given ones), except those that have to be
+ * downloaded by hand. CONFLICT when there's nothing to update.
+ */
+export const updateAll = defineEndpoint({
+  method: 'POST',
+  path: '/api/mods/update-all',
+  body: UpdateAllBody,
+  response: UpdateJobResponse,
 })
