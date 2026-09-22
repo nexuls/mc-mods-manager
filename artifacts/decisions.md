@@ -122,3 +122,13 @@ Accepted.
   `EXDEV`). There's no restore UI yet.
 - **Web unit tests** get their own `tsconfig.test.json` project with Bun types, and the app project excludes `*.test.ts`.
 
+
+### D18 — Header theme toggle, server status badge, pointer cursor
+- **Theme** uses `next-themes` (already a dependency through the shadcn sonner Toaster): `attribute="class"`, default
+  `system`, stored in localStorage under `mc-mod.theme`. This is the one browser-storage value not parsed with zod:
+  next-themes reads and writes it itself and only applies values from its `themes` list.
+- **Server status** is a header badge (Connecting / Connected / Reconnecting / Disconnected) instead of a banner. The
+  health poll retries twice (1 s apart), so "Disconnected" means 3 failed requests in a row; "Reconnecting" shows during
+  the retries. Polling keeps going while disconnected, so the badge recovers by itself.
+- **Pointer cursor** comes from one unlayered rule in `index.css` (enabled buttons, menu items, options, tabs), since
+  Tailwind v4 dropped it and shadcn items use `cursor-default` utilities. `components/ui/*` stays untouched.

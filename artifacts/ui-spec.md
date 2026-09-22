@@ -18,7 +18,8 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
 
 - Header instance badge opens the **Instance dialog** (change version/loader; shows detection sources).
 - If `needsSetup`, the Instance dialog opens automatically and blocks until filled.
-- Server-disconnected banner if `/api/health` fails 3× in a row.
+- Header right side: server status badge (Connected / Reconnecting / Disconnected; red after `/api/health` fails 3× in a row,
+  version in the tooltip) and a theme menu (Light / Dark / System).
 
 ## Views
 
