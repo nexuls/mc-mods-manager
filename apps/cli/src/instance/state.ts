@@ -37,10 +37,25 @@ export async function writeState(root: string, state: State): Promise<void> {
   await writeFileAtomic(root, stateFile(root), `${JSON.stringify(State.parse(state), null, 2)}\n`)
 }
 
-/** Read-modify-write. Callers are serialized by the single-process server, so no locking. */
-export async function updateState(root: string, update: (s: State) => State): Promise<State> {
-  const { state } = await readState(root)
-  const next = update(state)
-  await writeState(root, next)
-  return next
+const pending = new Map<string, Promise<unknown>>()
+
+/**
+ * Read-modify-write. Updates to the same root run one after another, so concurrent requests
+ * don't overwrite each other's changes.
+ */
+export function updateState(root: string, update: (s: State) => State): Promise<State> {
+  const run = (pending.get(root) ?? Promise.resolve())
+    .catch(() => {})
+    .then(async () => {
+      const { state } = await readState(root)
+      const next = update(state)
+      await writeState(root, next)
+      return next
+    })
+  pending.set(root, run)
+  const clear = () => {
+    if (pending.get(root) === run) pending.delete(root)
+  }
+  run.then(clear, clear)
+  return run
 }

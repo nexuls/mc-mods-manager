@@ -38,3 +38,26 @@ test('schema mismatch is reported', async () => {
   await Bun.write(stateFile(root), JSON.stringify({ schemaVersion: 1, instance: { loader: 'x' } }))
   expect((await readState(root)).warning).toContain('loader')
 })
+
+test('concurrent updates are applied one after another', async () => {
+  await Promise.all([
+    updateState(root, (s) => ({ ...s, a: 1 })),
+    updateState(root, (s) => ({ ...s, b: 2 })),
+    updateState(root, (s) => ({ ...s, instance: { loader: 'quilt' } })),
+  ])
+  expect((await readState(root)).state).toEqual({
+    schemaVersion: 1,
+    a: 1,
+    b: 2,
+    instance: { loader: 'quilt' },
+  })
+})
+
+test('a failed update does not block the next one', async () => {
+  const failed = updateState(root, () => {
+    throw new Error('boom')
+  })
+  const next = updateState(root, (s) => ({ ...s, instance: { loader: 'forge' } }))
+  await expect(failed).rejects.toThrow('boom')
+  expect((await next).instance).toEqual({ loader: 'forge' })
+})
