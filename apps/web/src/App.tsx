@@ -44,8 +44,8 @@ function App() {
                 className="flex-1 justify-center"
               >
                 This page needs the link mc-mod printed when it started (it ends in{' '}
-                <code>?t=…</code>). Each run makes a new one, so links from an earlier run stop
-                working.
+                <code className="whitespace-nowrap">?t=…</code>). Each run makes a new one, so links
+                from an earlier run stop working.
               </PageMessage>
             ) : instance.isError ? (
               <PageMessage

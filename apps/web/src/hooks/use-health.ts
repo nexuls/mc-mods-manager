@@ -1,6 +1,6 @@
 import { api } from '@mc-mod/shared'
 import { useQuery } from '@tanstack/react-query'
-import { call } from '@/lib/api'
+import { ApiClientError, call } from '@/lib/api'
 
 /**
  * Polls `/api/health` every 10s. Also the CLI's heartbeat for `--exit-on-close`.
@@ -17,9 +17,22 @@ export function useHealth() {
   })
 }
 
-export type ServerStatus = 'checking' | 'connected' | 'reconnecting' | 'disconnected'
+export type ServerStatus =
+  | 'checking'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'unauthorized'
 
-export function serverStatus(health: ReturnType<typeof useHealth>): ServerStatus {
+type HealthState = Pick<
+  ReturnType<typeof useHealth>,
+  'isError' | 'isSuccess' | 'error' | 'failureCount' | 'failureReason'
+>
+
+export function serverStatus(health: HealthState): ServerStatus {
+  // The server answered, it just doesn't know this page's token (a link from an earlier run).
+  const reason = health.error ?? health.failureReason
+  if (reason instanceof ApiClientError && reason.code === 'UNAUTHORIZED') return 'unauthorized'
   if (health.isError) return 'disconnected'
   if (health.failureCount > 0) return 'reconnecting'
   if (health.isSuccess) return 'connected'

@@ -8,6 +8,7 @@ const statusInfo: Record<Status, { label: string; dot: string }> = {
   connected: { label: 'Connected', dot: 'bg-emerald-500' },
   reconnecting: { label: 'Reconnecting', dot: 'bg-amber-500 animate-pulse' },
   disconnected: { label: 'Disconnected', dot: 'bg-destructive' },
+  unauthorized: { label: 'Not signed in', dot: 'bg-amber-500' },
 }
 
 /** Header badge showing whether the local mc-mod server answers `/api/health`. */
@@ -26,15 +27,18 @@ export function ServerStatus() {
           tabIndex={0}
         >
           <span className={cn('size-2 rounded-full', dot)} aria-hidden />
-          {label}
+          {/* Just the dot on phones; the tooltip and screen readers still get the label. */}
+          <span className="max-sm:sr-only">{label}</span>
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
         {status === 'disconnected'
           ? 'The mc-mod server stopped answering. Check the terminal it runs in, then reopen the link.'
-          : health.data
-            ? `mc-mod v${health.data.version}, last checked ${new Date(health.dataUpdatedAt).toLocaleTimeString()}`
-            : 'Contacting the mc-mod server…'}
+          : status === 'unauthorized'
+            ? 'This page has no valid session. Open the link mc-mod printed in the terminal.'
+            : health.data
+              ? `mc-mod v${health.data.version}, last checked ${new Date(health.dataUpdatedAt).toLocaleTimeString()}`
+              : 'Contacting the mc-mod server…'}
       </TooltipContent>
     </Tooltip>
   )
