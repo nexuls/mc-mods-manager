@@ -78,7 +78,7 @@ Update this file at the end of every working session (see AGENTS.md).
 ## Phase 9 — Polish & release
 - [ ] Error states, empty states, loading skeletons, dark mode
 - [ ] Web component tests (happy-dom); trash restore/empty UI
-- [ ] README with usage + CurseForge key instructions
+- [x] README with usage + CurseForge key instructions (update it as Phases 7–8 land)
 - [ ] Windows/macOS path testing
 - [ ] `bun publish --dry-run`
 - [ ] Optional: `bun build --compile` standalone binaries (linux/macos/windows)
@@ -102,3 +102,4 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Installed table header stays on top while scrolling (page on narrow screens, the pane in the split). Checked with headless Chrome at 1000 and 1440px. |
 | 2026-09-22 | Project pages open over the Browse list, keeping the search, Installed state, Browse params and scroll (D24). Checked with headless Chrome at 1000 and 1440px: open → Back to results keeps scroll and filters, typing returns to the results, browser Back reopens the project. |
 | 2026-09-22 | Toggle for the split view next to the search bar, wide screens only, remembered per browser (D25). Side column now hides below 672px, since the 5 : 4 split cut off the row menus at 1440px. Checked with headless Chrome: default on, off survives a reload, nav and Browse route follow it, no toggle at 1000px; the table fits at 1280, 1440 and 1920px. |
+| 2026-09-22 | README rewritten for users (install from source, options, CurseForge key, files written, roadmap); MIT LICENSE; SECURITY.md with private reporting and the threat model. |
