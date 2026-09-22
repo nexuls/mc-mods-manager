@@ -264,9 +264,12 @@ describe('buildInstalledMod', () => {
     })
   })
 
-  test('fills Modrinth titles from fetched projects', () => {
+  test('fills titles from projects fetched from the same platform', () => {
     const projects = new Map([
-      ['P', { id: 'P', slug: 'p', title: 'Project P', description: '', side: 'server' as const }],
+      [
+        'modrinth:P',
+        { id: 'P', slug: 'p', title: 'Project P', description: '', side: 'server' as const },
+      ],
     ])
     const mod = buildInstalledMod({
       jar,

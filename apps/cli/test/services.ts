@@ -9,6 +9,7 @@ import type { InstanceService } from '../src/services/instance'
 import { JobService } from '../src/services/jobs'
 import { LibraryService } from '../src/services/library'
 import { SettingsService } from '../src/services/settings'
+import type { FakeCurseForge } from './fake-curseforge'
 import type { FakeModrinth } from './fake-modrinth'
 
 export interface ServiceOptions {
@@ -19,7 +20,7 @@ export interface ServiceOptions {
   fetch?: Fetch
   /** Defaults to an unsaved default config in a temp path (written only when a test saves settings). */
   config?: ConfigService
-  curseforge?: CurseForgeProvider
+  curseforge?: FakeCurseForge
 }
 
 /** Every service `createApp` needs, backed by fakes. */
@@ -36,7 +37,7 @@ export function makeServices(o: ServiceOptions) {
       () => config.curseforgeKey(),
       async () => new Response('{}', { status: 404 }),
     )
-  const library = new LibraryService(instance, modrinth, now)
+  const library = new LibraryService({ instance, modrinth, curseforge, config, now })
   const catalog = new CatalogService(instance, modrinth, config)
   const jobs = new JobService()
   const installer = new InstallerService({

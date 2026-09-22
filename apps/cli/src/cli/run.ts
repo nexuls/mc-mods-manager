@@ -55,7 +55,7 @@ export async function run(argv: readonly string[]): Promise<void> {
 
   const modrinth = new ModrinthProvider()
   const curseforge = new CurseForgeProvider(() => config.curseforgeKey())
-  const library = new LibraryService(instance, modrinth)
+  const library = new LibraryService({ instance, modrinth, curseforge, config })
   const catalog = new CatalogService(instance, modrinth, config)
   const jobs = new JobService()
   const { app } = createApp({

@@ -66,6 +66,13 @@ const MAX_FILES = 500
 
 const TTL = { search: 2 * 60_000, project: 10 * 60_000, versions: 5 * 60_000, tags: 24 * 3600_000 }
 
+/** CurseForge refused the key (401/403). The message tells the user to check Settings. */
+export class CurseForgeKeyError extends AppError {
+  constructor() {
+    super('PROVIDER_ERROR', 'CurseForge rejected the API key. Check it in Settings.')
+  }
+}
+
 const isNumericId = (s: string) => /^\d{1,10}$/.test(s)
 
 /** `1.21.1`, `1.21`, `1.21-pre1`, `24w14a`: the game-version entries of a file's `gameVersions`. */
@@ -530,9 +537,7 @@ export class CurseForgeProvider {
     })
 
     if (res.status === 404 && options.notFound !== undefined) return options.notFound
-    if (res.status === 401 || res.status === 403) {
-      throw new AppError('PROVIDER_ERROR', 'CurseForge rejected the API key. Check it in Settings.')
-    }
+    if (res.status === 401 || res.status === 403) throw new CurseForgeKeyError()
     if (!res.ok) {
       throw new AppError(
         res.status === 429 ? 'RATE_LIMITED' : 'PROVIDER_ERROR',

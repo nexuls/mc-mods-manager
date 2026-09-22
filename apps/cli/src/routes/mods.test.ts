@@ -2,11 +2,13 @@ import { expect, test } from 'bun:test'
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { ApiErrorSchema, api, TOKEN_HEADER } from '@mc-mod/shared'
+import { type FakeCurseForge, fakeCurseForge } from '../../test/fake-curseforge'
 import { fakeModrinth } from '../../test/fake-modrinth'
 import { copyFixture } from '../../test/fixtures'
 import { listen } from '../../test/http'
 import { makeJar } from '../../test/jar'
 import { makeServices } from '../../test/services'
+import { ConfigService } from '../config'
 import { readState } from '../instance/state'
 import { hashBytes } from '../jar/hash'
 import type { HashMatch, ProjectInfo } from '../providers/types'
@@ -52,8 +54,21 @@ const sodiumMatch: HashMatch = {
   gameVersions: ['1.21.4'],
 }
 
-/** A Prism instance (Fabric 1.21.4) with three jars, one of them known to the fake Modrinth. */
-async function setup(options: { offline?: boolean } = {}) {
+const jei: ProjectInfo = {
+  id: '238222',
+  slug: 'jei',
+  title: 'Just Enough Items',
+  description: 'Recipes',
+  side: 'unknown',
+}
+
+/**
+ * A Prism instance (Fabric 1.21.4) with three jars, one of them known to the fake Modrinth. CurseForge
+ * has no key unless `curseforge` is given.
+ */
+async function setup(
+  options: { offline?: boolean; curseforge?: FakeCurseForge; config?: ConfigService } = {},
+) {
   const f = await copyFixture('prism')
   const mods = path.join(f.dir, 'minecraft/mods')
   await Bun.write(path.join(mods, 'sodium-fabric-0.6.0.jar'), sodiumJar)
@@ -69,7 +84,13 @@ async function setup(options: { offline?: boolean } = {}) {
   const instance = await InstanceService.load(f.dir)
   const { app } = createApp({
     auth: { mode: 'token', token },
-    services: makeServices({ instance, modrinth: fake.modrinth, now: () => 1000 }),
+    services: makeServices({
+      instance,
+      modrinth: fake.modrinth,
+      now: () => 1000,
+      curseforge: options.curseforge ?? fakeCurseForge({ enabled: false }).curseforge,
+      config: options.config,
+    }),
     webDir: path.join(f.dir, 'no-web'),
     validateResponses: true,
     onInternalError: (err) => {
@@ -157,6 +178,90 @@ test('offline: lists jars with a warning and retries the lookup next time', asyn
   expect(warnings[0]).toContain("Couldn't reach Modrinth")
   const { state } = await readState(t.dir)
   expect(state.mods).toEqual({})
+})
+
+test('CurseForge: fingerprints are looked up too, and both sources are kept', async () => {
+  const cf = fakeCurseForge({
+    matches: {
+      [hashBytes(sodiumJar).cfFingerprint]: {
+        projectId: '394468',
+        versionId: '5555',
+        versionNumber: 'sodium-fabric-0.6.0.jar',
+        loaders: ['fabric'],
+        gameVersions: ['1.21.4'],
+      },
+      [hashBytes(localJar).cfFingerprint]: {
+        projectId: jei.id,
+        versionId: '77',
+        versionNumber: 'my-mod-1.0.jar',
+        loaders: ['fabric'],
+        gameVersions: ['1.21.4'],
+      },
+    },
+    projects: [jei],
+  })
+  await using t = await setup({ curseforge: cf.curseforge })
+  const { mods, warnings } = await t.list()
+  expect(warnings).toEqual([])
+  const sod = mods.find((m) => m.fileName === 'sodium-fabric-0.6.0.jar')
+  expect(sod?.sources.map((s) => [s.provider, s.projectId, s.method])).toEqual([
+    ['modrinth', sodium.id, 'hash'],
+    ['curseforge', '394468', 'hash'],
+  ])
+  expect(sod?.primarySource).toBe('modrinth')
+  const mine = mods.find((m) => m.fileName === 'my-mod-1.0.jar')
+  expect(mine).toMatchObject({
+    primarySource: 'curseforge',
+    sources: [{ provider: 'curseforge', title: 'Just Enough Items', versionId: '77' }],
+  })
+  expect(cf.calls.identify).toHaveLength(1)
+  expect(cf.calls.identify[0]).toHaveLength(3)
+  const { state } = await readState(t.dir)
+  expect(state.mods?.[sod?.sha1 ?? '']?.checkedAt).toEqual({ modrinth: 1000, curseforge: 1000 })
+
+  // Looked up once; the next list comes from state.json.
+  await t.list()
+  expect(cf.calls.identify).toHaveLength(1)
+})
+
+test('CurseForge preferred in settings becomes the primary source', async () => {
+  await using f = await copyFixture('empty')
+  const config = new ConfigService(path.join(f.dir, 'config.json'))
+  await config.update({ preferredProvider: 'curseforge' })
+  const cf = fakeCurseForge({
+    matches: {
+      [hashBytes(sodiumJar).cfFingerprint]: {
+        projectId: '394468',
+        versionId: '5555',
+        versionNumber: 'x',
+        loaders: ['fabric'],
+        gameVersions: ['1.21.4'],
+      },
+    },
+  })
+  await using t = await setup({ curseforge: cf.curseforge, config })
+  const { mods } = await t.list()
+  expect(mods.find((m) => m.fileName === 'sodium-fabric-0.6.0.jar')?.primarySource).toBe(
+    'curseforge',
+  )
+})
+
+test('CurseForge without a key is skipped; with a rejected key it warns', async () => {
+  await using off = await setup()
+  const first = await off.list()
+  expect(first.warnings).toEqual([])
+  const { state } = await readState(off.dir)
+  expect(Object.values(state.mods ?? {}).every((r) => r.checkedAt?.curseforge === undefined)).toBe(
+    true,
+  )
+
+  await using bad = await setup({ curseforge: fakeCurseForge({ badKey: true }).curseforge })
+  const res = await bad.list()
+  expect(res.warnings).toEqual([
+    'CurseForge rejected the API key. Check it in Settings. Showing what was found before.',
+  ])
+  // Modrinth's results still come through.
+  expect(res.mods.find((m) => m.fileName === 'sodium-fabric-0.6.0.jar')?.sources).toHaveLength(1)
 })
 
 test('PATCH disables and enables by renaming', async () => {

@@ -67,6 +67,9 @@ export function applyLookup(
   }
 }
 
+/** Key of a fetched project in the maps passed around here: `modrinth:AANobbMI`, `curseforge:238222`. */
+export const projectKey = (provider: Provider, id: string) => `${provider}:${id}`
+
 /** Fills title/slug/icon/side of a source from a fetched project, keeping what it already has. */
 export function enrich(source: ModSource, project: ProjectInfo | undefined): ModSource {
   if (!project) return source
@@ -212,13 +215,13 @@ export function buildInstalledMod(input: {
   launcher: readonly ModSource[]
   instance: Pick<Instance, 'loader' | 'gameVersion' | 'contentKind'>
   preferred: Provider
+  /** Projects fetched this run, keyed by `projectKey`. */
   projects: ReadonlyMap<string, ProjectInfo>
 }): InstalledMod {
   const { jar, record, preferred } = input
   const merged = mergeSources({ record, launcher: input.launcher, preferred })
-  // Only Modrinth projects are fetched for now; CurseForge sources keep what was recorded.
   const sources = merged.sources.map((s) =>
-    s.provider === 'modrinth' ? enrich(s, input.projects.get(s.projectId)) : s,
+    enrich(s, input.projects.get(projectKey(s.provider, s.projectId))),
   )
   const has = (p: Provider | undefined) => p !== undefined && sources.some((s) => s.provider === p)
   const pinned = has(record?.primarySource)

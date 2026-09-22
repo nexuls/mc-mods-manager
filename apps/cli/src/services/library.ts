@@ -1,43 +1,66 @@
 import path from 'node:path'
-import type {
-  InstalledMod,
-  ModRecord,
-  ModSource,
-  ModSuggestion,
-  ModsResponse,
-  Provider,
-  State,
-  UpdateModBody,
+import {
+  type InstalledMod,
+  type ModRecord,
+  type ModSource,
+  type ModSuggestion,
+  type ModsResponse,
+  type Provider,
+  providerLabel,
+  type State,
+  type UpdateModBody,
 } from '@mc-mod/shared'
+import type { ConfigService } from '../config'
 import { AppError } from '../errors'
 import { readLauncherMetadata } from '../instance/launcher-metadata'
 import { moveToTrash, renameInside } from '../instance/paths'
 import { readState, updateState } from '../instance/state'
 import { disabledName, enabledName, type ScannedJar, scanJar, scanJars } from '../jar/scan'
+import { CurseForgeKeyError, type CurseForgeProvider } from '../providers/curseforge'
 import type { ModrinthProvider } from '../providers/modrinth'
-import type { ProjectInfo } from '../providers/types'
-import { applyLookup, buildInstalledMod } from './identify'
+import type { HashMatch, ProjectInfo } from '../providers/types'
+import { applyLookup, buildInstalledMod, projectKey } from './identify'
 import type { InstanceService } from './instance'
 
-/** Until settings exist (Phase 6), Modrinth is the preferred provider. */
-const PREFERRED: Provider = 'modrinth'
 const SUGGESTION_LIMIT = 6
 
 type Modrinth = Pick<ModrinthProvider, 'identify' | 'getProjects' | 'getProject' | 'search'>
+type CurseForge = Pick<
+  CurseForgeProvider,
+  'enabled' | 'identify' | 'getProjects' | 'getProject' | 'search'
+>
+
+export interface LibraryDeps {
+  instance: InstanceService
+  modrinth: Modrinth
+  curseforge: CurseForge
+  config: Pick<ConfigService, 'config'>
+  now?: () => number
+}
+
+/** One platform's exact-file lookup: the jars it checked and what it found for each (by sha1). */
+type LookupResult =
+  | { provider: Provider; ok: true; checked: Map<string, HashMatch | undefined> }
+  | { provider: Provider; ok: false; warning: string }
 
 /** Installed content: scan, identify (architecture §7.2), enable/disable, remove, link. */
 export class LibraryService {
-  /** Modrinth projects fetched this run, for titles/icons of launcher-metadata and manual sources. */
+  /** Projects fetched this run (by `projectKey`), for titles/icons of launcher-metadata and manual sources. */
   private readonly projects = new Map<string, ProjectInfo>()
-  /** Project ids already requested this run, found or not, so offline runs don't retry every call. */
+  /** Project keys already requested this run, found or not, so offline runs don't retry every call. */
   private readonly requested = new Set<string>()
   private pendingList: Promise<ModsResponse> | undefined
+  private readonly instance: InstanceService
+  private readonly modrinth: Modrinth
+  private readonly curseforge: CurseForge
+  private readonly now: () => number
 
-  constructor(
-    private readonly instance: InstanceService,
-    private readonly modrinth: Modrinth,
-    private readonly now: () => number = Date.now,
-  ) {}
+  constructor(private readonly deps: LibraryDeps) {
+    this.instance = deps.instance
+    this.modrinth = deps.modrinth
+    this.curseforge = deps.curseforge
+    this.now = deps.now ?? Date.now
+  }
 
   /** Lists the content dir. Jars never looked up are identified; `refresh` looks every jar up again. */
   list(options: { refresh?: boolean } = {}): Promise<ModsResponse> {
@@ -60,40 +83,59 @@ export class LibraryService {
     const { jars, cache } = await scanJars(contentDir, state.jarCache)
     const warnings: string[] = []
     const records = new Map<string, ModRecord>()
+    const due = (provider: Provider) =>
+      jars.filter((j) => refresh || state.mods?.[j.sha1]?.checkedAt?.[provider] === undefined)
 
-    const toCheck = jars
-      .map((j) => j.sha1)
-      .filter((sha1) => refresh || state.mods?.[sha1]?.checkedAt?.modrinth === undefined)
-    let online = true
-    if (toCheck.length > 0) {
-      try {
-        const matches = await this.modrinth.identify(toCheck)
-        await this.fetchProjects(
-          [...matches.values()].map((m) => m.projectId),
-          true,
-        )
-        const now = this.now()
-        for (const sha1 of new Set(toCheck)) {
-          const match = matches.get(sha1)
-          const project = match ? this.projects.get(match.projectId) : undefined
-          records.set(sha1, applyLookup(state.mods?.[sha1], 'modrinth', match, project, now))
-        }
-      } catch (err) {
-        online = false
-        warnings.push(`${lookupWarning(err)} Showing what was found before.`)
+    // Both platforms at once (architecture §7.2 step 3). CurseForge only with a key.
+    const results = await Promise.all([
+      this.lookup(
+        'modrinth',
+        due('modrinth'),
+        (j) => j.sha1,
+        (keys) => this.modrinth.identify(keys),
+      ),
+      this.curseforge.enabled()
+        ? this.lookup(
+            'curseforge',
+            due('curseforge'),
+            (j) => j.cfFingerprint,
+            (keys) => this.curseforge.identify(keys),
+          )
+        : undefined,
+    ])
+
+    const reachable = new Set<Provider>(['modrinth', 'curseforge'])
+    if (!this.curseforge.enabled()) reachable.delete('curseforge')
+    const now = this.now()
+    for (const result of results) {
+      if (!result) continue
+      if (!result.ok) {
+        reachable.delete(result.provider)
+        warnings.push(result.warning)
+        continue
+      }
+      const ids = [...result.checked.values()].flatMap((m) => (m ? [m.projectId] : []))
+      // Only nice to have: without projects the sources just lack titles until the next lookup.
+      await this.fetchProjects(result.provider, ids, true).catch(() => {})
+      for (const [sha1, match] of result.checked) {
+        const project = match
+          ? this.projects.get(projectKey(result.provider, match.projectId))
+          : undefined
+        const before = records.get(sha1) ?? state.mods?.[sha1]
+        records.set(sha1, applyLookup(before, result.provider, match, project, now))
       }
     }
 
     const launcher = await readLauncherMetadata(root, contentDir, jars)
     const recordOf = (sha1: string) => records.get(sha1) ?? state.mods?.[sha1]
-    if (online) {
+    for (const provider of reachable) {
       const missing = jars.flatMap((j) =>
         [...(launcher.get(j.sha1) ?? []), ...manualOf(recordOf(j.sha1))]
-          .filter((s) => s.provider === 'modrinth' && !s.title)
+          .filter((s) => s.provider === provider && !s.title)
           .map((s) => s.projectId),
       )
       // Only nice to have: a failure just leaves those rows without titles.
-      await this.fetchProjects(missing, false).catch(() => {})
+      await this.fetchProjects(provider, missing, false).catch(() => {})
     }
 
     await this.save(root, state, cache, records, jars)
@@ -105,7 +147,7 @@ export class LibraryService {
           record: recordOf(jar.sha1),
           launcher: launcher.get(jar.sha1) ?? [],
           instance: inst,
-          preferred: PREFERRED,
+          preferred: this.deps.config.config.preferredProvider,
           projects: this.projects,
         }),
       ),
@@ -113,14 +155,47 @@ export class LibraryService {
     }
   }
 
-  /** Fetches Modrinth projects not seen yet this run. `force` refetches ids asked for before. */
-  private async fetchProjects(ids: readonly string[], force: boolean): Promise<void> {
-    const wanted = [...new Set(ids)].filter(
-      (id) => !this.projects.has(id) && (force || !this.requested.has(id)),
-    )
+  /**
+   * Looks jars up on one platform by `keyOf` (sha1 for Modrinth, fingerprint for CurseForge). Jars
+   * sharing a key share the answer. A failed lookup becomes a warning, so the list still loads.
+   */
+  private async lookup<K>(
+    provider: Provider,
+    jars: readonly ScannedJar[],
+    keyOf: (jar: ScannedJar) => K,
+    identify: (keys: K[]) => Promise<Map<K, HashMatch>>,
+  ): Promise<LookupResult> {
+    const checked = new Map<string, HashMatch | undefined>()
+    if (jars.length === 0) return { provider, ok: true, checked }
+    try {
+      const matches = await identify([...new Set(jars.map(keyOf))])
+      for (const j of jars) checked.set(j.sha1, matches.get(keyOf(j)))
+      return { provider, ok: true, checked }
+    } catch (err) {
+      return {
+        provider,
+        ok: false,
+        warning: `${lookupWarning(provider, err)} Showing what was found before.`,
+      }
+    }
+  }
+
+  /** Fetches projects not seen yet this run. `force` refetches ids asked for before. */
+  private async fetchProjects(
+    provider: Provider,
+    ids: readonly string[],
+    force: boolean,
+  ): Promise<void> {
+    const wanted = [...new Set(ids)].filter((id) => {
+      const key = projectKey(provider, id)
+      return !this.projects.has(key) && (force || !this.requested.has(key))
+    })
     if (wanted.length === 0) return
-    for (const id of wanted) this.requested.add(id)
-    for (const [id, p] of await this.modrinth.getProjects(wanted)) this.projects.set(id, p)
+    for (const id of wanted) this.requested.add(projectKey(provider, id))
+    const client = provider === 'modrinth' ? this.modrinth : this.curseforge
+    for (const [id, p] of await client.getProjects(wanted)) {
+      this.projects.set(projectKey(provider, id), p)
+    }
   }
 
   /**
@@ -174,7 +249,7 @@ export class LibraryService {
       }
       const project = await this.modrinth.getProject(body.link.projectId)
       if (!project) throw new AppError('NOT_FOUND', `No Modrinth project "${body.link.projectId}"`)
-      this.projects.set(project.id, project)
+      this.projects.set(projectKey('modrinth', project.id), project)
       manual = {
         provider: 'modrinth',
         projectId: project.id,
@@ -282,11 +357,13 @@ export function nameFromFile(fileName: string): string {
 }
 
 /** The warning for a failed lookup. Anything but a provider error is a bug and is rethrown. */
-function lookupWarning(err: unknown): string {
+function lookupWarning(provider: Provider, err: unknown): string {
+  const label = providerLabel[provider]
+  if (err instanceof CurseForgeKeyError) return err.message
   if (err instanceof AppError && (err.code === 'PROVIDER_ERROR' || err.code === 'RATE_LIMITED')) {
     return err.code === 'RATE_LIMITED'
-      ? 'Modrinth rate limit reached.'
-      : "Couldn't reach Modrinth to identify new jars."
+      ? `${label} rate limit reached.`
+      : `Couldn't reach ${label} to identify new jars.`
   }
   throw err
 }
