@@ -28,16 +28,17 @@ Error codes and their HTTP status (`errorStatus` in `contract/errors.ts`): `BAD_
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/mods` | `InstalledMod[]` (hash-identified, with side + update info if cached) |
-| POST | `/api/mods/refresh` | Re-scan dir, re-identify, returns list |
-| POST | `/api/mods/check-updates` | Returns `InstalledMod[]` with `update` populated |
-| PATCH | `/api/mods/:fileName` | `{ enabled?, sideOverride?, primarySource?, link?: { provider, projectId } \| null }` (rename to/from `.disabled`, set side, pin provider, manual link/unlink) |
-| GET | `/api/mods/:fileName/suggestions` | Low-confidence "possible match" candidates for an unidentified jar |
-| DELETE | `/api/mods/:fileName` | Delete jar (moved to `.mc-mod/trash/` for undo in v1.1) |
-| POST | `/api/mods/:fileName/update` | Update to `{ versionId? }` (default: best version) |
-| POST | `/api/mods/update-all` | Update every mod with an available update; streams progress (see below) |
+| GET | `/api/mods` | `{ mods: InstalledMod[], warnings: string[] }`. Jars never looked up before are identified on the way (one bulk Modrinth request); everything else comes from `state.json`. If Modrinth can't be reached, the list still returns with a warning |
+| POST | `/api/mods/refresh` | Same response; looks every jar up again |
+| PATCH | `/api/mods/:fileName` | `{ enabled?, sideOverride?: Side \| null, primarySource?: Provider \| null, link?: { provider, projectId } \| null, unlinked?: boolean }` → `InstalledMod`. `enabled` renames to/from `.jar.disabled` (409 `CONFLICT` if the target exists; the response has the new `fileName`). `link` is a manual link (Modrinth only until Phase 6: CurseForge gives `PROVIDER_DISABLED`), `null` removes it. `unlinked: true` is "treat as local" |
+| GET | `/api/mods/:fileName/suggestions` | `{ suggestions: ModSuggestion[] }`: "possible match" candidates for an unidentified jar (mod id as a Modrinth slug, then name searches). Never applied automatically |
+| DELETE | `/api/mods/:fileName` | Moves the jar to `.mc-mod/trash/<epoch ms>-<name>` → `{ fileName, trashPath }` (relative to the instance root) |
+| POST | `/api/mods/check-updates` | *(Phase 7)* Returns `InstalledMod[]` with `update` populated |
+| POST | `/api/mods/:fileName/update` | *(Phase 7)* Update to `{ versionId? }` (default: best version) |
+| POST | `/api/mods/update-all` | *(Phase 7)* Update every mod with an available update; streams progress (see below) |
 
-`:fileName` is URL-encoded and validated as a plain basename present in the content dir.
+`:fileName` is URL-encoded and validated as a plain `.jar`/`.jar.disabled` basename (`ModFileName`), then it must exist in
+the content dir (404 otherwise).
 
 ## Search & projects
 

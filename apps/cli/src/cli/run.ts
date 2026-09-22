@@ -2,9 +2,11 @@ import { statSync } from 'node:fs'
 import path from 'node:path'
 import { TOKEN_PARAM } from '@mc-mod/shared'
 import { IS_BUNDLE, parseEnv, resolveTargetDir } from '../env'
+import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
 import { createApp } from '../server'
 import { InstanceService } from '../services/instance'
+import { LibraryService } from '../services/library'
 import { VERSION } from '../version'
 import { openBrowser } from './browser'
 import { watchIdle } from './idle'
@@ -44,7 +46,7 @@ export async function run(argv: readonly string[]): Promise<void> {
 
   const { app } = createApp({
     auth,
-    services: { instance },
+    services: { instance, library: new LibraryService(instance, new ModrinthProvider()) },
     // The bundle lives at dist/bin.js with the web build copied to dist/web.
     webDir: path.join(import.meta.dir, 'web'),
     validateResponses: dev || process.env.NODE_ENV === 'test',
