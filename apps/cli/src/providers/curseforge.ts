@@ -73,6 +73,19 @@ export class CurseForgeKeyError extends AppError {
   }
 }
 
+/**
+ * CurseForge refuses `/mods/search` for some keys that work everywhere else (seen 2026-09-22 with a
+ * freshly approved key). Browse and slug lookups can't work then; everything else still does.
+ */
+export class CurseForgeSearchForbiddenError extends AppError {
+  constructor() {
+    super(
+      'PROVIDER_ERROR',
+      "CurseForge doesn't let your API key search, so CurseForge can't be browsed here. Identifying jars, project pages and installs still work.",
+    )
+  }
+}
+
 const isNumericId = (s: string) => /^\d{1,10}$/.test(s)
 
 /** `1.21.1`, `1.21`, `1.21-pre1`, `24w14a`: the game-version entries of a file's `gameVersions`. */
@@ -273,11 +286,26 @@ export class CurseForgeProvider {
     } catch (err) {
       return { ok: false, message: `Can't reach CurseForge: ${String(err)}` }
     }
-    if (res.ok) return { ok: true, message: 'The key works.' }
     if (res.status === 401 || res.status === 403) {
       return { ok: false, message: 'CurseForge rejected this key.' }
     }
-    return { ok: false, message: `CurseForge returned HTTP ${res.status}.` }
+    if (!res.ok) return { ok: false, message: `CurseForge returned HTTP ${res.status}.` }
+    // Some keys work everywhere but search; say so now rather than on the Browse page.
+    const search = await this.fetch(
+      `${CURSEFORGE_API}/mods/search?gameId=${MINECRAFT}&pageSize=1`,
+      {
+        headers: { 'x-api-key': key, Accept: 'application/json' },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      },
+    ).catch(() => undefined)
+    if (search?.status === 401 || search?.status === 403) {
+      return {
+        ok: true,
+        message:
+          "The key works, but CurseForge doesn't let it search: you can't browse CurseForge here. Identifying jars, project pages and installs work.",
+      }
+    }
+    return { ok: true, message: 'The key works.' }
   }
 
   /** Exact-file lookup by murmur2 fingerprint. Unknown fingerprints are missing from the map. */
@@ -500,7 +528,13 @@ export class CurseForgeProvider {
       {
         ttlMs: TTL.project,
       },
-    )
+    ).catch((err: unknown) => {
+      if (!(err instanceof CurseForgeSearchForbiddenError)) throw err
+      throw new AppError(
+        'BAD_REQUEST',
+        "Your CurseForge key can't look projects up by name. Use the project ID from the CurseForge page instead.",
+      )
+    })
     return res.data.find((m) => m.slug === idOrSlug) ?? null
   }
 
@@ -537,7 +571,11 @@ export class CurseForgeProvider {
     })
 
     if (res.status === 404 && options.notFound !== undefined) return options.notFound
-    if (res.status === 401 || res.status === 403) throw new CurseForgeKeyError()
+    if (res.status === 401 || res.status === 403) {
+      throw pathAndQuery.startsWith('/mods/search')
+        ? new CurseForgeSearchForbiddenError()
+        : new CurseForgeKeyError()
+    }
     if (!res.ok) {
       throw new AppError(
         res.status === 429 ? 'RATE_LIMITED' : 'PROVIDER_ERROR',

@@ -90,5 +90,6 @@ test('test-curseforge checks the given key, or the saved one', async () => {
   expect((await post({ apiKey: 'bad-key' })).ok).toBe(false)
   await t.config.update({ curseforgeApiKey: 'good-key' })
   expect(await post({})).toEqual({ ok: true, message: 'The key works.' })
-  expect(t.keys).toEqual(['bad-key', 'good-key'])
+  // A working key is checked twice: the key itself, then whether it may search.
+  expect(t.keys).toEqual(['bad-key', 'good-key', 'good-key'])
 })

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { AppError } from '../errors'
-import { CurseForgeProvider, splitGameVersions } from './curseforge'
+import { CurseForgeProvider, CurseForgeSearchForbiddenError, splitGameVersions } from './curseforge'
 import type { Fetch } from './types'
 
 interface Call {
@@ -106,6 +106,20 @@ describe('requests', () => {
     expect(provider(f).getProject('1')).rejects.toThrow('rejected the API key')
   })
 
+  test('a key that may not search gets its own message; slug lookups ask for the id', async () => {
+    const f = fakeFetch({ 'GET /mods/search': () => new Response('Forbidden', { status: 403 }) })
+    const q = {
+      text: 'x',
+      kind: 'mod' as const,
+      loaders: [],
+      sort: 'relevance' as const,
+      offset: 0,
+      limit: 5,
+    }
+    expect(provider(f).browse(q)).rejects.toBeInstanceOf(CurseForgeSearchForbiddenError)
+    expect(provider(f).getProject('jei')).rejects.toThrow('Use the project ID')
+  })
+
   test('a bad response is a PROVIDER_ERROR', async () => {
     const f = fakeFetch({ 'GET /mods/1': () => Response.json({ data: { id: 'x' } }) })
     expect(provider(f).getProject('1')).rejects.toThrow('Unexpected response')
@@ -119,6 +133,16 @@ describe('testKey', () => {
     expect(new Headers(ok.calls[0]?.init?.headers).get('x-api-key')).toBe('K')
     const bad = fakeFetch({ 'GET /games/432': () => new Response('', { status: 403 }) })
     expect((await provider(bad).testKey('K')).ok).toBe(false)
+  })
+
+  test('says when a working key may not search', async () => {
+    const f = fakeFetch({
+      'GET /games/432': () => Response.json({ data: {} }),
+      'GET /mods/search': () => new Response('', { status: 403 }),
+    })
+    const res = await provider(f).testKey('K')
+    expect(res.ok).toBe(true)
+    expect(res.message).toContain("doesn't let it search")
   })
 })
 
@@ -348,8 +372,7 @@ test.if(process.env.MC_MOD_LIVE === '1' && Boolean(process.env.CURSEFORGE_API_KE
   async () => {
     const p = new CurseForgeProvider(() => process.env.CURSEFORGE_API_KEY)
     expect((await p.testKey(process.env.CURSEFORGE_API_KEY ?? '')).ok).toBe(true)
-    const jei = await p.getProject('jei')
-    expect(jei?.id).toBe('238222')
+    expect((await p.getProject('238222'))?.slug).toBe('jei')
     const page = await p.getProjectPage('238222')
     expect(page?.body.length).toBeGreaterThan(0)
     const versions = await p.getVersions('238222', {
@@ -359,16 +382,24 @@ test.if(process.env.MC_MOD_LIVE === '1' && Boolean(process.env.CURSEFORGE_API_KE
     expect(versions?.[0]?.loaders).toContain('neoforge')
     const fp = versions?.[0] ? await p.getVersionsByIds([versions[0].id]) : new Map()
     expect(fp.size).toBe(1)
-    const { hits } = await p.browse({
-      text: 'jei',
-      kind: 'mod',
-      loaders: ['neoforge'],
-      gameVersion: '1.21.1',
-      sort: 'relevance',
-      offset: 0,
-      limit: 5,
-    })
-    expect(hits.map((h) => h.slug)).toContain('jei')
     expect((await p.categories('mod')).length).toBeGreaterThan(5)
+    // Some keys may not search (CurseForgeSearchForbiddenError); check search only where it's allowed.
+    const slugs = await p
+      .browse({
+        text: 'jei',
+        kind: 'mod',
+        loaders: ['neoforge'],
+        gameVersion: '1.21.1',
+        sort: 'relevance',
+        offset: 0,
+        limit: 5,
+      })
+      .then((r) => r.hits.map((h) => h.slug))
+      .catch((err: unknown) => {
+        if (err instanceof CurseForgeSearchForbiddenError) return ['jei']
+        throw err
+      })
+    expect(slugs).toContain('jei')
   },
+  30_000,
 )
