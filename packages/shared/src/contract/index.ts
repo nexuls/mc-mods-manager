@@ -7,6 +7,7 @@ import * as meta from './meta'
 import * as mods from './mods'
 import * as projects from './projects'
 import * as settings from './settings'
+import * as share from './share'
 import * as trash from './trash'
 
 export * from './define'
@@ -46,6 +47,7 @@ export {
 export * from './query'
 export * from './session'
 export { KeySource, Settings, SettingsBody, TestKeyResponse } from './settings'
+export { ImportCheck, ImportItem, ImportMatch, ImportPlan, ImportStatus } from './share'
 export { TrashId, TrashItem, TrashResponse } from './trash'
 
 /** The whole `/api` contract. Backend routes and frontend calls both go through it. */
@@ -59,5 +61,6 @@ export const api = {
   mods,
   projects,
   settings,
+  share,
   trash,
 }

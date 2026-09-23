@@ -9,6 +9,7 @@ import { instanceRoutes } from './routes/instance'
 import { modsRoutes } from './routes/mods'
 import { projectsRoutes } from './routes/projects'
 import { settingsRoutes } from './routes/settings'
+import { shareRoutes } from './routes/share'
 import { trashRoutes } from './routes/trash'
 import { type Auth, checkHost, requireToken } from './security'
 import type { CatalogService } from './services/catalog'
@@ -18,6 +19,7 @@ import type { JobService } from './services/jobs'
 import type { LibraryService } from './services/library'
 import type { ServerExportService } from './services/server-export'
 import type { SettingsService } from './services/settings'
+import type { ShareService } from './services/share'
 import type { TrashService } from './services/trash'
 import type { UpdatesService } from './services/updates'
 
@@ -38,6 +40,7 @@ export interface AppOptions {
     settings: SettingsService
     updates: UpdatesService
     serverExport: ServerExportService
+    share: ShareService
     trash: TrashService
   }
   /** The built web UI. Missing in source/dev runs, where Vite serves the UI. */
@@ -68,9 +71,11 @@ export function createApp(options: AppOptions): { app: Express; apiRouter: expre
   installRoutes(apiRouter, options.services)
   settingsRoutes(apiRouter, options.services)
   exportRoutes(apiRouter, options.services)
+  shareRoutes(apiRouter, options.services)
   trashRoutes(apiRouter, options.services)
 
-  app.use('/api', express.json())
+  // A shared mod list of a few hundred mods is past body-parser's 100kb default.
+  app.use('/api', express.json({ limit: '4mb' }))
   app.use(apiRouter)
   app.use('/api', apiNotFound)
   if ('embedded' in options.web) serveEmbeddedWeb(app, options.web.embedded)

@@ -10,6 +10,7 @@ import { JobService } from '../src/services/jobs'
 import { LibraryService } from '../src/services/library'
 import { ServerExportService } from '../src/services/server-export'
 import { SettingsService } from '../src/services/settings'
+import { ShareService } from '../src/services/share'
 import { TrashService } from '../src/services/trash'
 import { UpdateStore, UpdatesService } from '../src/services/updates'
 import type { FakeCurseForge } from './fake-curseforge'
@@ -74,6 +75,14 @@ export function makeServices(o: ServiceOptions) {
     openFolder: o.openFolder ?? (async () => true),
     now,
   })
+  const share = new ShareService({
+    instance,
+    library,
+    catalog,
+    curseforge,
+    version: '1.0.0-test',
+    now,
+  })
   return {
     instance,
     library,
@@ -83,6 +92,7 @@ export function makeServices(o: ServiceOptions) {
     settings,
     updates,
     serverExport,
+    share,
     trash: new TrashService({ instance }),
     config,
     curseforge,

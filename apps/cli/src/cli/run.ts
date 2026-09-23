@@ -14,6 +14,7 @@ import { JobService } from '../services/jobs'
 import { LibraryService } from '../services/library'
 import { ServerExportService } from '../services/server-export'
 import { SettingsService } from '../services/settings'
+import { ShareService } from '../services/share'
 import { TrashService } from '../services/trash'
 import { UpdateStore, UpdatesService } from '../services/updates'
 import { VERSION } from '../version'
@@ -87,6 +88,7 @@ export async function run(argv: readonly string[], runOptions: RunOptions = {}):
       installer,
       updates: new UpdatesService({ library, catalog, installer, curseforge, store }),
       serverExport: new ServerExportService({ instance, library, config, openFolder }),
+      share: new ShareService({ instance, library, catalog, curseforge, version: VERSION }),
       trash: new TrashService({ instance }),
     },
     web: webAssets(runOptions),
