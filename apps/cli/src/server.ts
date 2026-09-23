@@ -105,7 +105,9 @@ function serveWeb(app: Express, webDir: string): void {
       return
     }
     res.setHeader('Cache-Control', 'no-store')
-    res.sendFile(index)
+    // With `root`, only the relative part is checked for dotfiles. An absolute path would 404 under
+    // a global install in `~/.bun/…`.
+    res.sendFile('index.html', { root: webDir })
   })
 }
 

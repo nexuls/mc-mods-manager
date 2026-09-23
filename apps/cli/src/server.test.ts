@@ -101,6 +101,17 @@ describe('web', () => {
     expect(await res.text()).toContain('<title>mc-mod</title>')
   })
 
+  // `bun add -g` installs under ~/.bun/install/global/…
+  test('serves index.html from a web dir under a dot directory', async () => {
+    const dotWebDir = path.join(webDir, '.bun/web')
+    await Bun.write(path.join(dotWebDir, 'index.html'), '<!doctype html><title>mc-mod</title>')
+    const { app } = createApp({ auth, services, web: { dir: dotWebDir }, validateResponses: true })
+    await using s = await listen(app)
+    const res = await fetch(`${s.url}/`)
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('<title>mc-mod</title>')
+  })
+
   test('explains a missing web build', async () => {
     const { app } = createApp({
       auth,
