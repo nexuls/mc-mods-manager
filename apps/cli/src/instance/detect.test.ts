@@ -4,7 +4,7 @@ import { Instance } from '@mc-mod/shared'
 import { copyFixture } from '../../test/fixtures'
 import { makeJar } from '../../test/jar'
 import { detectInstance } from './detect'
-import { parseCurseForgeLoader } from './detectors/launchers'
+import { javaMajor, parseCurseForgeLoader } from './detectors/launchers'
 
 async function detect(fixture: string, sub = '.', options = {}) {
   await using f = await copyFixture(fixture)
@@ -65,6 +65,31 @@ describe('launcher manifests', () => {
       loader: 'fabric',
       loaderVersion: '0.16.5',
     })
+  })
+
+  test('Java version: instance.cfg wins, then the version manifest, then the game version', async () => {
+    // Prism records the Java it ran with.
+    expect((await detect('prism')).javaVersion).toEqual({ major: 21, source: 'detected' })
+    // A modded version json inherits `javaVersion` from the release it extends.
+    expect((await detect('vanilla-launcher', '.minecraft/profiles/fabric')).javaVersion).toEqual({
+      major: 21,
+      source: 'detected',
+    })
+    // Nothing wrote it down, so it comes from what 1.21.1 needs.
+    expect((await detect('tlauncher', '.minecraft/home/NeoForge 1.21.1/mods')).javaVersion).toEqual(
+      {
+        major: 21,
+        source: 'game-version',
+      },
+    )
+    expect((await detect('empty')).javaVersion).toBeNull()
+  })
+
+  test('javaMajor', () => {
+    expect(javaMajor('21.0.8')).toBe(21)
+    expect(javaMajor('1.8.0_292')).toBe(8)
+    expect(javaMajor('17')).toBe(17)
+    expect(javaMajor('nonsense')).toBeUndefined()
   })
 
   test('parseCurseForgeLoader', () => {

@@ -10,6 +10,8 @@ export interface Finding {
   gameVersion?: string
   loader?: Loader
   loaderVersion?: string
+  /** Java major version, as the launcher or the version manifest records it. */
+  javaVersion?: number
   /** Absolute path. */
   contentDir?: string
   warnings?: string[]

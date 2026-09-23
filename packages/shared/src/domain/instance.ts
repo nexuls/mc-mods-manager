@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { JavaInfo } from './java'
 import { ContentKind, Loader } from './loader'
 
 export const InstanceKind = z.enum(['client', 'server'])
@@ -23,6 +24,7 @@ export const InstanceField = z.enum([
   'gameVersion',
   'loader',
   'loaderVersion',
+  'javaVersion',
   'contentDir',
 ])
 export type InstanceField = z.infer<typeof InstanceField>
@@ -58,6 +60,8 @@ export const Instance = z.strictObject({
   gameVersion: GameVersion.nullable(),
   loader: Loader.nullable(),
   loaderVersion: LoaderVersion.nullable(),
+  /** The Java the instance runs on, detected or derived from the game version; null when neither knows. */
+  javaVersion: JavaInfo.nullable(),
   contentKind: ContentKind,
   /** Absolute path of `mods/` or `plugins/`. */
   contentDir: z.string(),

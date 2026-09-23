@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { GameVersion, Loader, loaderInfo, ModFileName, State } from './index'
+import { GameVersion, javaForGameVersion, Loader, loaderInfo, ModFileName, State } from './index'
 
 test('every loader has info', () => {
   for (const l of Loader.options) expect(loaderInfo[l].label).toBeTruthy()
@@ -39,4 +39,22 @@ describe('ModFileName', () => {
       expect(ModFileName.safeParse(n).success).toBe(false)
     },
   )
+})
+
+describe('javaForGameVersion', () => {
+  test.each([
+    ['1.21.1', 21],
+    ['1.20.5', 21],
+    ['1.20.4', 17],
+    ['1.18', 17],
+    ['1.17.1', 16],
+    ['1.16.5', 8],
+    ['1.7.10', 8],
+  ])('%s needs Java %i', (version, major) => {
+    expect(javaForGameVersion(version)).toBe(major)
+  })
+
+  test.each(['24w14a', '1.21-pre1', '26.2', ''])('%p gives null', (v) => {
+    expect(javaForGameVersion(v)).toBeNull()
+  })
 })

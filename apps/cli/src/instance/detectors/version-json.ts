@@ -16,6 +16,8 @@ const Arg = z.union([
 const VersionJson = z.looseObject({
   id: z.string(),
   inheritsFrom: z.string().optional(),
+  /** Mojang's version manifest; modded jsons inherit it from the version they extend. */
+  javaVersion: z.looseObject({ majorVersion: z.number().int() }).optional(),
   jar: z.string().optional(),
   libraries: z.array(z.looseObject({ name: z.string() })).optional(),
   arguments: z.looseObject({ game: z.array(Arg).optional() }).optional(),
@@ -28,6 +30,7 @@ export interface VersionInfo {
   gameVersion: string
   loader: Loader
   loaderVersion?: string
+  javaVersion?: number
 }
 
 const LIBRARY_LOADERS: [RegExp, Loader][] = [
@@ -84,7 +87,17 @@ export async function readVersion(mcRoot: string, id: string): Promise<VersionIn
     v.jar ??
     (loader === 'vanilla' ? v.id : undefined)
   if (!gameVersion) return undefined
-  return { id, file, gameVersion, loader, loaderVersion }
+  // A modded json rarely carries the Java version itself; the version it extends does.
+  const inherited =
+    v.javaVersion === undefined && v.inheritsFrom !== undefined && v.inheritsFrom !== id
+      ? VersionJson.safeParse(
+          await readJson(path.join(mcRoot, 'versions', v.inheritsFrom, `${v.inheritsFrom}.json`)),
+        )
+      : undefined
+  const javaVersion = (
+    v.javaVersion ?? (inherited?.success ? inherited.data.javaVersion : undefined)
+  )?.majorVersion
+  return { id, file, gameVersion, loader, loaderVersion, javaVersion }
 }
 
 const LauncherProfiles = z.looseObject({
@@ -109,6 +122,7 @@ function toFinding(v: VersionInfo, source: string, confidence: Finding['confiden
     gameVersion: v.gameVersion,
     loader: v.loader,
     loaderVersion: v.loaderVersion,
+    javaVersion: v.javaVersion,
   }
 }
 

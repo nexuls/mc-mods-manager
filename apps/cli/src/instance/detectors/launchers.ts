@@ -1,7 +1,7 @@
 import path from 'node:path'
 import type { Loader } from '@mc-mod/shared'
 import { z } from 'zod'
-import { readJson } from './fs'
+import { readJson, readText } from './fs'
 import type { Finding, Layout } from './types'
 
 // Launcher manifests. Schemas are loose and cover only the fields we read.
@@ -16,6 +16,23 @@ const PRISM_COMPONENTS: Record<string, Loader> = {
 const MmcPack = z.looseObject({
   components: z.array(z.looseObject({ uid: z.string(), version: z.string().optional() })),
 })
+
+/**
+ * A Java runtime version (`21.0.8`, `1.8.0_292`) as its major version: 21 and 8. Java 8 and older
+ * put the major version second, behind the `1.`.
+ */
+export function javaMajor(version: string): number | undefined {
+  const m = /^(?:1\.)?(\d+)/.exec(version.trim())
+  const major = m?.[1] ? Number(m[1]) : Number.NaN
+  return Number.isInteger(major) && major >= 6 && major <= 99 ? major : undefined
+}
+
+/** Prism/MultiMC's `instance.cfg`: `JavaVersion=21.0.8`, written once the instance has run. */
+async function prismJava(root: string): Promise<number | undefined> {
+  const cfg = await readText(path.join(root, 'instance.cfg'))
+  const value = cfg ? /^JavaVersion=(.+)$/m.exec(cfg)?.[1] : undefined
+  return value ? javaMajor(value) : undefined
+}
 
 /** Prism Launcher / MultiMC: `mmc-pack.json`. */
 export async function detectPrism({ root }: Layout): Promise<Finding[]> {
@@ -34,6 +51,7 @@ export async function detectPrism({ root }: Layout): Promise<Finding[]> {
       gameVersion: mc?.version,
       loader: loader ? (PRISM_COMPONENTS[loader.uid] ?? 'vanilla') : 'vanilla',
       loaderVersion: loader?.version,
+      javaVersion: await prismJava(root),
     },
   ]
 }

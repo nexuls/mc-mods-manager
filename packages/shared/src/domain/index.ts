@@ -1,6 +1,7 @@
 export * from './config'
 export * from './instance'
 export * from './jar-meta'
+export * from './java'
 export * from './loader'
 export * from './mod'
 export * from './project'

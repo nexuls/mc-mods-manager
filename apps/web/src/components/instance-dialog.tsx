@@ -66,6 +66,7 @@ const fieldLabel: Record<InstanceField, string> = {
   gameVersion: 'game version',
   loader: 'loader',
   loaderVersion: 'loader version',
+  javaVersion: 'Java version',
   contentDir: 'content folder',
 }
 

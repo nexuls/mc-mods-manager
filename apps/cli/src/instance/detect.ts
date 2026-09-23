@@ -7,6 +7,8 @@ import {
   type Instance,
   type InstanceField,
   type InstanceOverrides,
+  type JavaInfo,
+  javaForGameVersion,
   loaderInfo,
   type Suggestion,
 } from '@mc-mod/shared'
@@ -73,6 +75,7 @@ export async function detectInstance(
   const won = merge(all)
 
   const loader = won.loader?.value ?? null
+  const gameVersion = won.gameVersion?.value ?? null
   const contentKind: ContentKind = loader ? loaderInfo[loader].contentKind : 'mod'
   const contentDir =
     won.contentDir?.value ??
@@ -88,9 +91,10 @@ export async function detectInstance(
     root: layout.root,
     gameDir: layout.gameDir,
     kind: won.kind?.value ?? 'client',
-    gameVersion: won.gameVersion?.value ?? null,
+    gameVersion,
     loader,
     loaderVersion: won.loaderVersion?.value ?? null,
+    javaVersion: javaOf(won.javaVersion?.value, gameVersion),
     contentKind,
     contentDir,
     detection: all
@@ -125,7 +129,9 @@ function merge(findings: Finding[]) {
     .sort((a, b) => RANK[b.f.confidence] - RANK[a.f.confidence] || a.i - b.i)
     .map(({ f }) => f)
 
-  function pick<K extends 'kind' | 'gameVersion' | 'loader' | 'contentDir'>(key: K) {
+  function pick<K extends 'kind' | 'gameVersion' | 'loader' | 'javaVersion' | 'contentDir'>(
+    key: K,
+  ) {
     const finding = ranked.find((f) => f[key] !== undefined)
     const value = finding?.[key]
     return finding && value !== undefined ? { value, finding } : undefined
@@ -139,6 +145,7 @@ function merge(findings: Finding[]) {
   return {
     kind: pick('kind'),
     gameVersion: pick('gameVersion'),
+    javaVersion: pick('javaVersion'),
     loader,
     loaderVersion:
       versionFrom?.loaderVersion !== undefined
@@ -146,6 +153,13 @@ function merge(findings: Finding[]) {
         : undefined,
     contentDir: pick('contentDir'),
   }
+}
+
+/** What a launcher recorded, or else what this game version needs (`java.ts`). */
+function javaOf(detected: number | undefined, gameVersion: string | null): JavaInfo | null {
+  if (detected !== undefined) return { major: detected, source: 'detected' }
+  const derived = gameVersion ? javaForGameVersion(gameVersion) : null
+  return derived === null ? null : { major: derived, source: 'game-version' }
 }
 
 /** `<gameDir>/mods` or `<gameDir>/plugins`; with an unknown loader, whichever exists (mods first). */
