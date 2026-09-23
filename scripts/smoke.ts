@@ -34,8 +34,9 @@ if (printed !== version) {
 
 // An empty folder is enough: the server starts and asks for setup in the UI.
 const dir = await mkdtemp(path.join(tmpdir(), 'mc-mod-smoke-'))
-const port = 47_000 + Math.floor(Math.random() * 1000)
-const proc = Bun.spawn([...cmd, '--dir', dir, '--no-open', '--port', String(port)], {
+// No --port: the CLI picks a free one when its default is taken, and the URL it prints says which.
+// A random fixed port can hit a real service (WinRM listens on 47001 on Windows runners).
+const proc = Bun.spawn([...cmd, '--dir', dir, '--no-open'], {
   stdout: 'pipe',
   stderr: 'pipe',
   env: { ...process.env, NO_COLOR: '1' },
