@@ -326,7 +326,7 @@ function ProjectCard({
       {/* Narrow lists (the split view) get a smaller icon and title, fewer stats and no author. */}
       <ProjectIcon
         url={hit.iconUrl}
-        className="h-full size-auto rounded-2xl @max-xl:size-20 @max-xl:rounded-xl"
+        className="h-full size-auto aspect-square rounded-2xl @max-xl:size-20 @max-xl:rounded-xl"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex min-w-0 items-baseline gap-2">

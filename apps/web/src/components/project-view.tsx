@@ -63,7 +63,7 @@ export function ProjectView({ provider, id, back }: { provider: Provider; id: st
 
   return (
     <div className="flex flex-col gap-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
+      <Button variant="ghost" asChild className="self-start">
         <Link to={back}>
           <ArrowLeftIcon />
           Back to results
