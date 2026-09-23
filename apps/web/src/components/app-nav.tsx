@@ -1,5 +1,12 @@
 import type { ContentKind } from '@mc-mod/shared'
-import { CompassIcon, type LucideIcon, PackageIcon, ServerIcon, SettingsIcon } from 'lucide-react'
+import {
+  CompassIcon,
+  type LucideIcon,
+  PackageIcon,
+  ServerIcon,
+  SettingsIcon,
+  Share2Icon,
+} from 'lucide-react'
 import { ViewTransition } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { useSplitView } from '@/hooks/use-split-view'
@@ -19,6 +26,7 @@ const links: {
   // Project pages are reached from Browse.
   { to: '/browse', label: 'Browse', Icon: CompassIcon, also: '/project/', library: true },
   { to: '/export', label: 'Export', Icon: ServerIcon, modsOnly: true },
+  { to: '/share', label: 'Share', Icon: Share2Icon },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 

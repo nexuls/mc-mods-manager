@@ -10,6 +10,7 @@ import { LibraryView } from '@/components/library-view'
 import { PageMessage } from '@/components/page-message'
 import { ScrollPanel } from '@/components/scroll-panel'
 import { SettingsView } from '@/components/settings-view'
+import { ShareView } from '@/components/share-view'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInstance } from '@/hooks/use-instance'
@@ -87,6 +88,10 @@ function App() {
                         <Route
                           path="export"
                           element={<ExportView plugins={ready.contentKind === 'plugin'} />}
+                        />
+                        <Route
+                          path="share"
+                          element={<ShareView contentKind={ready.contentKind} />}
                         />
                         <Route path="settings" element={<SettingsView />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
