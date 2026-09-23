@@ -3,7 +3,7 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped.
 Update this file at the end of every working session (see AGENTS.md).
 
-**Current phase:** 9 — Polish & release (Phase 8 Server export done).
+**Current phase:** 10 — Sharing mod lists (Phase 9 Polish & release done).
 
 ## Phase 0 — Planning
 - [x] Architecture, API spec, UI spec, detection notes, external API notes
@@ -86,6 +86,13 @@ Update this file at the end of every working session (see AGENTS.md).
 - [x] `bun build --compile` standalone binaries (linux x64/arm64, macOS x64/arm64, windows x64) with the web UI embedded (`scripts/compile.ts`)
 - [x] Manual release workflow: version bump, npm publish, tagged GitHub release with binaries (`.github/workflows/release.yml`, `releasing.md`)
 
+## Phase 10 — Share & import mod lists
+- [x] Java version on the instance (`JavaInfo`, detected or derived from the game version)
+- [x] Mod list file schema (`domain/mod-list.ts`) + `GET /api/share/export`, `POST /api/share/import`
+- [x] `ShareService`: export the list, plan an import (re-picked versions, installed/local/manual/unavailable)
+- [x] Web: `/share` view (export button, file picker) and the import dialog with checkboxes
+- [ ] Follow-up: follow required dependencies that a shared list doesn't include
+
 ## Session log
 | Date | Summary |
 |---|---|
@@ -113,3 +120,5 @@ Update this file at the end of every working session (see AGENTS.md).
 | 2026-09-22 | Phase 8 done: `GET /api/export/preview`, `POST /api/export` (copy into `<instance>/server-mods/` with an optional clean, or a stored zip in the instance root) and `/api/export/reveal`; the target is a plain folder name that can't be or hold the mods folder (D29). Web `/export` view with Included / Needs review / Excluded groups, per-export checkboxes and the shared side menu (`ModSide`, moved out of the Installed row). On a scratch copy of the dev instance: 41 of 51 jars included (10 client-only excluded, none unknown), copy, clean copy (removed a planted stale jar after the confirm) and a 139 MB zip of 41 jars. Checked with headless Chrome (puppeteer-core, scratch only) at 1440px in dark and light, and 420px; Open folder wasn't clicked (it would open a real file manager). |
 | 2026-09-22 | Phase 9: release pipeline (D30). `bun build --compile` binaries for linux/macOS/windows embed the web UI (`scripts/compile.ts`, `createApp({ web: { embedded } })`); the npm package `mc-mod` has no runtime deps and ships README/LICENSE; `scripts/version.ts` bumps the one version in `apps/cli/package.json`; manual Release workflow (test on 3 OSes → bump → build → smoke → push tag → `bun publish` → GitHub release with binaries and notes from Conventional Commits) and a manual Test workflow. Checked locally: packed tarball installs with zero deps and runs; the compiled binary serves the UI, ignores a planted `.env`, and passes `scripts/smoke.ts`; actionlint passes. Not run on GitHub yet. Polish: page skeleton / error / sign-in states, error boundary, `PageMessage`, Not signed in status, phone header; trash API + dialog + Undo (D31); happy-dom component tests; `samePath` for launcher profile dirs on Windows/macOS. UI checked with headless Chrome on a scratch copy of the dev instance (1440px and 420px, dark and light): remove → Undo restored the jar, Trash restore, no-token page. |
 | 2026-09-23 | View transitions on navigation with React 19.3's `<ViewTransition>` (D32): the route content fades and slides, the navigation highlight slides between items, `root` opted out, reduced motion respected. Checked with headless Chrome on a scratch instance (6 jars) at 1440px split, 1100px and 420px: `startViewTransition` fires on every nav (nav clicks, opening a project, search leaving a project), frame-by-frame the highlight slides behind the labels, and the console stays clean. |
+| 2026-09-23 | Phase 10: share the mod list (D33). `GET /api/share/export` writes `mc-mod/mod-list` JSON (instance + every jar with its source); `POST /api/share/import` plans what it would install here, re-picking versions for this instance and marking installed, local, manual and unavailable entries. New `/share` view with an export button and a file picker, and an import dialog with the two instances side by side, the warnings and per-mod checkboxes; installing runs the normal install job. Java version is now part of the instance (Prism `instance.cfg`, the inherited version manifest, else derived from the game version). Checked live on two scratch instances: an 8-mod list exported from one planned 6 installs and 2 already-installed in the other, unticking updated the count and size, and the file downloaded as `mc-mod-neoforge-1.21.1-2026-09-23.json`. UI checked with headless Chrome at 1440px (dark) and 430px (light); console clean. |
+

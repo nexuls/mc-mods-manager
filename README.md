@@ -29,6 +29,9 @@ with its required dependencies.
 - **Exports server mods.** It copies the mods a server needs (server-side and both-sides, plus those
   whose side nobody knows, for you to review) into `server-mods/` or a zip, ready to upload.
   Client-only and disabled mods are left out, and your `mods/` folder isn't changed.
+- **Shares the mod list.** **Share** writes a JSON file with the game version, loader, loader version,
+  Java version and every mod with its version. Import someone else's file and mc-mod picks versions that
+  fit *your* instance, leaves out what you already have, and installs the ones you tick.
 - **Enables, disables and removes jars.** Disabling renames the file to `.jar.disabled`. Removed jars
   go to `.mc-mod/trash/` and aren't deleted: undo right away, or restore them later from **Trash**.
 - **Runs on your machine only.** The server listens on `127.0.0.1` and needs a per-run session
@@ -219,6 +222,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 - [x] CurseForge search, installs and identification
 - [x] Update checks, and updating one mod or all of them
 - [x] Server export: copy the server-side mods to a folder or a zip for upload
+- [x] Share the mod list as a file, and import someone else's
 - [x] Published to npm as `mc-mod`, with standalone binaries on GitHub releases
 
 Progress is tracked in [artifacts/progress.md](artifacts/progress.md).

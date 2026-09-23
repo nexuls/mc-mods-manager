@@ -284,13 +284,30 @@ remove any), or **zip** (`<dirName>-<version>-<date>.zip` in the instance root, 
 is a plain name in the instance root and never the mods folder or one holding it. Never modifies the source `mods/`
 dir (`services/server-export.ts`, D29).
 
+### 7.7 Sharing the mod list
+A mod list file (`packages/shared/src/domain/mod-list.ts`) holds the instance (game version, loader,
+loader version, Java version) and every jar: display name, version, enabled state, side, size, sha1 and
+its platform source when it has one. Export writes what `LibraryService.list()` already knows; nothing
+is downloaded.
+
+Import is a plan, like installing (§7.4): for each entry, an installed jar with the same sha1 (or the
+same project) is `installed`; an entry with no source is `local`; otherwise the listed version is used
+when it fits this instance, and the best fitting version replaces it when it doesn't (`rankVersions`,
+§7.3). Instance differences (game version, loader, loader version, Java) become `checks` the dialog
+shows side by side, plus warnings. Nothing touches disk until the user ticks items and installs them
+through the usual install job (`services/share.ts`).
+
+Java version: launchers record it (Prism's `instance.cfg`, the Mojang version manifest a modded
+`versions/<id>.json` inherits from); otherwise it's derived from the game version
+(`javaForGameVersion`, `source: "game-version"`).
+
 ## 8. Frontend (`apps/web`)
 
 - Vite + React 19 + TypeScript, Tailwind CSS v4 (`@tailwindcss/vite`), shadcn/ui components.
 - **TanStack Query** for all server state (caching, refetch after mutations). No global store needed;
   small UI state stays in components.
 - Routing: a few views, so a lightweight router (**react-router** in declarative mode) with routes
-  `/` (installed), `/browse`, `/project/:provider/:id`, `/export`, `/settings`.
+  `/` (installed), `/browse`, `/project/:provider/:id`, `/export`, `/share`, `/settings`.
 - API client: `call(endpoint, req)` in `src/lib/api.ts` takes a shared contract endpoint, injects the session
   token, validates the body and parses the response with the endpoint's zod schema. Components never call `fetch` directly.
 - Forms: shadcn `Field` components + react-hook-form `Controller` with `zodResolver`, reusing the endpoint's body schema.

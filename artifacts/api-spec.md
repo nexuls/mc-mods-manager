@@ -70,6 +70,21 @@ Using plan → confirm → execute keeps the UI honest about dependencies before
 
 Moving an unknown or local mod between groups for good is a side override (`PATCH /api/mods/:fileName`), not an export option.
 
+## Share (mod lists)
+
+A mod list file is `{ format: "mc-mod/mod-list", formatVersion, createdAt, generator, instance, mods[] }`;
+`instance` carries the kind, content kind, game version, loader, loader version and Java version
+(`{ major, source: "detected" | "game-version" }`), and each entry is
+`{ fileName, name, version?, enabled, side, size, sha1?, source? }`. Files travel between mc-mod versions,
+so the schemas drop unknown fields instead of refusing them.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/share/export` | The instance and every jar in its folder as a `ModList`. The browser saves it as `mc-mod-<loader>-<version>-<date>.json` |
+| POST | `/api/share/import` | `{ list: ModList }` → `{ createdAt, generator, from, to, checks[], items[], warnings[] }`. Read-only. Item `status`: `install`, `installed` (same file or another version of the project), `manual`, `unavailable` (nothing fits, or CurseForge has no key), `local` (not on a platform). Versions are re-picked for this instance: the listed one when it fits, else the best one (`note` says so). BAD_REQUEST for a list from a newer `formatVersion` |
+
+Installing the ticked items is the normal `POST /api/install`, so downloads, hashes and job progress work the same.
+
 ## Trash
 
 `.mc-mod/trash/` holds jars that were removed or replaced by an update, as `<epoch ms>-<file name>` (the trash id).

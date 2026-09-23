@@ -125,6 +125,17 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   (a toast gives the path when no file manager can be opened).
 - The nav item is hidden for plugin instances; `/export` explains that plugins are already server-only.
 
+### Share (`/share`)
+- Two cards: **Export the list** (a button that saves `mc-mod-<loader>-<version>-<date>.json`, then says
+  what was written) and **Import a list** (a button opening the file picker; the file is parsed with
+  `ModList` in the browser before anything is sent).
+- The import dialog shows where the list came from (date, mc-mod version), the list's instance next to
+  this one (game version, loader, loader version, Java — differences in amber), the plan's warnings, and
+  every listed mod.
+- Rows are ticked by default; already-installed, local, unavailable and manual ones are locked with a
+  badge (manual keeps a **Download** link). Unticking leaves a mod out.
+- **Install N mods** runs the normal install job with per-item progress, then closes on success.
+
 ### Settings (`/settings`)
 - Cards: **CurseForge** (key status badge, password input; Save tests the key first; Test; Remove key; a note when
   `CURSEFORGE_API_KEY` overrides it; says when a working key can't search), **Preferences** (preferred provider, allow

@@ -334,3 +334,25 @@ Accepted.
   (class `nav-label`, `z-index: 1`), which also lets their colour cross-fade along with the move.
 - The browser's `root` cross-fade is switched off (React does not cancel it here), so the header and the navigation
   stay put. `prefers-reduced-motion: reduce` clears the animations instead of using `!important` to outrank them.
+
+### D33 — Sharing the mod list (Phase 10)
+- **One JSON file, not a pack format.** `mc-mod/mod-list` holds the instance and the mods with their platform
+  sources; no jars travel with it. Modrinth's `.mrpack` and packwiz were both rejected for v1: they're pack
+  *distribution* formats with their own hashes and directory rules, while this is "here's my setup, install what
+  you're missing". A list stays readable even when a mod has no platform.
+- **Lenient file schemas.** `ModList` and its parts use `z.object` (unknown fields dropped), not `z.strictObject`,
+  because files move between mc-mod versions; a `formatVersion` above ours is refused with a message instead.
+  `mods` is capped at 1000 entries and `/api` bodies at 4 MB (body-parser's 100 kb default is smaller than a
+  list of a few hundred mods).
+- **Import re-picks versions for the importing instance.** The version in the list is used only when it fits
+  (loader, game version, pre-release setting); otherwise the best fitting one takes its place and the row says so.
+  A list from another game version still installs something useful instead of failing.
+- **Already-installed mods are matched by sha1 first, then by project**, so another version of the same project
+  counts as installed (unticked, "Another version is installed"); updating it is what Check updates is for.
+- **Importing installs through the existing install job** (`POST /api/install`), so downloads, hash checks,
+  atomic renames and SSE progress are the same code as any other install. The import endpoint itself never
+  writes anything.
+- **Java version became part of the instance** (`JavaInfo`): detected from Prism's `instance.cfg` or the Mojang
+  version manifest a modded version json inherits from, else derived from the game version and marked
+  `source: "game-version"`, so the dialog never presents a guess as a fact.
+
