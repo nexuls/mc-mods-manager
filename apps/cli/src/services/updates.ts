@@ -11,6 +11,7 @@ import {
   type UpdateJobResponse,
 } from '@mc-mod/shared'
 import { AppError } from '../errors'
+import { eachLimit } from '../lib/each-limit'
 import type { CurseForgeProvider } from '../providers/curseforge'
 import type { CatalogService } from './catalog'
 import { projectKey } from './identify'
@@ -266,17 +267,4 @@ function modTitle(m: InstalledMod): string {
 
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`
-}
-
-/** Runs `fn` over `items`, at most `limit` at a time. */
-async function eachLimit<T>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<void>,
-): Promise<void> {
-  const queue = [...items]
-  const worker = async () => {
-    for (let item = queue.shift(); item !== undefined; item = queue.shift()) await fn(item)
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
 }
