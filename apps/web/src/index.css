@@ -160,3 +160,73 @@ select:not(:disabled),
 summary {
   cursor: pointer;
 }
+
+/*
+ * View transitions between pages. React drives them: react-router updates the location inside a
+ * React transition, so the `<ViewTransition>` in `App.tsx` (class `page`) and the highlight in
+ * `app-nav.tsx` (name `nav-highlight`) animate on every navigation. Everything outside them — the
+ * header, the navigation — is the browser's `root` snapshot, which is opted out of its default
+ * cross-fade so it simply stays put.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  ::view-transition-old(.page),
+  ::view-transition-new(.page) {
+    /* Pages differ in height: let each snapshot keep its own, instead of being squashed to fit. */
+    height: auto;
+    overflow: clip;
+  }
+
+  ::view-transition-old(.page) {
+    animation: page-leave 120ms ease-in both;
+  }
+
+  ::view-transition-new(.page) {
+    animation: page-enter 220ms 60ms ease-out both;
+  }
+
+  ::view-transition-group(nav-highlight) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /*
+   * The labels stay above the highlight travelling between them, and cross-fade in place so the
+   * one being left and the one being picked change colour along with the move.
+   */
+  ::view-transition-group(.nav-label) {
+    z-index: 1;
+  }
+
+  ::view-transition-old(.nav-label),
+  ::view-transition-new(.nav-label) {
+    animation-duration: 220ms;
+  }
+}
+
+/* Asked for less motion: the pages still swap, just without the browser's default animation. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

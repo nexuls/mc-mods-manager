@@ -319,3 +319,18 @@ Accepted.
   Testing Library are imported once and keep the first `document`; they're imported with `await import()` after
   `withDom()`. Cleanup is registered in `withDom()` itself: an `afterEach` in a shared module only runs for the first
   file that imports it.
+
+### D32 — View transitions on navigation
+- **React drives the transitions, not react-router.** `<ViewTransition>` (React 19.3) animates any update made in a
+  React transition, and `<BrowserRouter>` already wraps its location updates in `startTransition`, so every navigation
+  animates with no change to the links. React Router's own `viewTransition` prop was not an option: it only does
+  anything in data/framework mode, and `<Routes>` here renders inside `App` under `<BrowserRouter>` (declarative mode).
+- **Two boundaries.** The route content in `App.tsx` (`default="page"`) fades and slides; the highlight behind the
+  current navigation item became its own element wrapped in `<ViewTransition name="nav-highlight">`, so React sees it
+  leave one item and enter another and the browser slides it across. In the split view Installed and Browse are both
+  highlighted; only the one the location points at is named, so the name always belongs to a single element.
+- **Stacking matters in the transition layer.** Every snapshot is painted over the rest of the page, so the travelling
+  highlight covered the labels it passed. The icon and label of each item therefore get a snapshot of their own
+  (class `nav-label`, `z-index: 1`), which also lets their colour cross-fade along with the move.
+- The browser's `root` cross-fade is switched off (React does not cancel it here), so the header and the navigation
+  stay put. `prefers-reduced-motion: reduce` clears the animations instead of using `!important` to outrank them.

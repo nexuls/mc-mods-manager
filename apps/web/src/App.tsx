@@ -1,5 +1,5 @@
 import { LockKeyholeIcon, RotateCwIcon, UnplugIcon } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef, useState, ViewTransition } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppHeader } from '@/components/app-header'
 import { AppNav } from '@/components/app-nav'
@@ -70,23 +70,29 @@ function App() {
               <>
                 <AppNav contentKind={ready.contentKind} />
                 <main className="flex min-w-0 flex-1 flex-col">
-                  {/* Keyed by path: moving to another page clears a crashed one. */}
-                  <ErrorBoundary key={pathname}>
-                    <Routes>
-                      {/* One LibraryView for all three, so moving between them keeps its state. */}
-                      <Route element={<LibraryView contentKind={ready.contentKind} />}>
-                        <Route index element={null} />
-                        <Route path="browse" element={null} />
-                        <Route path="project/:provider/:id" element={null} />
-                      </Route>
-                      <Route
-                        path="export"
-                        element={<ExportView plugins={ready.contentKind === 'plugin'} />}
-                      />
-                      <Route path="settings" element={<SettingsView />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </ErrorBoundary>
+                  {/*
+                   * React runs the view transition for us: react-router's location update is a
+                   * React transition, so the content swap animates (see the `page` class in
+                   * index.css). Keyed by path: moving to another page clears a crashed one.
+                   */}
+                  <ViewTransition default="page">
+                    <ErrorBoundary key={pathname}>
+                      <Routes>
+                        {/* One LibraryView for all three, so moving between them keeps its state. */}
+                        <Route element={<LibraryView contentKind={ready.contentKind} />}>
+                          <Route index element={null} />
+                          <Route path="browse" element={null} />
+                          <Route path="project/:provider/:id" element={null} />
+                        </Route>
+                        <Route
+                          path="export"
+                          element={<ExportView plugins={ready.contentKind === 'plugin'} />}
+                        />
+                        <Route path="settings" element={<SettingsView />} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </ErrorBoundary>
+                  </ViewTransition>
                 </main>
               </>
             ) : instance.isPending ? (
