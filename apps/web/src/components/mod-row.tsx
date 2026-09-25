@@ -1,7 +1,14 @@
-import { type InstalledMod, type Provider, providerLabel, type UpdateModBody } from '@mc-mod/shared'
+import {
+  bridgeInfo,
+  type InstalledMod,
+  type Provider,
+  providerLabel,
+  type UpdateModBody,
+} from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
   ArrowUpCircleIcon,
+  CableIcon,
   ExternalLinkIcon,
   LinkIcon,
   MoreHorizontalIcon,
@@ -116,6 +123,23 @@ export const ModRow = memo(function ModRow({
               </TooltipTrigger>
               <TooltipContent>
                 {mod.compatibilityReason ?? 'Not made for this instance'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {mod.compatibility === 'bridged' && mod.bridge && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                  aria-label={`Runs through ${bridgeInfo[mod.bridge].label}`}
+                >
+                  <CableIcon />
+                  <span className={BADGE_TEXT}>{bridgeInfo[mod.bridge].label}</span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {mod.compatibilityReason}. {bridgeInfo[mod.bridge].caveat}
               </TooltipContent>
             </Tooltip>
           )}

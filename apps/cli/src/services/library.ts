@@ -19,7 +19,8 @@ import { disabledName, enabledName, type ScannedJar, scanJar, scanJars } from '.
 import { CurseForgeKeyError, type CurseForgeProvider } from '../providers/curseforge'
 import type { ModrinthProvider } from '../providers/modrinth'
 import type { HashMatch, ProjectInfo } from '../providers/types'
-import { applyLookup, buildInstalledMod, projectKey } from './identify'
+import type { BridgeStore } from './bridges'
+import { applyLookup, buildInstalledMod, detectBridges, projectKey } from './identify'
 import type { InstanceService } from './instance'
 import { type UpdateStore, withUpdate } from './updates'
 
@@ -37,6 +38,8 @@ export interface LibraryDeps {
   modrinth: Modrinth
   curseforge: CurseForge
   config: Pick<ConfigService, 'config'>
+  /** Filled with the compatibility layers found in the content dir, for version picking. */
+  bridges?: BridgeStore
   /** Results of the last update check, added to every list. */
   updates?: Pick<UpdateStore, 'get'>
   now?: () => number
@@ -144,6 +147,9 @@ export class LibraryService {
 
     await this.save(root, state, cache, records, jars)
     const inst = this.instance.instance
+    // Found from the jars' own mod ids, so a translation layer counts even offline.
+    const bridges = detectBridges(jars)
+    this.deps.bridges?.set(bridges)
     return {
       mods: jars.map((jar) =>
         withUpdate(
@@ -154,6 +160,7 @@ export class LibraryService {
             instance: inst,
             preferred: this.deps.config.config.preferredProvider,
             projects: this.projects,
+            bridges,
           }),
           this.deps.updates?.get(jar.sha1),
         ),

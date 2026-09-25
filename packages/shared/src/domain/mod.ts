@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LoaderBridgeId } from './bridge'
 import { JarMeta } from './jar-meta'
 import { Side } from './side'
 
@@ -51,7 +52,14 @@ export const ModSource = z.strictObject({
 })
 export type ModSource = z.infer<typeof ModSource>
 
-export const Compatibility = z.enum(['ok', 'wrong-loader', 'wrong-game-version', 'unknown'])
+/** `bridged`: built for another loader, but a compatibility layer can run it here (`bridge` says which). */
+export const Compatibility = z.enum([
+  'ok',
+  'bridged',
+  'wrong-loader',
+  'wrong-game-version',
+  'unknown',
+])
 export type Compatibility = z.infer<typeof Compatibility>
 
 /** A newer version of an installed mod, from its primary source (found by "Check updates"). */
@@ -99,8 +107,10 @@ export const InstalledMod = z.strictObject({
   /** A manual link disagrees with an exact hash match (the hash wins). */
   conflict: z.boolean(),
   compatibility: Compatibility,
-  /** Why it's incompatible, e.g. `Built for Forge`. */
+  /** Why it's incompatible or bridged, e.g. `Built for Forge`. */
   compatibilityReason: z.string().optional(),
+  /** The compatibility layer it runs through, when `compatibility` is `bridged`. */
+  bridge: LoaderBridgeId.optional(),
   side: Side,
   sideSource: SideSource,
   /** Set after "Check updates" when the primary source has a newer fitting version. */

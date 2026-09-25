@@ -4,8 +4,10 @@ import { parseFabricRange } from '../lib/mc-version'
 import type { HashMatch } from '../providers/types'
 import {
   applyLookup,
+  bridgedLoaders,
   buildInstalledMod,
   checkCompatibility,
+  detectBridges,
   mergeSources,
   resolveSide,
   runnableLoaders,
@@ -185,6 +187,62 @@ describe('checkCompatibility', () => {
   test('unknown without an instance loader', () => {
     const none = { loader: null, gameVersion: null, contentKind: 'mod' } as const
     expect(checkCompatibility(none, noJar, hashed(['forge'], [])).compatibility).toBe('unknown')
+  })
+
+  // A Fabric build on NeoForge used to read as "Built for Fabric" — a dead end — even though the
+  // instance may well be running it through a translation layer.
+  test('a Fabric build on NeoForge 1.21.1 is bridged, not wrong-loader', () => {
+    const neo = { loader: 'neoforge', gameVersion: '1.21.1', contentKind: 'mod' } as const
+    expect(checkCompatibility(neo, noJar, hashed(['fabric'], ['1.21.1']))).toEqual({
+      compatibility: 'bridged',
+      reason: 'Fabric build — needs Sinytra Connector',
+      bridge: 'sinytra-connector',
+    })
+    // With the layer in the folder it stops being a question mark.
+    expect(
+      checkCompatibility(neo, noJar, hashed(['fabric'], ['1.21.1']), ['sinytra-connector']).reason,
+    ).toBe('Fabric build — runs through Sinytra Connector')
+  })
+
+  test('a bridge never excuses the wrong game version, or a loader it does not cover', () => {
+    const neo = { loader: 'neoforge', gameVersion: '1.21.1', contentKind: 'mod' } as const
+    expect(checkCompatibility(neo, noJar, hashed(['fabric'], ['1.20.1'])).compatibility).toBe(
+      'wrong-game-version',
+    )
+    // Connector runs Fabric on Forge at 1.20.1 only, and never runs Quilt-only builds.
+    const forge = { loader: 'forge', gameVersion: '1.19.2', contentKind: 'mod' } as const
+    expect(checkCompatibility(forge, noJar, hashed(['fabric'], ['1.19.2'])).compatibility).toBe(
+      'wrong-loader',
+    )
+    expect(checkCompatibility(neo, noJar, hashed(['quilt'], ['1.21.1'])).compatibility).toBe(
+      'wrong-loader',
+    )
+  })
+})
+
+describe('bridgedLoaders', () => {
+  test('Connector covers Fabric on NeoForge 1.21+ and on Forge 1.20.1 only', () => {
+    expect(bridgedLoaders('neoforge', '1.21.1').map((b) => b.loader)).toEqual(['fabric'])
+    expect(bridgedLoaders('forge', '1.20.1').map((b) => b.bridge.id)).toEqual(['sinytra-connector'])
+    expect(bridgedLoaders('forge', '1.21.1')).toEqual([])
+    expect(bridgedLoaders('neoforge', '1.20.1')).toEqual([])
+    // Fabric and Quilt already run Fabric builds, so a bridge would be noise.
+    expect(bridgedLoaders('fabric', '1.21.1')).toEqual([])
+    expect(bridgedLoaders('quilt', '1.21.1')).toEqual([])
+  })
+
+  test('an unknown game version cannot rule a bridge out', () => {
+    expect(bridgedLoaders('neoforge', null).map((b) => b.loader)).toEqual(['fabric'])
+  })
+})
+
+describe('detectBridges', () => {
+  test('finds a layer by the mod id its jar declares', () => {
+    const jar = (id?: string) => ({
+      meta: id ? { id, authors: [], loaders: [], side: 'both' as const, depends: [] } : null,
+    })
+    expect(detectBridges([jar('sodium'), jar('Connector'), jar()])).toEqual(['sinytra-connector'])
+    expect(detectBridges([jar('sodium')])).toEqual([])
   })
 })
 

@@ -1,13 +1,15 @@
 import {
+  bridgeInfo,
   type ContentKind,
   type Loader,
+  type LoaderBridgeId,
   loaderInfo,
   type ProjectVersion,
   type RankedVersion,
   type VersionType,
 } from '@mc-mod/shared'
 import { compareVersions } from '../lib/mc-version'
-import { runnableLoaders } from './identify'
+import { bridgedLoaders, runnableLoaders } from './identify'
 
 // Picking "the perfect version" (architecture §7.3). Pure, so the rules are easy to test.
 
@@ -17,21 +19,35 @@ export interface VersionContext {
   contentKind: ContentKind
   /** Betas and alphas compete with releases on date alone. Off: releases win. */
   allowPrerelease: boolean
+  /** Compatibility layers installed in this instance, from the last scan of the content dir. */
+  bridges?: readonly LoaderBridgeId[]
 }
 
-type LoaderFit = 'native' | 'fallback' | 'none'
+/**
+ * How well a file's loader fits: its own, one this loader also runs, or one only a translation layer
+ * runs (`bridged`, e.g. a Fabric build on NeoForge through Sinytra Connector).
+ */
+type LoaderFit = 'native' | 'fallback' | 'bridged' | 'none'
 type GameFit = 'exact' | 'older' | 'none'
 
 const CHANNEL_RANK: Record<VersionType, number> = { release: 0, beta: 1, alpha: 2 }
+const LOADER_RANK: Record<LoaderFit, number> = { native: 0, fallback: 1, bridged: 2, none: 3 }
 
-function loaderFit(v: ProjectVersion, ctx: VersionContext): { fit: LoaderFit; via?: Loader } {
+function loaderFit(
+  v: ProjectVersion,
+  ctx: VersionContext,
+): { fit: LoaderFit; via?: Loader; bridge?: LoaderBridgeId } {
   const { loader } = ctx
   // Without a loader (vanilla or not set up) there's nothing to check against.
   if (!loader || loader === 'vanilla') return { fit: 'native' }
   const listed = v.loaders.map((l) => l.toLowerCase())
   if (listed.includes(loader)) return { fit: 'native' }
   const via = runnableLoaders(loader, ctx.gameVersion).find((l) => listed.includes(l))
-  return via ? { fit: 'fallback', via } : { fit: 'none' }
+  if (via) return { fit: 'fallback', via }
+  const bridged = bridgedLoaders(loader, ctx.gameVersion).find((b) => listed.includes(b.loader))
+  return bridged
+    ? { fit: 'bridged', via: bridged.loader, bridge: bridged.bridge.id }
+    : { fit: 'none' }
 }
 
 /**
@@ -65,6 +81,13 @@ export function rankVersions(
     const compatible = l.fit !== 'none' && g.fit !== 'none'
     const notes: string[] = []
     if (compatible && l.via) notes.push(`${loaderInfo[l.via].label} build`)
+    if (compatible && l.bridge) {
+      notes.push(
+        ctx.bridges?.includes(l.bridge)
+          ? `runs through ${bridgeInfo[l.bridge].label}`
+          : `needs ${bridgeInfo[l.bridge].label}`,
+      )
+    }
     if (compatible && g.newest) notes.push(`Made for ${g.newest}`)
     return { v, l, g, compatible, note: notes.join(' · ') || undefined }
   })
@@ -72,7 +95,7 @@ export function rankVersions(
   const candidates = scored.filter((s) => s.compatible && s.v.file)
   candidates.sort(
     (a, b) =>
-      Number(a.l.fit === 'fallback') - Number(b.l.fit === 'fallback') ||
+      LOADER_RANK[a.l.fit] - LOADER_RANK[b.l.fit] ||
       Number(a.g.fit === 'older') - Number(b.g.fit === 'older') ||
       (ctx.allowPrerelease ? 0 : CHANNEL_RANK[a.v.type] - CHANNEL_RANK[b.v.type]) ||
       (a.g.newest && b.g.newest ? compareVersions(b.g.newest, a.g.newest) : 0) ||
@@ -85,6 +108,7 @@ export function rankVersions(
     compatible: s.compatible,
     recommended: s.v === best,
     note: s.note,
+    bridge: s.compatible ? s.l.bridge : undefined,
   }))
 }
 
@@ -96,8 +120,22 @@ export function pickBest(
   return rankVersions(versions, ctx).find((v) => v.recommended)
 }
 
-/** Loaders to ask the platform for: the instance's own and the ones it can also run. */
-export function queryLoaders(ctx: Pick<VersionContext, 'loader' | 'gameVersion'>): Loader[] {
+/**
+ * Loaders to ask the platform for: the instance's own and the ones it can also run, plus the ones a
+ * translation layer runs **once that layer is installed here**. Offering every Fabric mod on a bare
+ * NeoForge instance would bury the builds that actually run; once Connector is in the folder, they do
+ * run, so they belong in the results.
+ */
+export function queryLoaders(
+  ctx: Pick<VersionContext, 'loader' | 'gameVersion' | 'bridges'>,
+): Loader[] {
   const { loader } = ctx
-  return loader && loader !== 'vanilla' ? runnableLoaders(loader, ctx.gameVersion) : []
+  if (!loader || loader === 'vanilla') return []
+  const installed = ctx.bridges ?? []
+  return [
+    ...runnableLoaders(loader, ctx.gameVersion),
+    ...bridgedLoaders(loader, ctx.gameVersion)
+      .filter((b) => installed.includes(b.bridge.id))
+      .map((b) => b.loader),
+  ]
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LoaderBridgeId } from './bridge'
 import { Provider } from './mod'
 import { Side } from './side'
 
@@ -128,6 +129,8 @@ export const RankedVersion = ProjectVersion.extend({
   recommended: z.boolean(),
   /** Why it's a less direct fit, e.g. `Fabric build` on a Quilt instance. */
   note: z.string().optional(),
+  /** Set when it only runs here through a compatibility layer (`compatible` is still true). */
+  bridge: LoaderBridgeId.optional(),
 })
 export type RankedVersion = z.infer<typeof RankedVersion>
 

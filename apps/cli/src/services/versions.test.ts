@@ -104,3 +104,30 @@ test('queryLoaders', () => {
   expect(queryLoaders({ loader: 'vanilla', gameVersion: '1.21.1' })).toEqual([])
   expect(queryLoaders({ loader: null, gameVersion: null })).toEqual([])
 })
+
+describe('loader bridges', () => {
+  const neoforge: VersionContext = { ...fabric, loader: 'neoforge' }
+
+  test('a Fabric build is offered on NeoForge, and says which layer runs it', () => {
+    const [ranked] = rankVersions([v({ loaders: ['fabric'] })], neoforge)
+    expect(ranked).toMatchObject({ compatible: true, bridge: 'sinytra-connector' })
+    expect(ranked?.note).toBe('Fabric build · needs Sinytra Connector')
+    const [installed] = rankVersions([v({ loaders: ['fabric'] })], {
+      ...neoforge,
+      bridges: ['sinytra-connector'],
+    })
+    expect(installed?.note).toBe('Fabric build · runs through Sinytra Connector')
+  })
+
+  test('a native build always wins over a bridged one, however new', () => {
+    const native = v({ loaders: ['neoforge'], publishedAt: '2026-01-01T00:00:00Z' })
+    const bridged = v({ loaders: ['fabric'], publishedAt: '2026-06-01T00:00:00Z' })
+    expect(pickBest([bridged, native], neoforge)?.id).toBe(native.id)
+    expect(pickBest([bridged], neoforge)?.id).toBe(bridged.id)
+  })
+
+  test('queryLoaders only widens the platform filter once the layer is installed', () => {
+    expect(queryLoaders(neoforge)).not.toContain('fabric')
+    expect(queryLoaders({ ...neoforge, bridges: ['sinytra-connector'] })).toContain('fabric')
+  })
+})

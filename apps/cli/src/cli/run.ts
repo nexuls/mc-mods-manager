@@ -7,6 +7,7 @@ import { CurseForgeProvider } from '../providers/curseforge'
 import { ModrinthProvider } from '../providers/modrinth'
 import { type Auth, createSessionToken } from '../security'
 import { createApp, type WebAssets } from '../server'
+import { BridgeStore } from '../services/bridges'
 import { CatalogService } from '../services/catalog'
 import { InstallerService } from '../services/installer'
 import { InstanceService } from '../services/instance'
@@ -64,9 +65,17 @@ export async function run(argv: readonly string[], runOptions: RunOptions = {}):
 
   const modrinth = new ModrinthProvider()
   const curseforge = new CurseForgeProvider(() => config.curseforgeKey())
-  const catalog = new CatalogService(instance, modrinth, curseforge, config)
+  const bridges = new BridgeStore()
+  const catalog = new CatalogService(instance, modrinth, curseforge, config, bridges)
   const store = new UpdateStore(() => catalog.versionContext())
-  const library = new LibraryService({ instance, modrinth, curseforge, config, updates: store })
+  const library = new LibraryService({
+    instance,
+    modrinth,
+    curseforge,
+    config,
+    bridges,
+    updates: store,
+  })
   const jobs = new JobService()
   const installer = new InstallerService({
     instance,

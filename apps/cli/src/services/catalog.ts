@@ -17,6 +17,7 @@ import type { ConfigService } from '../config'
 import { AppError } from '../errors'
 import type { CurseForgeProvider } from '../providers/curseforge'
 import type { BrowseQuery, ModrinthProvider } from '../providers/modrinth'
+import type { BridgeStore } from './bridges'
 import type { InstanceService } from './instance'
 import { queryLoaders, rankVersions, type VersionContext } from './versions'
 
@@ -48,6 +49,8 @@ export class CatalogService {
     private readonly modrinth: Modrinth,
     private readonly curseforge: CurseForge,
     private readonly config: Pick<ConfigService, 'config'>,
+    /** Compatibility layers installed here; empty until the content dir has been scanned once. */
+    private readonly bridges: Pick<BridgeStore, 'list'>,
   ) {}
 
   /** CurseForge calls fail with PROVIDER_DISABLED on their own while there's no key. */
@@ -68,7 +71,13 @@ export class CatalogService {
   /** The instance's loader, game version and content kind, as version picking needs them. */
   versionContext(): VersionContext {
     const { loader, gameVersion, contentKind } = this.instance.instance
-    return { loader, gameVersion, contentKind, allowPrerelease: this.config.config.allowPrerelease }
+    return {
+      loader,
+      gameVersion,
+      contentKind,
+      allowPrerelease: this.config.config.allowPrerelease,
+      bridges: this.bridges.list(),
+    }
   }
 
   async search(q: SearchInput): Promise<SearchResponse> {
@@ -79,7 +88,7 @@ export class CatalogService {
     // Plugin game versions are minimums, so a version filter would hide plugins that work fine.
     const filters = {
       gameVersion: q.all || kind === 'plugin' ? null : gameVersion,
-      loaders: q.all ? [] : queryLoaders({ loader, gameVersion }),
+      loaders: q.all ? [] : queryLoaders({ loader, gameVersion, bridges: this.bridges.list() }),
     }
     const { hits, total } = await this.platform(q.provider).browse({
       text: q.q,

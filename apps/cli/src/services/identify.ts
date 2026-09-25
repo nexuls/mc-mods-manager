@@ -2,7 +2,10 @@ import {
   type Compatibility,
   type InstalledMod,
   type Instance,
+  LOADER_BRIDGES,
   Loader,
+  type LoaderBridge,
+  type LoaderBridgeId,
   loaderInfo,
   type ModRecord,
   type ModSource,
@@ -12,7 +15,7 @@ import {
   type SourceMethod,
 } from '@mc-mod/shared'
 import type { ScannedJar } from '../jar/scan'
-import { rangeContains } from '../lib/mc-version'
+import { compareVersions, rangeContains } from '../lib/mc-version'
 import type { HashMatch, ProjectInfo } from '../providers/types'
 
 // Pure identification logic (architecture §7.2): merging sources, the compatibility check and side
@@ -131,6 +134,45 @@ export function runnableLoaders(loader: Loader, gameVersion: string | null): Loa
   return out
 }
 
+/** A build this instance can only run through a compatibility layer, and the layer that runs it. */
+export interface BridgedLoader {
+  loader: Loader
+  bridge: LoaderBridge
+}
+
+/**
+ * Loaders this instance can run through a translation layer (`domain/bridge.ts`), e.g. Fabric builds on
+ * a NeoForge 1.21.1 instance through Sinytra Connector. Loaders it runs natively are never listed here:
+ * a bridge is the last resort, and is always presented as one.
+ *
+ * An unknown game version can't rule a bridge out, so it's offered — the UI says it might not work.
+ */
+export function bridgedLoaders(loader: Loader, gameVersion: string | null): BridgedLoader[] {
+  const runs = runnableLoaders(loader, gameVersion)
+  return LOADER_BRIDGES.flatMap((bridge) =>
+    !runs.includes(bridge.from) &&
+    bridge.targets.some((t) => t.loader === loader && coversVersion(t, gameVersion))
+      ? [{ loader: bridge.from, bridge }]
+      : [],
+  )
+}
+
+function coversVersion(
+  target: { minGameVersion?: string; maxGameVersion?: string },
+  gameVersion: string | null,
+): boolean {
+  if (!gameVersion) return true
+  if (target.minGameVersion && compareVersions(gameVersion, target.minGameVersion) < 0) return false
+  if (target.maxGameVersion && compareVersions(gameVersion, target.maxGameVersion) > 0) return false
+  return true
+}
+
+/** The bridges installed in a content dir, recognised by the mod ids their jars declare. */
+export function detectBridges(jars: readonly Pick<ScannedJar, 'meta'>[]): LoaderBridgeId[] {
+  const ids = new Set(jars.flatMap((j) => (j.meta?.id ? [j.meta.id.toLowerCase()] : [])))
+  return LOADER_BRIDGES.filter((b) => b.modIds.some((id) => ids.has(id))).map((b) => b.id)
+}
+
 function knownLoaders(names: readonly string[]): Loader[] {
   return names.flatMap((n) => {
     const l = Loader.safeParse(n.toLowerCase())
@@ -151,32 +193,32 @@ export function checkCompatibility(
   instance: Pick<Instance, 'loader' | 'gameVersion' | 'contentKind'>,
   jar: Pick<ScannedJar, 'meta' | 'minecraft'>,
   sources: readonly ModSource[],
-): { compatibility: Compatibility; reason?: string } {
+  /** Bridges actually installed here, so the reason can say "runs through" rather than "needs". */
+  installedBridges: readonly LoaderBridgeId[] = [],
+): CompatibilityVerdict {
   const { loader, gameVersion } = instance
   if (!loader || loader === 'vanilla') return { compatibility: 'unknown' }
-  const runs = runnableLoaders(loader, gameVersion)
   const checkVersions = instance.contentKind === 'mod' && gameVersion !== null
+  const fits = (loaders: readonly Loader[]) =>
+    loaderVerdict(loaders, loader, gameVersion, installedBridges)
 
   const platform = sources.find((s) => EXACT.has(s.method) && s.loaders)
   if (platform) {
     const loaders = knownLoaders(platform.loaders ?? [])
-    if (loaders.length > 0 && !loaders.some((l) => runs.includes(l))) {
-      const labels = loaders.map((l) => loaderInfo[l].label)
-      return { compatibility: 'wrong-loader', reason: `Built for ${listShort(labels)}` }
-    }
+    const verdict = fits(loaders)
+    if (verdict?.compatibility === 'wrong-loader') return verdict
     const versions = platform.gameVersions ?? []
     if (checkVersions && versions.length > 0 && !versions.includes(gameVersion)) {
       return { compatibility: 'wrong-game-version', reason: `Made for ${listShort(versions)}` }
     }
+    if (verdict) return verdict
     return { compatibility: loaders.length > 0 || versions.length > 0 ? 'ok' : 'unknown' }
   }
 
   const loaders = knownLoaders(jar.meta?.loaders ?? [])
   if (loaders.length === 0) return { compatibility: 'unknown' }
-  if (!loaders.some((l) => runs.includes(l))) {
-    const labels = loaders.map((l) => loaderInfo[l].label)
-    return { compatibility: 'wrong-loader', reason: `Built for ${listShort(labels)}` }
-  }
+  const verdict = fits(loaders)
+  if (verdict?.compatibility === 'wrong-loader') return verdict
   if (checkVersions && jar.minecraft && !rangeContains(jar.minecraft, gameVersion)) {
     const named = [...new Set(jar.minecraft.candidates)]
     return {
@@ -186,7 +228,42 @@ export function checkCompatibility(
         : 'Declares another Minecraft version',
     }
   }
-  return { compatibility: 'ok' }
+  return verdict ?? { compatibility: 'ok' }
+}
+
+export interface CompatibilityVerdict {
+  compatibility: Compatibility
+  reason?: string
+  bridge?: LoaderBridgeId
+}
+
+/**
+ * What the loaders a file was built for mean for this instance: undefined when one of them runs
+ * natively, a `bridged` verdict when a translation layer covers it, else `wrong-loader`. An empty list
+ * says nothing either way.
+ */
+function loaderVerdict(
+  loaders: readonly Loader[],
+  loader: Loader,
+  gameVersion: string | null,
+  installedBridges: readonly LoaderBridgeId[],
+): CompatibilityVerdict | undefined {
+  if (loaders.length === 0) return undefined
+  if (loaders.some((l) => runnableLoaders(loader, gameVersion).includes(l))) return undefined
+  const bridged = bridgedLoaders(loader, gameVersion).find((b) => loaders.includes(b.loader))
+  if (bridged) {
+    const { bridge } = bridged
+    const via = installedBridges.includes(bridge.id)
+      ? `runs through ${bridge.label}`
+      : `needs ${bridge.label}`
+    return {
+      compatibility: 'bridged',
+      reason: `${loaderInfo[bridged.loader].label} build — ${via}`,
+      bridge: bridge.id,
+    }
+  }
+  const labels = loaders.map((l) => loaderInfo[l].label)
+  return { compatibility: 'wrong-loader', reason: `Built for ${listShort(labels)}` }
 }
 
 /**
@@ -217,6 +294,8 @@ export function buildInstalledMod(input: {
   preferred: Provider
   /** Projects fetched this run, keyed by `projectKey`. */
   projects: ReadonlyMap<string, ProjectInfo>
+  /** Compatibility layers installed in this content dir (`detectBridges`). */
+  bridges?: readonly LoaderBridgeId[]
 }): InstalledMod {
   const { jar, record, preferred } = input
   const merged = mergeSources({ record, launcher: input.launcher, preferred })
@@ -230,7 +309,12 @@ export function buildInstalledMod(input: {
     : has(preferred)
       ? preferred
       : sources[0]?.provider
-  const { compatibility, reason } = checkCompatibility(input.instance, jar, sources)
+  const { compatibility, reason, bridge } = checkCompatibility(
+    input.instance,
+    jar,
+    sources,
+    input.bridges,
+  )
   return {
     fileName: jar.fileName,
     enabled: jar.enabled,
@@ -246,6 +330,7 @@ export function buildInstalledMod(input: {
     conflict: merged.conflict,
     compatibility,
     compatibilityReason: reason,
+    bridge,
     ...resolveSide(record?.sideOverride, sources, primarySource, jar.meta?.side),
   }
 }

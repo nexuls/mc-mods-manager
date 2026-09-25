@@ -3,6 +3,7 @@ import path from 'node:path'
 import { ConfigService } from '../src/config'
 import { CurseForgeProvider } from '../src/providers/curseforge'
 import type { Fetch } from '../src/providers/types'
+import { BridgeStore } from '../src/services/bridges'
 import { CatalogService } from '../src/services/catalog'
 import { InstallerService } from '../src/services/installer'
 import type { InstanceService } from '../src/services/instance'
@@ -43,13 +44,15 @@ export function makeServices(o: ServiceOptions) {
       () => config.curseforgeKey(),
       async () => new Response('{}', { status: 404 }),
     )
-  const catalog = new CatalogService(instance, modrinth, curseforge, config)
+  const bridges = new BridgeStore()
+  const catalog = new CatalogService(instance, modrinth, curseforge, config, bridges)
   const store = new UpdateStore(() => catalog.versionContext())
   const library = new LibraryService({
     instance,
     modrinth,
     curseforge,
     config,
+    bridges,
     updates: store,
     now,
   })
