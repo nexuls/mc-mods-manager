@@ -14,11 +14,15 @@ import type { Provider } from './mod'
 export const LoaderBridgeId = z.enum(['sinytra-connector'])
 export type LoaderBridgeId = z.infer<typeof LoaderBridgeId>
 
-/** One host loader a bridge covers, and the game versions it covers there. Bounds are inclusive. */
+/**
+ * One host loader a bridge covers, and the exact game versions it covers there — the versions the
+ * bridge itself has builds for. A list rather than a range: a range would claim 1.21.8 for a layer
+ * that stops at 1.21.1, and telling someone a mod "needs Sinytra Connector" when no Connector exists
+ * for their version is worse than saying nothing.
+ */
 export interface BridgeTarget {
   loader: Loader
-  minGameVersion?: string
-  maxGameVersion?: string
+  gameVersions: readonly string[]
 }
 
 export interface LoaderBridge {
@@ -39,8 +43,11 @@ export interface LoaderBridge {
 
 /**
  * Checked against the live platforms on 2026-09-25: Sinytra Connector is `u58R1TMW` on Modrinth and
- * `890127` on CurseForge, built for Forge on 1.20.1 and NeoForge from 1.21 on, and its jar declares
- * the mod id `connector` (`connectormod` in the 1.20.1 line).
+ * `890127` on CurseForge, its jar declares the mod id `connector` (`connectormod` in the 1.20.1 line),
+ * and Modrinth lists its builds for 1.20.1 (Forge) and 1.21, 1.21.1 and 26.1.2 (NeoForge).
+ *
+ * `gameVersions` is what will go stale here: refresh it from
+ * https://api.modrinth.com/v2/project/connector when a layer picks up new versions.
  */
 export const LOADER_BRIDGES: readonly LoaderBridge[] = [
   {
@@ -48,8 +55,8 @@ export const LOADER_BRIDGES: readonly LoaderBridge[] = [
     label: 'Sinytra Connector',
     from: 'fabric',
     targets: [
-      { loader: 'forge', minGameVersion: '1.20.1', maxGameVersion: '1.20.1' },
-      { loader: 'neoforge', minGameVersion: '1.21' },
+      { loader: 'forge', gameVersions: ['1.20.1'] },
+      { loader: 'neoforge', gameVersions: ['1.21', '1.21.1', '26.1.2'] },
     ],
     modIds: ['connector', 'connectormod'],
     projects: [

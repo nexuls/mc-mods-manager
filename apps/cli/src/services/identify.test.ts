@@ -226,6 +226,8 @@ describe('bridgedLoaders', () => {
     expect(bridgedLoaders('forge', '1.20.1').map((b) => b.bridge.id)).toEqual(['sinytra-connector'])
     expect(bridgedLoaders('forge', '1.21.1')).toEqual([])
     expect(bridgedLoaders('neoforge', '1.20.1')).toEqual([])
+    // Connector has no build for 1.21.11, so nothing claims it does.
+    expect(bridgedLoaders('neoforge', '1.21.11')).toEqual([])
     // Fabric and Quilt already run Fabric builds, so a bridge would be noise.
     expect(bridgedLoaders('fabric', '1.21.1')).toEqual([])
     expect(bridgedLoaders('quilt', '1.21.1')).toEqual([])

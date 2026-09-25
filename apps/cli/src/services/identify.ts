@@ -15,7 +15,7 @@ import {
   type SourceMethod,
 } from '@mc-mod/shared'
 import type { ScannedJar } from '../jar/scan'
-import { compareVersions, rangeContains } from '../lib/mc-version'
+import { rangeContains } from '../lib/mc-version'
 import type { HashMatch, ProjectInfo } from '../providers/types'
 
 // Pure identification logic (architecture §7.2): merging sources, the compatibility check and side
@@ -151,20 +151,12 @@ export function bridgedLoaders(loader: Loader, gameVersion: string | null): Brid
   const runs = runnableLoaders(loader, gameVersion)
   return LOADER_BRIDGES.flatMap((bridge) =>
     !runs.includes(bridge.from) &&
-    bridge.targets.some((t) => t.loader === loader && coversVersion(t, gameVersion))
+    bridge.targets.some(
+      (t) => t.loader === loader && (gameVersion === null || t.gameVersions.includes(gameVersion)),
+    )
       ? [{ loader: bridge.from, bridge }]
       : [],
   )
-}
-
-function coversVersion(
-  target: { minGameVersion?: string; maxGameVersion?: string },
-  gameVersion: string | null,
-): boolean {
-  if (!gameVersion) return true
-  if (target.minGameVersion && compareVersions(gameVersion, target.minGameVersion) < 0) return false
-  if (target.maxGameVersion && compareVersions(gameVersion, target.maxGameVersion) > 0) return false
-  return true
 }
 
 /** The bridges installed in a content dir, recognised by the mod ids their jars declare. */
