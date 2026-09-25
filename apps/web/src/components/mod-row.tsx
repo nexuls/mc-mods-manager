@@ -10,7 +10,7 @@ import {
   Trash2Icon,
   UnlinkIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { toast } from 'sonner'
 import { SourceChip } from '@/components/mod-chips'
 import { ModSide } from '@/components/mod-side'
@@ -50,16 +50,20 @@ import { cn } from '@/lib/utils'
 /** Badge labels in the name cell: hidden (icon only) while the cell is narrower than 24rem. */
 const BADGE_TEXT = '@max-sm/name:hidden'
 
-export function ModRow({
+/**
+ * A row of the installed table. Memoised, and the callbacks take the mod rather than closing over it,
+ * so one row's switch or menu doesn't re-render the whole list (there can be hundreds).
+ */
+export const ModRow = memo(function ModRow({
   mod,
   onLink,
   onUpdate,
   onChangeVersion,
 }: {
   mod: InstalledMod
-  onLink: () => void
-  onUpdate: () => void
-  onChangeVersion: () => void
+  onLink: (mod: InstalledMod) => void
+  onUpdate: (mod: InstalledMod) => void
+  onChangeVersion: (mod: InstalledMod) => void
 }) {
   const update = useUpdateMod()
   const remove = useRemoveMod()
@@ -125,7 +129,7 @@ export function ModRow({
                 >
                   <button
                     type="button"
-                    onClick={onUpdate}
+                    onClick={() => onUpdate(mod)}
                     aria-label={`Update ${name}`}
                     className="cursor-pointer"
                   >
@@ -240,18 +244,18 @@ export function ModRow({
             )}
             {mod.sources.length > 0 && <DropdownMenuSeparator />}
             {mod.update && (
-              <DropdownMenuItem onSelect={onUpdate}>
+              <DropdownMenuItem onSelect={() => onUpdate(mod)}>
                 <ArrowUpCircleIcon />
                 Update to {mod.update.versionNumber}
               </DropdownMenuItem>
             )}
             {mod.sources.length > 0 && (
-              <DropdownMenuItem onSelect={onChangeVersion}>
+              <DropdownMenuItem onSelect={() => onChangeVersion(mod)}>
                 <RepeatIcon />
                 Change version…
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={onLink}>
+            <DropdownMenuItem onSelect={() => onLink(mod)}>
               <LinkIcon />
               Link to project…
             </DropdownMenuItem>
@@ -315,4 +319,4 @@ export function ModRow({
       </TableCell>
     </TableRow>
   )
-}
+})

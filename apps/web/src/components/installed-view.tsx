@@ -8,7 +8,7 @@ import {
   SearchCheckIcon,
   Trash2Icon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { ChangeVersionDialog } from '@/components/change-version-dialog'
@@ -40,6 +40,29 @@ import {
 } from '@/lib/mods'
 import { cn } from '@/lib/utils'
 
+/**
+ * Rows in the table's first render, and how many more each following frame adds. Mounting a few
+ * hundred rows at once is what made opening this page feel slow: react-router navigates in a React
+ * transition, so React holds the previous page on screen until the new one has rendered. A first
+ * screenful renders straight away and the rest fill in behind it.
+ */
+const FIRST_ROWS = 25
+const ROW_CHUNK = 50
+
+/**
+ * How many of `total` rows to render right now. It only ever grows, so filtering or sorting an
+ * already-mounted list stays immediate.
+ */
+function useRowBudget(total: number): number {
+  const [budget, setBudget] = useState(FIRST_ROWS)
+  useEffect(() => {
+    if (budget >= total) return
+    const frame = requestAnimationFrame(() => setBudget((b) => b + ROW_CHUNK))
+    return () => cancelAnimationFrame(frame)
+  }, [budget, total])
+  return budget
+}
+
 /** The installed list; `text` comes from the shared search bar. */
 export function InstalledView({ contentLabel, text }: { contentLabel: string; text: string }) {
   const mods = useMods()
@@ -58,7 +81,13 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
 
   const all = mods.data?.mods ?? []
   const shown = filterMods(all, filter, text, sort)
+  const budget = useRowBudget(shown.length)
+  const rows = budget >= shown.length ? shown : shown.slice(0, budget)
   const counts = countByFilter(all)
+  // Stable, so a memoised row only re-renders when its own mod changes.
+  const onLink = useCallback((m: InstalledMod) => setLinking(m.fileName), [])
+  const onUpdate = useCallback((m: InstalledMod) => setUpdating([m]), [])
+  const onChangeVersion = useCallback((m: InstalledMod) => setChanging(m.fileName), [])
   const linkingMod: InstalledMod | undefined = all.find((m) => m.fileName === linking)
   const changingMod = all.find((m) => m.fileName === changing)
   const withUpdates = all.filter((m) => m.update)
@@ -89,17 +118,23 @@ export function InstalledView({ contentLabel, text }: { contentLabel: string; te
           </TableRow>
         </TableHeader>
         <TableBody>
-          {shown.map((m) => (
+          {rows.map((m) => (
             <ModRow
               key={m.fileName}
               mod={m}
-              onLink={() => setLinking(m.fileName)}
-              onUpdate={() => setUpdating([m])}
-              onChangeVersion={() => setChanging(m.fileName)}
+              onLink={onLink}
+              onUpdate={onUpdate}
+              onChangeVersion={onChangeVersion}
             />
           ))}
         </TableBody>
       </Table>
+      {rows.length < shown.length && (
+        // Only up here for a frame or two, so it isn't announced.
+        <p className="text-muted-foreground py-4 text-center text-sm" aria-hidden>
+          Showing {rows.length} of {shown.length}…
+        </p>
+      )}
       {shown.length === 0 && (
         <p className="text-muted-foreground py-12 text-center text-sm">
           {text.trim()
