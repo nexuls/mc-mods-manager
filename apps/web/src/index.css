@@ -87,6 +87,13 @@
   --sidebar-ring: oklch(0.708 0 0);
   /* ScrollPanel's edge shadows; stronger in dark mode, where a faint one disappears. */
   --scroll-shadow: oklch(0 0 0 / 12%);
+  /*
+   * One duration and easing for every view transition (pages, opening a project, the split toggle,
+   * the navigation highlight), so no swap looks different from another. Short on purpose: the
+   * transition holds interaction until it ends.
+   */
+  --view-duration: 180ms;
+  --view-ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .dark {
@@ -162,11 +169,13 @@ summary {
 }
 
 /*
- * View transitions between pages. React drives them: react-router updates the location inside a
- * React transition, so the `<ViewTransition>` in `App.tsx` (class `page`) and the highlight in
- * `app-nav.tsx` (name `nav-highlight`) animate on every navigation. Everything outside them — the
- * header, the navigation — is the browser's `root` snapshot, which is opted out of its default
- * cross-fade so it simply stays put.
+ * View transitions. One shape for every view swap, so they all read the same: the old and the new
+ * content cross-fade over the same window, with nothing sliding and nothing left blank in between.
+ * React drives them — react-router updates the location inside a React transition, and the split
+ * toggle uses one too — so the `<ViewTransition>` in `App.tsx` (class `page`) and the highlight in
+ * `app-nav.tsx` (name `nav-highlight`) animate on navigation, on opening or closing a project and on
+ * turning the split view on or off. Everything outside them — the header, the navigation — is the
+ * browser's `root` snapshot, which is opted out of its default cross-fade so it simply stays put.
  */
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(root),
@@ -174,24 +183,28 @@ summary {
     animation: none;
   }
 
+  /*
+   * The browser's own fade-out/fade-in, kept as-is and only re-timed: both snapshots animate over
+   * the same window, which is what makes a swap read as one cross-fade rather than a blink.
+   */
   ::view-transition-old(.page),
   ::view-transition-new(.page) {
     /* Pages differ in height: let each snapshot keep its own, instead of being squashed to fit. */
     height: auto;
     overflow: clip;
+    animation-duration: var(--view-duration);
+    animation-timing-function: var(--view-ease);
   }
 
-  ::view-transition-old(.page) {
-    animation: page-leave 120ms ease-in both;
-  }
-
-  ::view-transition-new(.page) {
-    animation: page-enter 220ms 60ms ease-out both;
+  /* The box holding the two snapshots resizes on the same clock, or it lags the fade by 70ms. */
+  ::view-transition-group(.page) {
+    animation-duration: var(--view-duration);
+    animation-timing-function: var(--view-ease);
   }
 
   ::view-transition-group(nav-highlight) {
-    animation-duration: 220ms;
-    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+    animation-duration: var(--view-duration);
+    animation-timing-function: var(--view-ease);
   }
 
   /*
@@ -200,11 +213,14 @@ summary {
    */
   ::view-transition-group(.nav-label) {
     z-index: 1;
+    animation-duration: var(--view-duration);
+    animation-timing-function: var(--view-ease);
   }
 
   ::view-transition-old(.nav-label),
   ::view-transition-new(.nav-label) {
-    animation-duration: 220ms;
+    animation-duration: var(--view-duration);
+    animation-timing-function: var(--view-ease);
   }
 }
 
@@ -214,19 +230,5 @@ summary {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none;
-  }
-}
-
-@keyframes page-leave {
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
   }
 }
