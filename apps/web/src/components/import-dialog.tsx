@@ -1,6 +1,12 @@
-import type { ImportItem, ImportPlan, ImportStatus } from '@mc-mod/shared'
+import {
+  bridgeInfo,
+  type ImportItem,
+  type ImportPlan,
+  type ImportVersionMode,
+} from '@mc-mod/shared'
 import {
   AlertTriangleIcon,
+  CableIcon,
   CheckIcon,
   CircleXIcon,
   DownloadIcon,
@@ -23,32 +29,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type ItemProgress, useInstallJob } from '@/hooks/use-install'
 import { errorMessage } from '@/lib/api'
 import { fileSize, plural, shortDate } from '@/lib/format'
+import { type ImportRow, importRows, statusLabel } from '@/lib/import'
 import { cn } from '@/lib/utils'
-
-/** Installable first, then the ones that need a hand, then what's already here. */
-const statusOrder: Record<ImportStatus, number> = {
-  install: 0,
-  manual: 1,
-  unavailable: 2,
-  local: 3,
-  installed: 4,
-}
-
-const statusLabel: Record<ImportStatus, string> = {
-  install: 'Install',
-  manual: 'Manual download',
-  unavailable: 'Unavailable',
-  local: 'Local file',
-  installed: 'Installed',
-}
 
 /**
  * A shared mod list, checked against this instance: what it was made for, what would be installed
  * (ticked), and what's already here or can't be installed (locked). Installing runs the normal job.
+ *
+ * Two controls decide what an import actually takes. **Versions** defaults to the exact builds the
+ * list pinned, so importing reproduces the setup the list came from instead of jumping everyone to
+ * the newest release; updating is then a deliberate step in Installed. **Include what doesn't fit**
+ * adds the files with no build for this instance, which can still be downloaded and may still work.
  */
 export function ImportDialog({
   plan,
@@ -63,24 +62,28 @@ export function ImportDialog({
   const open = plan !== null
   const { run, start, reset } = useInstallJob()
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set())
+  const [mode, setMode] = useState<ImportVersionMode>('shared')
+  const [includeIncompatible, setIncludeIncompatible] = useState(false)
 
-  // A newly opened list starts from scratch: everything installable ticked.
+  // A newly opened list starts from scratch: everything installable ticked, shared versions.
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset when another list is opened
   useEffect(() => {
     reset()
     setSkipped(new Set())
+    setMode('shared')
+    setIncludeIncompatible(false)
   }, [plan, reset])
 
-  const items = useMemo(
-    () =>
-      plan ? [...plan.items].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]) : [],
-    [plan],
+  const rows = useMemo(
+    () => (plan ? importRows(plan.items, mode, includeIncompatible) : []),
+    [plan, mode, includeIncompatible],
   )
-  const chosen = items.filter((i) => i.status === 'install' && !skipped.has(i.fileName))
+  const chosen = rows.filter((r) => r.selectable && !skipped.has(r.item.fileName))
   const busy = run.state === 'running'
   const started = run.state !== 'idle'
-  const totalSize = chosen.reduce((n, i) => n + (i.size ?? 0), 0)
-  const already = items.filter((i) => i.status === 'installed').length
+  const totalSize = chosen.reduce((n, r) => n + (r.candidate?.size ?? 0), 0)
+  const already = rows.filter((r) => r.status === 'installed').length
+  const stuck = rows.filter((r) => r.status === 'incompatible').length
 
   // The job's item-* events index into the files sent when it started.
   const [jobItems, setJobItems] = useState<string[]>([])
@@ -91,12 +94,13 @@ export function ImportDialog({
   }
 
   const install = async () => {
-    const list = chosen.flatMap((i) =>
-      i.provider && i.projectId && i.versionId
-        ? [{ provider: i.provider, projectId: i.projectId, versionId: i.versionId }]
+    const list = chosen.flatMap(({ item, candidate }) =>
+      item.provider && item.projectId && candidate
+        ? [{ provider: item.provider, projectId: item.projectId, versionId: candidate.versionId }]
         : [],
     )
-    setJobItems(chosen.map((i) => i.fileName))
+    if (list.length === 0) return
+    setJobItems(chosen.map((r) => r.item.fileName))
     const result = await start({ items: list })
     if (result.state === 'error') {
       toast.error(errorMessage(result.error))
@@ -115,6 +119,9 @@ export function ImportDialog({
       else next.add(fileName)
       return next
     })
+
+  const setAll = (on: boolean) =>
+    setSkipped(on ? new Set() : new Set(rows.map((r) => r.item.fileName)))
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
@@ -143,16 +150,66 @@ export function ImportDialog({
                 </AlertDescription>
               </Alert>
             )}
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-xs font-medium">Versions</span>
+                <ToggleGroup
+                  type="single"
+                  size="sm"
+                  variant="outline"
+                  value={mode}
+                  disabled={started}
+                  onValueChange={(v) => v && setMode(v as ImportVersionMode)}
+                >
+                  <ToggleGroupItem value="shared" className="px-2.5 text-xs">
+                    As shared
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="best" className="px-2.5 text-xs">
+                    Newest that fits
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="import-include-incompatible"
+                      checked={includeIncompatible}
+                      disabled={started || stuck === 0}
+                      onCheckedChange={setIncludeIncompatible}
+                    />
+                    <Label htmlFor="import-include-incompatible" className="text-xs font-medium">
+                      Include what doesn't fit{stuck > 0 ? ` (${stuck})` : ''}
+                    </Label>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Downloads the files with no build for this instance anyway. They may not load.
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="ml-auto flex items-center gap-1">
+                <Button variant="ghost" size="sm" disabled={started} onClick={() => setAll(true)}>
+                  Select all
+                </Button>
+                <Button variant="ghost" size="sm" disabled={started} onClick={() => setAll(false)}>
+                  None
+                </Button>
+              </div>
+            </div>
+
             <ScrollPanel className="-mx-2" viewportClassName="max-h-[45vh]">
               <ul className="flex flex-col gap-1 px-2">
-                {items.map((item) => (
-                  <ImportRow
-                    key={item.fileName}
-                    item={item}
-                    checked={chosen.includes(item)}
-                    locked={started || item.status !== 'install'}
-                    onCheckedChange={(on) => toggle(item.fileName, on)}
-                    progress={progressOf(item)}
+                {rows.map((row) => (
+                  <ImportRowItem
+                    key={row.item.fileName}
+                    row={row}
+                    checked={chosen.includes(row)}
+                    locked={started || !row.selectable}
+                    onCheckedChange={(on) => toggle(row.item.fileName, on)}
+                    progress={progressOf(row.item)}
                   />
                 ))}
               </ul>
@@ -210,27 +267,29 @@ function Checks({ plan }: { plan: ImportPlan }) {
   )
 }
 
-function ImportRow({
-  item,
+function ImportRowItem({
+  row,
   checked,
   locked,
   onCheckedChange,
   progress,
 }: {
-  item: ImportItem
+  row: ImportRow
   checked: boolean
   locked: boolean
   onCheckedChange: (checked: boolean) => void
   progress: ItemProgress | undefined
 }) {
+  const { item, status, candidate, detail } = row
   const id = `import-${item.fileName}`
-  const inactive = item.status !== 'install'
-  const version = item.versionNumber ?? item.listedVersion
+  const inactive = status !== 'install' && !row.selectable
+  const version = candidate?.versionNumber ?? item.listedVersion
   return (
     <li
       className={cn(
         'flex items-center gap-3 rounded-lg border p-2.5',
         inactive && 'text-muted-foreground bg-muted/40',
+        row.selectable && status === 'incompatible' && 'border-amber-500/40',
       )}
     >
       <Checkbox
@@ -245,10 +304,20 @@ function ImportRow({
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{item.title}</span>
           {version && <span className="text-muted-foreground shrink-0 text-xs">{version}</span>}
+          {candidate?.bridge && (
+            <Badge
+              variant="secondary"
+              className="bg-amber-500/15 text-amber-700 dark:text-amber-300"
+              title={bridgeInfo[candidate.bridge].caveat}
+            >
+              <CableIcon />
+              {bridgeInfo[candidate.bridge].label}
+            </Badge>
+          )}
           {!item.enabled && <Badge variant="outline">Disabled there</Badge>}
         </span>
-        <span className="text-muted-foreground truncate text-xs" title={item.note ?? item.reason}>
-          {item.note ?? item.reason ?? item.fileName}
+        <span className="text-muted-foreground truncate text-xs" title={detail}>
+          {detail ?? item.fileName}
         </span>
         {progress?.state === 'downloading' && (
           <Progress
@@ -264,19 +333,22 @@ function ImportRow({
         <CheckIcon className="size-4 text-emerald-500" aria-label="Installed" />
       ) : progress?.state === 'failed' ? (
         <CircleXIcon className="text-destructive size-4" aria-label="Failed" />
-      ) : item.status === 'manual' && item.pageUrl ? (
+      ) : status === 'manual' && candidate?.pageUrl ? (
         <Button variant="outline" size="sm" asChild>
-          <a href={item.pageUrl} target="_blank" rel="noreferrer noopener">
+          <a href={candidate.pageUrl} target="_blank" rel="noreferrer noopener">
             Download
             <ExternalLinkIcon />
           </a>
         </Button>
-      ) : item.status !== 'install' ? (
+      ) : status !== 'install' ? (
         <Badge
           variant="outline"
-          className={cn(item.status === 'unavailable' && 'text-destructive')}
+          className={cn(
+            status === 'unavailable' && 'text-destructive',
+            status === 'incompatible' && 'text-amber-600 dark:text-amber-500',
+          )}
         >
-          {statusLabel[item.status]}
+          {statusLabel[status]}
         </Badge>
       ) : (
         <SideChip side={item.side} />

@@ -14,9 +14,13 @@ const item = (over: Partial<ImportItem> & Pick<ImportItem, 'fileName' | 'title'>
   status: 'install',
   provider: 'modrinth',
   projectId: `${over.fileName}-project`,
-  versionId: `${over.fileName}-version`,
-  versionNumber: '1.0',
-  size: 1024,
+  shared: {
+    versionId: `${over.fileName}-version`,
+    versionNumber: '1.0',
+    size: 1024,
+    compatible: true,
+    manual: false,
+  },
   ...over,
 })
 
@@ -60,9 +64,26 @@ const plan: ImportPlan = {
       status: 'local',
       provider: undefined,
       projectId: undefined,
-      versionId: undefined,
+      shared: undefined,
+      reason: 'Not on Modrinth or CurseForge',
+    }),
+    // Only a build for another game version exists: downloadable, but it doesn't fit.
+    item({
+      fileName: 'legacy.jar',
+      title: 'Legacy',
+      status: 'incompatible',
+      reason: 'No version for Fabric 1.21.4',
+      shared: {
+        versionId: 'legacy-version',
+        versionNumber: '1.0',
+        size: 2048,
+        compatible: false,
+        manual: false,
+        note: 'Made for 1.20.1',
+      },
     }),
   ],
+  bridges: [],
   warnings: ['The list was made for game version 1.20.1; this instance is 1.21.4.'],
 }
 
@@ -74,7 +95,7 @@ describe('ImportDialog', () => {
     fakeApi({})
     show()
     expect(await screen.findByText('Lithium')).toBeDefined()
-    expect(screen.getByText(/pack.json holds 4 mods/)).toBeDefined()
+    expect(screen.getByText(/pack.json holds 5 mods/)).toBeDefined()
     expect(screen.getByText(/1 of them is already installed/)).toBeDefined()
     expect(screen.getByText('1.20.1')).toBeDefined()
     expect(screen.getByText('1.21.4')).toBeDefined()
@@ -83,6 +104,37 @@ describe('ImportDialog', () => {
     expect(screen.getByText('Installed')).toBeDefined()
     expect(screen.getByText('Local file')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Install 2 mods' })).toBeDefined()
+  })
+
+  // "Unavailable" used to be the end of the road for a mod with no build for this instance.
+  test("mods that don't fit are offered once the switch is on", async () => {
+    fakeApi({})
+    show()
+    await screen.findByText('Lithium')
+    const legacy = screen.getByRole('checkbox', { name: 'Install Legacy' })
+    expect(legacy.hasAttribute('disabled')).toBe(true)
+
+    await userEvent.click(screen.getByLabelText(/Include what doesn't fit/))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Install 3 mods' })).toBeDefined(),
+    )
+    expect(
+      screen.getByRole('checkbox', { name: 'Install Legacy' }).getAttribute('data-state'),
+    ).toBe('checked')
+  })
+
+  test('Select all and None tick and untick everything selectable', async () => {
+    fakeApi({})
+    show()
+    await screen.findByText('Lithium')
+    await userEvent.click(screen.getByRole('button', { name: 'None' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Install 0 mods' })).toBeDefined(),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Install 2 mods' })).toBeDefined(),
+    )
   })
 
   test('installable mods start ticked and can be unticked', async () => {

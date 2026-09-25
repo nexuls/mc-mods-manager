@@ -2,6 +2,8 @@ import { expect, test } from 'bun:test'
 import path from 'node:path'
 import {
   api,
+  type ImportItem,
+  importCandidate,
   MOD_LIST_FORMAT,
   type ModList,
   type ProjectVersion,
@@ -30,6 +32,14 @@ const lithium: ProjectInfo = {
   id: 'gvQqBUqZ',
   slug: 'lithium',
   title: 'Lithium',
+  description: '',
+  side: 'both',
+}
+/** A project whose only build is for another game version, so nothing fits this instance. */
+const legacy: ProjectInfo = {
+  id: 'LEGACY01',
+  slug: 'legacy',
+  title: 'Legacy Mod',
   description: '',
   side: 'both',
 }
@@ -73,6 +83,15 @@ const sodiumVersions = [
     gameVersions: ['1.20.1'],
     file: { name: 'sodium-0.5.jar', url: 'https://cdn.modrinth.com/sodium-0.5.jar', size: 10 },
   }),
+  // An older build that still fits this instance: what "as shared" must keep using.
+  version({
+    id: 'SOD-MID',
+    projectId: sodium.id,
+    name: 'Sodium 0.55',
+    versionNumber: '0.55',
+    publishedAt: '2026-01-15T00:00:00Z',
+    file: { name: 'sodium-0.55.jar', url: 'https://cdn.modrinth.com/sodium-0.55.jar', size: 10 },
+  }),
   version({
     id: 'SOD-NEW',
     projectId: sodium.id,
@@ -80,6 +99,17 @@ const sodiumVersions = [
     versionNumber: '0.6',
     publishedAt: '2026-02-01T00:00:00Z',
     file: { name: 'sodium-0.6.jar', url: 'https://cdn.modrinth.com/sodium-0.6.jar', size: 10 },
+  }),
+]
+
+const legacyVersions = [
+  version({
+    id: 'LEG-1',
+    projectId: legacy.id,
+    name: 'Legacy 1.0',
+    versionNumber: '1.0',
+    gameVersions: ['1.20.1'],
+    file: { name: 'legacy-1.0.jar', url: 'https://cdn.modrinth.com/legacy-1.0.jar', size: 20 },
   }),
 ]
 
@@ -98,8 +128,8 @@ async function setup(jars: Record<string, Uint8Array> = {}) {
         gameVersions: ['1.21.4'],
       },
     },
-    projects: [lithium, sodium],
-    versions: [version(), ...sodiumVersions],
+    projects: [lithium, sodium, legacy],
+    versions: [version(), ...sodiumVersions, ...legacyVersions],
   })
   const token = createSessionToken()
   const { app } = createApp({
@@ -141,6 +171,9 @@ async function setup(jars: Record<string, Uint8Array> = {}) {
     },
   }
 }
+
+/** What an import takes for an item with the default (shared-first) choice of version. */
+const pick = (item: ImportItem | undefined) => (item ? importCandidate(item, 'shared') : undefined)
 
 /** A list made "elsewhere": Lithium from Modrinth, Sodium pinned to a 1.20.1 build, one local jar. */
 const sharedList: ModList = {
@@ -241,16 +274,20 @@ test("someone else's list: versions are re-picked, local jars and mismatches are
   ])
 
   const [lith, sod, local] = plan.items
-  expect(lith).toMatchObject({ status: 'install', versionId: 'LITH1', versionNumber: '0.14' })
-  // The listed Sodium is a 1.20.1 build, so the 1.21.4 one takes its place.
-  expect(sod).toMatchObject({
-    status: 'install',
-    listedVersion: '0.5',
-    versionId: 'SOD-NEW',
-    versionNumber: '0.6',
-    enabled: false,
+  // The listed Lithium build fits, so that exact file is what an import takes.
+  expect(lith).toMatchObject({ status: 'install' })
+  expect(lith?.shared).toMatchObject({
+    versionId: 'LITH1',
+    versionNumber: '0.14',
+    compatible: true,
   })
-  expect(sod?.note).toContain("doesn't fit")
+  expect(pick(lith)?.versionId).toBe('LITH1')
+
+  // The listed Sodium is a 1.20.1 build: it's still offered, but the 1.21.4 one is what fits.
+  expect(sod).toMatchObject({ status: 'install', listedVersion: '0.5', enabled: false })
+  expect(sod?.shared).toMatchObject({ versionId: 'SOD-OLD', compatible: false })
+  expect(sod?.best).toMatchObject({ versionId: 'SOD-NEW', versionNumber: '0.6', compatible: true })
+  expect(pick(sod)?.versionId).toBe('SOD-NEW')
   expect(local).toMatchObject({ status: 'local', title: 'Homemade' })
   expect(plan.warnings.join(' ')).toContain('game version 1.20.1')
   expect(plan.warnings.join(' ')).toContain('Modrinth or CurseForge')
@@ -277,7 +314,7 @@ test('a project with no fitting version is unavailable; CurseForge needs a key',
     ],
   })
   expect(plan.items.map((i) => i.status)).toEqual(['unavailable', 'unavailable'])
-  expect(plan.items[0]?.reason).toContain('No version for Fabric 1.21.4')
+  expect(plan.items[0]?.reason).toContain('Nothing to download for Fabric 1.21.4')
   expect(plan.items[1]?.reason).toContain('CurseForge API key')
   expect(plan.warnings.join(' ')).toContain('CurseForge API key')
 })
@@ -292,4 +329,50 @@ test('rejects files that are not mod lists, and lists from a newer mc-mod', asyn
   })
   expect(newer.status).toBe(400)
   expect(await newer.text()).toContain('newer mc-mod')
+})
+
+test('a mod with no build for this instance can still be taken, and says so', async () => {
+  await using t = await setup()
+  const plan = await t.importPlan({
+    ...sharedList,
+    mods: [
+      {
+        ...sharedList.mods[0],
+        fileName: 'legacy-1.0.jar',
+        name: 'Legacy Mod',
+        version: '1.0',
+        sha1: undefined,
+        source: { provider: 'modrinth', projectId: legacy.id, versionId: 'LEG-1' },
+      },
+    ],
+  })
+
+  const [item] = plan.items
+  // Not "unavailable": the file exists and can be downloaded, it just doesn't fit.
+  expect(item).toMatchObject({ status: 'incompatible', reason: 'No version for Fabric 1.21.4' })
+  expect(item?.shared).toMatchObject({ versionId: 'LEG-1', compatible: false })
+  expect(pick(item)?.versionId).toBe('LEG-1')
+  expect(plan.warnings.join(' ')).toContain("Include what doesn't fit")
+})
+
+// An import reproduces the setup the list came from; updating is a separate, deliberate step.
+test('a pinned build that still fits is kept, however new the alternative', async () => {
+  await using t = await setup()
+  const plan = await t.importPlan({
+    ...sharedList,
+    mods: [
+      {
+        ...sharedList.mods[1],
+        version: '0.55',
+        source: { provider: 'modrinth', projectId: sodium.id, versionId: 'SOD-MID' },
+      },
+    ],
+  })
+
+  const [item] = plan.items
+  expect(item?.shared).toMatchObject({ versionId: 'SOD-MID', compatible: true })
+  expect(item?.best).toMatchObject({ versionId: 'SOD-NEW', compatible: true })
+  expect(pick(item)?.versionId).toBe('SOD-MID')
+  // Asking for the newest that fits is what moves it on.
+  expect(importCandidate(item as ImportItem, 'best')?.versionId).toBe('SOD-NEW')
 })

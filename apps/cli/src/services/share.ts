@@ -1,9 +1,11 @@
 import {
+  type ImportCandidate,
   type ImportCheck,
   type ImportItem,
   type ImportPlan,
   type InstalledMod,
   type Instance,
+  importStatus,
   loaderInfo,
   MOD_LIST_FORMAT,
   MOD_LIST_VERSION,
@@ -11,6 +13,7 @@ import {
   type ModListEntry,
   type ModListInstance,
   type ProjectVersion,
+  type Provider,
   providerLabel,
   type RankedVersion,
 } from '@mc-mod/shared'
@@ -33,12 +36,14 @@ export interface ShareDeps {
   library: Pick<LibraryService, 'list'>
   catalog: Pick<
     CatalogService,
-    'bestVersion' | 'versionsByIds' | 'versionContext' | 'describeTarget'
+    'bestVersion' | 'versions' | 'versionsByIds' | 'versionContext' | 'describeTarget'
   >
   curseforge: Pick<CurseForgeProvider, 'enabled'>
   /** The mc-mod version written into exported lists. */
   version: string
   now?: () => number
+  /** Unexpected errors while planning, after the entry is reported as unavailable. */
+  onInternalError?: (err: unknown) => void
 }
 
 /**
@@ -90,12 +95,13 @@ export class ShareService {
     await eachLimit(due, CONCURRENCY, async ({ item, entry }) => {
       if (!entry) return
       try {
-        this.resolve(item, entry, await this.pick(entry))
+        await this.resolve(item, entry)
       } catch (err) {
-        if (!(err instanceof AppError)) throw err
+        // One project the platform can't answer for must not lose the other 200 entries.
         failed++
         item.status = 'unavailable'
-        item.reason = err.message
+        item.reason = err instanceof AppError ? err.message : 'Could not be looked up'
+        if (!(err instanceof AppError)) this.deps.onInternalError?.(err)
       }
     })
 
@@ -112,6 +118,12 @@ export class ShareService {
     if (noKey > 0) {
       warnings.push(
         `Add a CurseForge API key in Settings to install ${plural(noKey, 'CurseForge file')} from this list.`,
+      )
+    }
+    const stuck = items.filter((i) => i.status === 'incompatible').length
+    if (stuck > 0) {
+      warnings.push(
+        `${plural(stuck, 'file')} in the list ${stuck === 1 ? 'has' : 'have'} no version for ${this.deps.catalog.describeTarget()}. Turn on "Include what doesn't fit" to take them anyway.`,
       )
     }
     const local = items.filter((i) => i.status === 'local').length
@@ -131,6 +143,7 @@ export class ShareService {
       to,
       checks,
       items,
+      bridges: [...(this.deps.catalog.versionContext().bridges ?? [])],
       warnings,
     }
   }
@@ -174,51 +187,71 @@ export class ShareService {
   }
 
   /**
-   * The version to install: the one in the list when it fits this instance, else the best one for it.
-   * Nothing fits → undefined.
+   * Finds the files this item could be installed from: the exact one the list pinned, and the best one
+   * for this instance. When neither exists, the project's newest downloadable file is offered as a
+   * last resort, so "include what doesn't fit" has something to take.
    */
-  private async pick(entry: ModListEntry): Promise<RankedVersion | ProjectVersion | undefined> {
+  private async resolve(item: ImportItem, entry: ModListEntry): Promise<void> {
     const source = entry.source
-    if (!source) return undefined
+    if (!source) return
+    const ctx = this.deps.catalog.versionContext()
+
     if (source.versionId) {
-      const listed = (
+      const pinned = (
         await this.deps.catalog.versionsByIds(source.provider, [source.versionId])
       ).get(source.versionId)
-      const ranked = listed
-        ? rankVersions([listed], this.deps.catalog.versionContext())[0]
-        : undefined
-      if (ranked?.compatible && ranked.projectId === source.projectId) return ranked
+      if (pinned && pinned.projectId === source.projectId) {
+        item.shared = candidateOf(rankVersions([pinned], ctx)[0] ?? pinned)
+      }
     }
-    return this.deps.catalog.bestVersion(source.provider, source.projectId)
-  }
+    const best = await this.deps.catalog.bestVersion(source.provider, source.projectId)
+    if (best && best.id !== item.shared?.versionId) item.best = candidateOf(best)
 
-  /** Fills the item in from the version that was picked (or marks it unavailable). */
-  private resolve(
-    item: ImportItem,
-    entry: ModListEntry,
-    version: RankedVersion | ProjectVersion | undefined,
-  ): void {
-    if (!version) {
+    if (!item.shared && !item.best) {
+      const fallback = await this.newestFile(source.provider, source.projectId)
+      if (fallback) item.best = candidateOf(fallback)
+    }
+    if (!item.shared && !item.best) {
       item.status = 'unavailable'
-      item.reason = `No version for ${this.deps.catalog.describeTarget()}`
+      item.reason = `Nothing to download for ${this.deps.catalog.describeTarget()}`
       return
     }
-    item.versionId = version.id
-    item.versionNumber = version.versionNumber
-    item.size = version.file?.size
-    if (entry.source?.versionId && version.id !== entry.source.versionId) {
-      item.note = `The listed version doesn't fit this instance; ${version.versionNumber} does`
-    } else if ('note' in version && version.note) {
-      item.note = version.note
+    item.status = importStatus(item, 'shared')
+    if (item.status === 'incompatible') {
+      item.reason = `No version for ${this.deps.catalog.describeTarget()}`
+    } else if (item.status === 'manual') {
+      item.reason = `Download by hand from ${providerLabel[source.provider]}`
     }
-    if (version.file && !version.file.url) {
-      item.status = 'manual'
-      item.pageUrl = version.pageUrl
-      item.reason = `Download by hand from ${providerLabel[version.provider]}`
-    } else if (!version.file) {
-      item.status = 'unavailable'
-      item.reason = 'That version has no jar to download'
-    }
+  }
+
+  /**
+   * The newest file of a project, whatever it was built for. Only asked for when nothing fits, so the
+   * user still has the choice of taking the jar and sorting the loader out themselves.
+   */
+  private async newestFile(
+    provider: Provider,
+    projectId: string,
+  ): Promise<RankedVersion | undefined> {
+    const all = await this.deps.catalog.versions(provider, projectId, true).catch(() => [])
+    return [...all]
+      .filter((v) => v.file)
+      .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0]
+  }
+}
+
+/** One ranked version as the dialog's pick-one-of-two choice sees it. */
+function candidateOf(version: RankedVersion | ProjectVersion): ImportCandidate {
+  const ranked = 'compatible' in version ? version : undefined
+  return {
+    versionId: version.id,
+    versionNumber: version.versionNumber,
+    size: version.file?.size,
+    // Without a file there is nothing to download, so it can't run here whatever the platform says.
+    compatible: Boolean(version.file) && (ranked?.compatible ?? false),
+    bridge: ranked?.bridge,
+    manual: Boolean(version.file && !version.file.url),
+    pageUrl: version.pageUrl,
+    note: version.file ? ranked?.note : 'No jar to download',
   }
 }
 

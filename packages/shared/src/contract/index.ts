@@ -48,7 +48,17 @@ export {
 export * from './query'
 export * from './session'
 export { KeySource, Settings, SettingsBody, TestKeyResponse } from './settings'
-export { ImportCheck, ImportItem, ImportMatch, ImportPlan, ImportStatus } from './share'
+export {
+  ImportCandidate,
+  ImportCheck,
+  ImportItem,
+  ImportMatch,
+  ImportPlan,
+  ImportStatus,
+  ImportVersionMode,
+  importCandidate,
+  importStatus,
+} from './share'
 export { TrashId, TrashItem, TrashResponse } from './trash'
 
 /** The whole `/api` contract. Backend routes and frontend calls both go through it. */
