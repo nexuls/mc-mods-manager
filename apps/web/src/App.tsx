@@ -14,7 +14,9 @@ import { ShareView } from '@/components/share-view'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInstance } from '@/hooks/use-instance'
+import { useMods } from '@/hooks/use-mods'
 import { PageScrollContext } from '@/hooks/use-page-scroll'
+import { useSettings } from '@/hooks/use-settings'
 import { ApiClientError, errorMessage } from '@/lib/api'
 
 function App() {
@@ -75,6 +77,7 @@ function App() {
               </PageMessage>
             ) : ready ? (
               <>
+                <Prefetch />
                 <AppNav contentKind={ready.contentKind} />
                 <main className="flex min-w-0 flex-1 flex-col">
                   {/*
@@ -123,6 +126,16 @@ function App() {
 /** The routes LibraryView serves; they manage the page scroll themselves. */
 function inLibrary(pathname: string): boolean {
   return pathname === '/' || pathname === '/browse' || pathname.startsWith('/project/')
+}
+
+/**
+ * Starts the requests every page needs as soon as the instance is known, whichever page is open, so
+ * moving to Installed or Browse finds the list already there instead of scanning the folder on arrival.
+ */
+function Prefetch() {
+  useMods()
+  useSettings()
+  return null
 }
 
 /** The navigation and a table's outline while the instance loads. */
