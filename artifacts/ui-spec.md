@@ -24,6 +24,9 @@ shadcn/ui components + Tailwind; light/dark theme following the OS, toggle in he
   when that fails; "Open the link from the terminal" on a 401 (a link from an earlier run). Each page sits in an error
   boundary keyed by path, so a crash shows "This page ran into a problem" (Try again / Reload) and navigating away
   recovers. Empty and error blocks share `PageMessage` (icon, title, text, actions in a dashed box).
+- **Motion:** every view swap is the same cross-fade (`--view-duration`, 180ms): moving between pages, opening or
+  closing a project, and turning the split view on or off. Nothing slides, and each page starts at the top. The
+  navigation highlight slides between items on the same clock. `prefers-reduced-motion: reduce` drops all of it.
 - **Scrolling:** every scrolling region (the page below the header, the split view's lists and project page, dialog
   lists) is a `ScrollPanel`: shadcn's scrollbar, plus a soft shadow on each edge the content continues past. The
   header stays put and the page scrolls below it. Native scrollbars that remain (menus, text areas, code blocks) are

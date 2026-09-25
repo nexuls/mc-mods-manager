@@ -356,3 +356,28 @@ Accepted.
   version manifest a modded version json inherits from, else derived from the game version and marked
   `source: "game-version"`, so the dialog never presents a guess as a fact.
 
+
+### D34 — One motion for every view swap, and nothing held back while it happens
+- **One cross-fade, one clock.** The old page-leave/page-enter keyframes ran back to back (fade out over 120ms, then
+  fade in over 220ms after a 60ms wait) and each moved the page a few pixels on the y axis. Held together with the
+  browser's 250ms default for the group and the `root` snapshot, that made a swap look different depending on which
+  pages it joined, and made opening a project — where the search bar above it does not change — look like the whole
+  screen blinked. The browser's own fade-out/fade-in is now kept as-is and only re-timed: old, new and group all run
+  for `--view-duration` (180ms) with `--view-ease`, so pages, projects, the split toggle and the navigation highlight
+  are one motion. Nothing translates; a swap where most of the screen is unchanged is now almost invisible.
+- **The split toggle is a React transition.** `useSplitView` kept the preference in a `useSyncExternalStore`, and store
+  reads are always urgent, so turning the split on or off re-laid the page out with no transition at all while every
+  other change animated. Each caller now mirrors the shared value in `useState` and `setWanted` updates them inside
+  `startTransition`, which is what `<ViewTransition>` needs to animate a change that isn't a navigation.
+- **Every page starts at the top.** Only the library routes managed the page scroll; leaving a long page for another
+  one kept its scroll position, so the two snapshots in the cross-fade began at different offsets and some swaps
+  jumped. `App` now scrolls the page to the top on entering any route LibraryView doesn't serve.
+- **Rows are mounted in chunks.** Navigation happens inside a React transition, so React finishes rendering the new
+  page before it shows anything — a few hundred `ModRow`s (each with a menu, a switch, tooltips and three mutation
+  hooks) therefore delayed the navigation itself rather than appearing progressively. `InstalledView` renders 25 rows
+  first and adds 50 per frame, and `ModRow` is memoised with callbacks that take the mod instead of closing over it,
+  so one row's switch no longer re-renders the list. The budget only grows, so filtering and sorting stay immediate.
+  Measured on the dev instance (115 jars, release build, 1600×1000): mounting the library 306ms → 152ms, opening a
+  project 347ms → 176ms.
+- **The list is fetched whatever page is open.** A `Prefetch` component starts `GET /api/mods` and `/api/settings` as
+  soon as the instance is known, so arriving at Installed or Browse doesn't begin the folder scan on arrival.
