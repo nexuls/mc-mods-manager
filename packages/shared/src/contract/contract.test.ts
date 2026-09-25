@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
+import { MOD_LIST_MAX_MODS, MOD_LIST_VERSION } from '../domain/mod-list'
 import {
   ApiErrorSchema,
   api,
   buildPath,
   defineEndpoint,
+  INSTALL_BATCH_LIMIT,
+  InstallBody,
   listEndpoints,
   SessionToken,
 } from './index'
@@ -57,5 +60,33 @@ describe('buildPath', () => {
 
   test('throws on a missing param', () => {
     expect(() => buildPath('/api/mods/:fileName')).toThrow('fileName')
+  })
+})
+
+describe('InstallBody', () => {
+  const item = (i: number) => ({
+    provider: 'modrinth' as const,
+    projectId: `p${i}`,
+    versionId: `v${i}`,
+  })
+
+  // A whole shared mod list is installed in one request, and a 60-item cap turned an import of any
+  // ordinary modpack into a client-side validation failure with nothing to act on.
+  test('takes as many files as a mod list can hold', () => {
+    expect(INSTALL_BATCH_LIMIT).toBe(MOD_LIST_MAX_MODS)
+    const items = Array.from({ length: INSTALL_BATCH_LIMIT }, (_, i) => item(i))
+    expect(InstallBody.safeParse({ items }).success).toBe(true)
+  })
+
+  test('still refuses an empty or oversized batch', () => {
+    expect(InstallBody.safeParse({ items: [] }).success).toBe(false)
+    const tooMany = Array.from({ length: INSTALL_BATCH_LIMIT + 1 }, (_, i) => item(i))
+    expect(InstallBody.safeParse({ items: tooMany }).success).toBe(false)
+  })
+})
+
+describe('MOD_LIST_VERSION', () => {
+  test('is the version exports are written with', () => {
+    expect(MOD_LIST_VERSION).toBe(1)
   })
 })

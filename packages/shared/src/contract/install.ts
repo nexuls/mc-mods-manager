@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { Provider } from '../domain/mod'
+import { MOD_LIST_MAX_MODS } from '../domain/mod-list'
 import { Side } from '../domain/side'
 import { defineEndpoint } from './define'
 import { JobId } from './jobs'
@@ -67,12 +68,18 @@ export const plan = defineEndpoint({
   response: PlanResponse,
 })
 
+/**
+ * How many files one install job may hold. A whole shared mod list is installed in one go, so this
+ * matches `ModList.mods`' own cap rather than the much smaller size of a dependency plan.
+ */
+export const INSTALL_BATCH_LIMIT = MOD_LIST_MAX_MODS
+
 export const InstallBody = z.strictObject({
   /** Usually the plan's `install` items (plus the optional ones the user ticked). */
   items: z
     .array(z.strictObject({ provider: Provider, projectId: ProjectId, versionId: ProjectId }))
     .min(1)
-    .max(60),
+    .max(INSTALL_BATCH_LIMIT),
 })
 export type InstallBody = z.infer<typeof InstallBody>
 

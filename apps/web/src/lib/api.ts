@@ -101,9 +101,23 @@ export async function stream<E extends Endpoint>(
   }
 }
 
-/** A message for a toast or inline error: the API's message, or a generic one. */
+/**
+ * A message for a toast or inline error: the API's message, or the best we can say about anything
+ * else. A `ZodError` means a request we built or a response we got didn't match the contract, which
+ * used to surface as "Something went wrong" with nothing to act on; it now names the field.
+ */
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiClientError) return err.message
   if (err instanceof TypeError) return "Can't reach mc-mod. Is it still running in the terminal?"
+  if (err instanceof z.ZodError) return `mc-mod sent something unexpected: ${issueList(err)}`
+  if (err instanceof Error && err.message) return err.message
   return 'Something went wrong'
+}
+
+/** The first few zod issues as `field: message`, for an error the user may have to report. */
+export function issueList(err: z.ZodError, max = 3): string {
+  const issues = err.issues
+    .slice(0, max)
+    .map((i) => (i.path.length > 0 ? `${i.path.join('.')}: ${i.message}` : i.message))
+  return issues.join('; ') + (err.issues.length > max ? ` (+${err.issues.length - max} more)` : '')
 }

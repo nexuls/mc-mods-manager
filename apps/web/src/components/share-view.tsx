@@ -1,4 +1,10 @@
-import { type ContentKind, type ImportPlan, ModList } from '@mc-mod/shared'
+import {
+  type ContentKind,
+  type ImportPlan,
+  MOD_LIST_FORMAT,
+  MOD_LIST_VERSION,
+  ModList,
+} from '@mc-mod/shared'
 import { AlertTriangleIcon, DownloadIcon, UploadIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -8,18 +14,36 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useImportPlan, useShareList } from '@/hooks/use-share'
-import { errorMessage } from '@/lib/api'
+import { errorMessage, issueList } from '@/lib/api'
 import { plural } from '@/lib/format'
 
-/** A file the browser handed us is JSON of unknown shape until `ModList` says otherwise. */
-const FileContents = z.string().transform((text, ctx) => {
+/**
+ * Reads a file the browser handed us. It's JSON of unknown shape until `ModList` says otherwise, and
+ * each way it can fail gets its own message: a silent "not a mod list" sent people looking in the
+ * wrong place when the real problem was a newer format or one bad entry.
+ */
+function readList(text: string): { list: ModList } | { error: string } {
+  let json: unknown
   try {
-    return ModList.parse(JSON.parse(text))
+    json = JSON.parse(text)
   } catch {
-    ctx.addIssue({ code: 'custom', message: 'not a mod list' })
-    return z.NEVER
+    return { error: "isn't JSON. Pick the .json file mc-mod exported." }
   }
-})
+  const format = ListHeader.safeParse(json)
+  if (!format.success || format.data.format !== MOD_LIST_FORMAT) {
+    return { error: "isn't a mod list exported by mc-mod." }
+  }
+  if (format.data.formatVersion > MOD_LIST_VERSION) {
+    return { error: 'was made by a newer mc-mod. Update mc-mod to import it.' }
+  }
+  const parsed = ModList.safeParse(json)
+  if (!parsed.success)
+    return { error: `has an entry mc-mod can't read — ${issueList(parsed.error)}` }
+  return { list: parsed.data }
+}
+
+/** Just enough of a list to tell "not ours" from "ours, but newer" before the full parse. */
+const ListHeader = z.object({ format: z.string(), formatVersion: z.number() })
 
 /**
  * `/share`: hand the instance's mod list to someone as a JSON file, or read theirs and install what's
@@ -33,12 +57,12 @@ export function ShareView({ contentKind }: { contentKind: ContentKind }) {
   const [opened, setOpened] = useState<{ plan: ImportPlan; fileName: string } | null>(null)
 
   const readFile = async (file: File) => {
-    const parsed = FileContents.safeParse(await file.text())
-    if (!parsed.success) {
-      toast.error(`${file.name} isn't a mod list exported by mc-mod`)
+    const parsed = readList(await file.text())
+    if ('error' in parsed) {
+      toast.error(`${file.name} ${parsed.error}`)
       return
     }
-    plan.mutate(parsed.data, {
+    plan.mutate(parsed.list, {
       onSuccess: (p) => setOpened({ plan: p, fileName: file.name }),
       onError: (err) => toast.error(errorMessage(err)),
     })

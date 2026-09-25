@@ -20,6 +20,7 @@ export {
   RevealBody,
 } from './export'
 export {
+  INSTALL_BATCH_LIMIT,
   InstallBody,
   PlanBody,
   PlanItem,

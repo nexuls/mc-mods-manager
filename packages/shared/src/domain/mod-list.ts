@@ -9,6 +9,8 @@ import { Side } from './side'
 export const MOD_LIST_FORMAT = 'mc-mod/mod-list'
 /** Bumped when a later shape can't be read by this one; older files stay readable. */
 export const MOD_LIST_VERSION = 1
+/** Entries one list may hold. An install job takes the same number, so a whole list fits in one. */
+export const MOD_LIST_MAX_MODS = 1000
 
 const Text = (max: number) => z.string().trim().max(max)
 
@@ -63,7 +65,7 @@ export const ModList = z.object({
   createdAt: z.iso.datetime(),
   generator: z.object({ name: Text(100), version: Text(50) }),
   instance: ModListInstance,
-  mods: z.array(ModListEntry).max(1000),
+  mods: z.array(ModListEntry).max(MOD_LIST_MAX_MODS),
 })
 export type ModList = z.infer<typeof ModList>
 
