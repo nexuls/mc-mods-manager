@@ -55,7 +55,7 @@ the content dir (404 otherwise).
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/install/plan` | `{ provider, projectId, versionId? }` → `{ items: PlanItem[], warnings[] }` (resolved deps on the same platform, what's already installed, conflicts). Item `status`: `install`, `installed`, `unavailable`, or `manual` (a fitting file the author only allows downloading from the website: `pageUrl`; its dependencies are still resolved) |
-| POST | `/api/install` | `{ items: { provider, projectId, versionId }[] }` → `{ jobId }`. A manual-only file fails its item with `MANUAL_DOWNLOAD_REQUIRED` |
+| POST | `/api/install` | `{ items: { provider, projectId, versionId }[] }` → `{ jobId }`, 1..`INSTALL_BATCH_LIMIT` items (the same cap as `ModList.mods`, so a whole shared list fits in one job). A manual-only file fails its item with `MANUAL_DOWNLOAD_REQUIRED` |
 | GET | `/api/jobs/:id/events` | Server-Sent Events: `progress`, `item-done`, `item-failed`, `done` |
 
 Using plan → confirm → execute keeps the UI honest about dependencies before anything touches disk.
@@ -81,7 +81,7 @@ so the schemas drop unknown fields instead of refusing them.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/share/export` | The instance and every jar in its folder as a `ModList`. The browser saves it as `mc-mod-<loader>-<version>-<date>.json` |
-| POST | `/api/share/import` | `{ list: ModList }` → `{ createdAt, generator, from, to, checks[], items[], warnings[] }`. Read-only. Item `status`: `install`, `installed` (same file or another version of the project), `manual`, `unavailable` (nothing fits, or CurseForge has no key), `local` (not on a platform). Versions are re-picked for this instance: the listed one when it fits, else the best one (`note` says so). BAD_REQUEST for a list from a newer `formatVersion` |
+| POST | `/api/share/import` | `{ list: ModList }` → `{ createdAt, generator, from, to, checks[], items[], bridges[], warnings[] }`. Read-only. Each item carries up to two candidates — `shared` (the build the list pinned) and `best` (the best build for this instance) — each `{ versionId, versionNumber?, size?, compatible, bridge?, manual, pageUrl?, note? }`; `importCandidate(item, mode)` in the contract picks between them for `mode` `shared` (the default) or `best`. Item `status`: `install`, `installed` (same file or another version of the project), `manual`, `incompatible` (a file exists but nothing fits; installable anyway), `unavailable` (nothing to download, or CurseForge has no key), `local` (not on a platform). BAD_REQUEST for a list from a newer `formatVersion` |
 
 Installing the ticked items is the normal `POST /api/install`, so downloads, hashes and job progress work the same.
 

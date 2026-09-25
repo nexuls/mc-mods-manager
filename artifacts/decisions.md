@@ -381,3 +381,35 @@ Accepted.
   project 347ms → 176ms.
 - **The list is fetched whatever page is open.** A `Prefetch` component starts `GET /api/mods` and `/api/settings` as
   soon as the instance is known, so arriving at Installed or Browse doesn't begin the folder scan on arrival.
+
+
+### D35 — Compatibility layers, and an import that reproduces the setup it came from
+- **A translation layer is a compatibility state, not an error.** Modrinth and CurseForge only list the loader a
+  file was *built* for, so a Fabric mod on a NeoForge instance read as `wrong-loader` and no version was ever
+  offered for it — including on instances that were already running those mods through Sinytra Connector. There is
+  now a table of layers (`domain/bridge.ts`: the loader each runs, the host loaders and game-version windows it
+  covers, its mod ids and project ids, and the caveat), a `bridged` value of `Compatibility`, and a `bridge` field
+  on both `InstalledMod` and `RankedVersion`. A bridged build is offered and installable, always ranked below a
+  native or fallback build, and always labelled with the layer that would run it. A layer never excuses the wrong
+  game version.
+- **The layer has to be in the folder before search widens.** `LibraryService` finds installed layers from the
+  jars' own mod ids — no network — and publishes them through `BridgeStore` for `CatalogService` to read.
+  Ranking always offers bridged builds, because the user asked about that project; search and version *filters*
+  only widen once the layer is installed, because offering every Fabric mod on a bare NeoForge instance would
+  bury the builds that actually load. The wording follows the same fact: "runs through Sinytra Connector" where
+  it is installed, "needs Sinytra Connector" where it isn't.
+- **An import takes the builds the list pinned.** The export already recorded the exact installed version; the
+  import used to silently accept it only if it fit and otherwise substitute. It now carries both candidates,
+  `shared` and `best`, and `importCandidate(item, mode)` in the contract chooses between them so the server's
+  `status` and the dialog cannot disagree. `shared` is the default: importing reproduces the setup the list came
+  from rather than moving everyone to the newest release, and updating stays a deliberate step in Installed.
+- **"Nothing fits" is no longer a dead end.** When neither candidate fits, the project's newest downloadable file
+  is offered as `incompatible` — unticked and marked, but installable through the dialog's "Include what doesn't
+  fit" switch. `unavailable` now means what it says: there is nothing to download at all. One project the
+  platform cannot answer for marks that entry unavailable instead of failing the whole plan.
+- **`InstallBody` takes a whole list.** Its 60-item cap came from dependency plans, but installing from a list
+  posts every ticked item in one request. Past 60 the *client's own* body validation threw a `ZodError` before
+  anything was sent, and `errorMessage()` reported it as "Something went wrong" — which is exactly what someone
+  importing an ordinary modpack saw. The cap is now `MOD_LIST_MAX_MODS`, `errorMessage()` names the failing
+  field, and reading a list file tells apart "not JSON", "not a mod list", "made by a newer mc-mod" and a bad
+  entry.

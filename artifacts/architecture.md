@@ -245,8 +245,31 @@ For a project, fetch versions filtered by `gameVersion` + `loader`, then choose:
 4. For loaders with compatibility (Quilt can run Fabric mods; Purpur/Paper can run Spigot/Bukkit plugins;
    Folia is **not** assumed compatible), fall back to compatible loaders only if no native build exists,
    and flag it in the UI.
+5. Last, a build only a **compatibility layer** can run (§7.8): offered, marked with the layer, never
+   chosen over a native or fallback build.
 
 The UI always shows the chosen version and lets the user pick another from a dropdown.
+
+### 7.8 Loader compatibility layers ("bridges")
+Some mods let one loader run another's builds — Sinytra Connector runs Fabric mods on Forge 1.20.1 and
+NeoForge 1.21+. The platforms only ever list the loader a file was *built* for, so without this those
+files look like they don't exist for the instance.
+
+`packages/shared/src/domain/bridge.ts` is the table: the layer's id and label, the loader it runs, the
+host loaders and game-version windows it covers, the mod ids its jar declares, its project ids, and the
+caveat the UI repeats. `identify.ts` turns it into `bridgedLoaders()` (which loaders this instance can
+run through a layer) and `detectBridges()` (which layers are in the content dir, by jar mod id — no
+network needed).
+
+- An installed jar that only a layer can run gets `compatibility: "bridged"` and `bridge`, not
+  `wrong-loader`. Game versions are still checked: a layer never excuses the wrong one.
+- `rankVersions` marks such a version `compatible` with `bridge` set and ranks it below every native and
+  fallback build, so it's installable but never the automatic choice.
+- `LibraryService` publishes what it found through `BridgeStore`, which `CatalogService` reads. Search
+  and version filters only widen to bridged loaders **once the layer is installed here**, so a bare
+  NeoForge instance isn't flooded with Fabric builds it can't load.
+- The wording follows the same fact: "runs through Sinytra Connector" where it's installed, "needs
+  Sinytra Connector" where it isn't.
 
 ### 7.4 Dependency resolution
 - Follow `required` dependencies recursively (Modrinth `dependencies[]`, CurseForge
@@ -290,12 +313,28 @@ loader version, Java version) and every jar: display name, version, enabled stat
 its platform source when it has one. Export writes what `LibraryService.list()` already knows; nothing
 is downloaded.
 
-Import is a plan, like installing (§7.4): for each entry, an installed jar with the same sha1 (or the
-same project) is `installed`; an entry with no source is `local`; otherwise the listed version is used
-when it fits this instance, and the best fitting version replaces it when it doesn't (`rankVersions`,
-§7.3). Instance differences (game version, loader, loader version, Java) become `checks` the dialog
-shows side by side, plus warnings. Nothing touches disk until the user ticks items and installs them
-through the usual install job (`services/share.ts`).
+Export pins the **exact build installed here**, never the newest one: the point of the file is to
+reproduce this setup somewhere else, and updating is a separate, deliberate step in Installed.
+
+Import is a plan, like installing (§7.4). For each entry, an installed jar with the same sha1 (or the
+same project) is `installed`, and an entry with no source is `local`. Otherwise the plan carries up to
+two candidates: `shared` (the pinned file) and `best` (the best build for this instance, `rankVersions`
+§7.3). `importCandidate(item, mode)` in the contract picks between them, so the server's `status` and
+the dialog can never disagree:
+
+- `shared` (the default) keeps the pinned build and only moves off it when it doesn't fit here.
+- `best` prefers what fits this instance.
+- Either way a build that runs beats one that doesn't, and something beats nothing.
+
+When neither candidate fits, the project's newest downloadable file is offered as `incompatible` rather
+than `unavailable`: unticked and marked, but installable through the dialog's "Include what doesn't
+fit" switch — the file exists, and the user may know something we don't. `unavailable` is now reserved
+for "there is nothing to download at all" (including CurseForge without a key).
+
+Instance differences (game version, loader, loader version, Java) become `checks` the dialog shows side
+by side, plus warnings. One project the platform can't answer for marks that entry unavailable instead
+of failing the whole list. Nothing touches disk until the user ticks items and installs them through
+the usual install job (`services/share.ts`); a whole list fits in one job (`INSTALL_BATCH_LIMIT`).
 
 Java version: launchers record it (Prism's `instance.cfg`, the Mojang version manifest a modded
 `versions/<id>.json` inherits from); otherwise it's derived from the game version
