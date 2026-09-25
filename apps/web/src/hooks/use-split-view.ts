@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
@@ -19,7 +19,7 @@ function read(): boolean {
 }
 
 let preferred = read()
-const listeners = new Set<() => void>()
+const listeners = new Set<(on: boolean) => void>()
 
 function setPreferred(on: boolean) {
   preferred = on
@@ -28,20 +28,32 @@ function setPreferred(on: boolean) {
   } catch {
     // Then it only lasts for this page load.
   }
-  for (const l of listeners) l()
-}
-
-function subscribe(onChange: () => void) {
-  listeners.add(onChange)
-  return () => listeners.delete(onChange)
+  for (const l of listeners) l(on)
 }
 
 /**
  * `split`: Installed and Browse are side by side right now (a wide screen and the user wants it).
  * `available`: the screen is wide enough to offer the toggle.
+ *
+ * Every caller mirrors the shared preference in its own state, rather than `useSyncExternalStore`,
+ * because store reads are always urgent: this way `setWanted` can update them inside a React
+ * transition, which is what lets `<ViewTransition>` animate the layout change like a navigation.
  */
 export function useSplitView() {
   const available = useMediaQuery(SPLIT_QUERY)
-  const wanted = useSyncExternalStore(subscribe, () => preferred)
-  return { split: available && wanted, available, wanted, setWanted: setPreferred }
+  const [wanted, setWanted] = useState(preferred)
+  useEffect(() => {
+    // A mount between the change and this effect would otherwise keep the value it read.
+    setWanted(preferred)
+    listeners.add(setWanted)
+    return () => {
+      listeners.delete(setWanted)
+    }
+  }, [])
+  return {
+    split: available && wanted,
+    available,
+    wanted,
+    setWanted: (on: boolean) => startTransition(() => setPreferred(on)),
+  }
 }
