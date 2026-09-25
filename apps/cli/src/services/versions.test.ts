@@ -126,8 +126,9 @@ describe('loader bridges', () => {
     expect(pickBest([bridged], neoforge)?.id).toBe(bridged.id)
   })
 
-  test('queryLoaders only widens the platform filter once the layer is installed', () => {
+  test('queryLoaders widens for one project always, for a search only once installed', () => {
     expect(queryLoaders(neoforge)).not.toContain('fabric')
     expect(queryLoaders({ ...neoforge, bridges: ['sinytra-connector'] })).toContain('fabric')
+    expect(queryLoaders(neoforge, { bridged: true })).toContain('fabric')
   })
 })

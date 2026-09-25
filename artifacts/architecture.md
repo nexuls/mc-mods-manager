@@ -265,9 +265,11 @@ network needed).
   `wrong-loader`. Game versions are still checked: a layer never excuses the wrong one.
 - `rankVersions` marks such a version `compatible` with `bridge` set and ranks it below every native and
   fallback build, so it's installable but never the automatic choice.
-- `LibraryService` publishes what it found through `BridgeStore`, which `CatalogService` reads. Search
-  and version filters only widen to bridged loaders **once the layer is installed here**, so a bare
-  NeoForge instance isn't flooded with Fabric builds it can't load.
+- `LibraryService` publishes what it found through `BridgeStore`, which `CatalogService` reads. Listing
+  one project's versions always asks the platform for bridged loaders too (`queryLoaders(ctx,
+  { bridged: true })`): the user named that project, so leaving them out would hide the only answer
+  there is. A *search* only widens **once the layer is installed here**, so a bare NeoForge instance
+  isn't flooded with Fabric builds it can't load.
 - The wording follows the same fact: "runs through Sinytra Connector" where it's installed, "needs
   Sinytra Connector" where it isn't.
 

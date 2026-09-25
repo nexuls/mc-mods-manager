@@ -140,7 +140,7 @@ export class CatalogService {
       all
         ? {}
         : {
-            loaders: queryLoaders(ctx),
+            loaders: queryLoaders(ctx, { bridged: true }),
             gameVersions: ctx.contentKind === 'mod' && ctx.gameVersion ? [ctx.gameVersion] : [],
           },
     )

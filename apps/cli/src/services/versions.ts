@@ -121,13 +121,18 @@ export function pickBest(
 }
 
 /**
- * Loaders to ask the platform for: the instance's own and the ones it can also run, plus the ones a
- * translation layer runs **once that layer is installed here**. Offering every Fabric mod on a bare
- * NeoForge instance would bury the builds that actually run; once Connector is in the folder, they do
- * run, so they belong in the results.
+ * Loaders to ask the platform for: the instance's own, the ones it can also run, and the ones a
+ * translation layer runs.
+ *
+ * `bridged` decides when that last group counts. Listing one project's versions always includes them
+ * (`bridged: true`): the user named that project, so "no version for this instance" would be hiding
+ * the only answer there is, and `rankVersions` labels the build with the layer it needs. A *search*
+ * leaves them out until the layer is actually installed — otherwise every Fabric mod would bury the
+ * builds a bare NeoForge instance can really load.
  */
 export function queryLoaders(
   ctx: Pick<VersionContext, 'loader' | 'gameVersion' | 'bridges'>,
+  options: { bridged?: boolean } = {},
 ): Loader[] {
   const { loader } = ctx
   if (!loader || loader === 'vanilla') return []
@@ -135,7 +140,7 @@ export function queryLoaders(
   return [
     ...runnableLoaders(loader, ctx.gameVersion),
     ...bridgedLoaders(loader, ctx.gameVersion)
-      .filter((b) => installed.includes(b.bridge.id))
+      .filter((b) => options.bridged || installed.includes(b.bridge.id))
       .map((b) => b.loader),
   ]
 }
