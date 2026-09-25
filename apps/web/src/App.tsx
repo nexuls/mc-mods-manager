@@ -1,5 +1,5 @@
 import { LockKeyholeIcon, RotateCwIcon, UnplugIcon } from 'lucide-react'
-import { useRef, useState, ViewTransition } from 'react'
+import { useLayoutEffect, useRef, useState, ViewTransition } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppHeader } from '@/components/app-header'
 import { AppNav } from '@/components/app-nav'
@@ -26,6 +26,12 @@ function App() {
   const unauthorized =
     instance.error instanceof ApiClientError && instance.error.code === 'UNAUTHORIZED'
   const ready = instance.data && !instance.data.needsSetup ? instance.data.instance : null
+
+  // LibraryView restores its own scroll (a project opens at the top, the list returns where it was);
+  // every other page starts at the top, so a swap never cross-fades one page's middle with another's.
+  useLayoutEffect(() => {
+    if (!inLibrary(pathname)) page.current?.scrollTo({ top: 0 })
+  }, [pathname])
 
   return (
     // The header stays put and the page scrolls below it, so content slides under its edge shadow.
@@ -73,8 +79,9 @@ function App() {
                 <main className="flex min-w-0 flex-1 flex-col">
                   {/*
                    * React runs the view transition for us: react-router's location update is a
-                   * React transition, so the content swap animates (see the `page` class in
-                   * index.css). Keyed by path: moving to another page clears a crashed one.
+                   * React transition, and so is the split toggle, so every content swap animates
+                   * the same way (see the `page` class in index.css). Keyed by path: moving to
+                   * another page clears a crashed one.
                    */}
                   <ViewTransition default="page">
                     <ErrorBoundary key={pathname}>
@@ -111,6 +118,11 @@ function App() {
       )}
     </div>
   )
+}
+
+/** The routes LibraryView serves; they manage the page scroll themselves. */
+function inLibrary(pathname: string): boolean {
+  return pathname === '/' || pathname === '/browse' || pathname.startsWith('/project/')
 }
 
 /** The navigation and a table's outline while the instance loads. */
