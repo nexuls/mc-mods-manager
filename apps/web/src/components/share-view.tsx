@@ -82,8 +82,9 @@ export function ShareView({ contentKind }: { contentKind: ContentKind }) {
         <CardHeader>
           <CardTitle>Export the list</CardTitle>
           <CardDescription>
-            Saves a JSON file with the game version, loader version, Java version and every {thing}{' '}
-            with its version.
+            Saves a JSON file with the game version, loader, loader version, Java version and every{' '}
+            {thing} pinned to the exact build installed here — not the newest one, so importing it
+            elsewhere reproduces this setup.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-start gap-3">
@@ -107,8 +108,10 @@ export function ShareView({ contentKind }: { contentKind: ContentKind }) {
         <CardHeader>
           <CardTitle>Import a list</CardTitle>
           <CardDescription>
-            Checks the list against this instance and lets you pick what to install.{' '}
-            {thing === 'mod' ? 'Mods' : 'Plugins'} you already have are left unticked.
+            Checks the list against this instance and lets you pick what to install. It takes the
+            builds the list pinned, and {thing === 'mod' ? 'mods' : 'plugins'} you already have are
+            left unticked. Anything with no build for this instance can still be installed from the
+            dialog.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-start gap-3">
